@@ -1,8 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../models/order.dart';
-import '../api/order_api.dart';
+import '../api/order_api.dart' show orderApi, orderToJson;
+import '../api/client.dart' show prefs;
 
 class OrderHistoryProvider extends ChangeNotifier {
   List<Order> _orders    = [];
@@ -23,12 +23,12 @@ class OrderHistoryProvider extends ChangeNotifier {
     _error     = null;
     notifyListeners();
     try {
-      _orders   = await orderApi.list(shiftId: shiftId);
-      _shiftId  = shiftId;
+      _orders    = await orderApi.list(shiftId: shiftId);
+      _shiftId   = shiftId;
       _fromCache = false;
-      await _saveOrders(shiftId, _orders);
+      await _save(shiftId, _orders);
     } catch (_) {
-      final cached = await _loadOrders(shiftId);
+      final cached = await _loadCached(shiftId);
       if (cached != null) {
         _orders    = cached;
         _shiftId   = shiftId;
@@ -41,75 +41,42 @@ class OrderHistoryProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void refresh(String shiftId) {
+  Future<void> refresh(String shiftId) async {
     _shiftId = null;
-    loadForShift(shiftId);
+    await loadForShift(shiftId);
   }
 
+  /// Called when a new order is successfully placed (online or after sync).
   void addOrder(Order o) {
+    // Avoid duplicates if synced order is also in pending list
+    if (_orders.any((x) => x.id == o.id)) return;
     _orders.insert(0, o);
     notifyListeners();
-    if (_shiftId != null) _saveOrders(_shiftId!, _orders);
+    if (_shiftId != null) _save(_shiftId!, _orders);
   }
 
-  // Called by OfflineSyncService after a pending order syncs successfully
+  /// Called by OfflineSyncService after a pending order syncs successfully.
   void onOrderSynced(Order o) => addOrder(o);
 
-  // ── Persistence ──────────────────────────────────────────────────────────
+  // ── Persistence — uses canonical orderToJson ───────────────────────────────
   static String _key(String shiftId) => 'orders_$shiftId';
 
-  Future<void> _saveOrders(String shiftId, List<Order> orders) async {
+  Future<void> _save(String shiftId, List<Order> orders) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(
-          _key(shiftId), jsonEncode(orders.map(_orderToJson).toList()));
+      final p = await prefs;
+      await p.setString(_key(shiftId),
+          jsonEncode(orders.map(orderToJson).toList()));
     } catch (_) {}
   }
 
-  Future<List<Order>?> _loadOrders(String shiftId) async {
+  Future<List<Order>?> _loadCached(String shiftId) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final raw   = prefs.getString(_key(shiftId));
+      final p   = await prefs;
+      final raw = p.getString(_key(shiftId));
       if (raw == null) return null;
       return (jsonDecode(raw) as List)
           .map((o) => Order.fromJson(o as Map<String, dynamic>))
           .toList();
     } catch (_) { return null; }
   }
-
-  Map<String, dynamic> _orderToJson(Order o) => {
-    'id':             o.id,
-    'branch_id':      o.branchId,
-    'shift_id':       o.shiftId,
-    'teller_id':      o.tellerId,
-    'teller_name':    o.tellerName,
-    'order_number':   o.orderNumber,
-    'status':         o.status,
-    'payment_method': o.paymentMethod,
-    'subtotal':       o.subtotal,
-    'discount_type':  o.discountType,
-    'discount_value': o.discountValue,
-    'discount_amount':o.discountAmount,
-    'tax_amount':     o.taxAmount,
-    'total_amount':   o.totalAmount,
-    'customer_name':  o.customerName,
-    'notes':          o.notes,
-    'created_at':     o.createdAt.toIso8601String(),
-    'items': o.items.map((i) => {
-      'id':         i.id,
-      'item_name':  i.itemName,
-      'size_label': i.sizeLabel,
-      'unit_price': i.unitPrice,
-      'quantity':   i.quantity,
-      'line_total': i.lineTotal,
-      'addons': i.addons.map((a) => {
-        'id':         a.id,
-        'addon_name': a.addonName,
-        'unit_price': a.unitPrice,
-        'quantity':   a.quantity,
-        'line_total': a.lineTotal,
-      }).toList(),
-    }).toList(),
-  };
 }
-

@@ -1,0 +1,211 @@
+import 'dart:typed_data';
+import 'package:flutter/services.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:starxpand_sdk_wrapper/starxpand_sdk_wrapper.dart';
+import '../models/order.dart';
+import '../utils/formatting.dart';
+
+class PrinterService {
+  static const _printerWidth = 576;
+
+  // ── Public print entry point ──────────────────────────────────────────────
+  static Future<String?> print({
+    required String ip,
+    required int port,
+    required Order order,
+    required String branchName,
+  }) async {
+    try {
+      final cleanIp = ip.split('/').first;
+      final device = StarDevice(cleanIp, StarInterfaceType.lan);
+
+      final connected =
+          await StarXpand.instance.connect(device, monitor: false);
+      if (!connected) return 'Could not connect to printer';
+
+      final pdfBytes = await _buildReceiptPdf(
+        order: order,
+        branchName: branchName,
+      );
+
+      final success = await StarXpand.instance.printPdf(
+        pdfBytes,
+        width: _printerWidth,
+      );
+
+      return success ? null : 'Print failed';
+    } catch (e) {
+      return 'Printer error: $e';
+    } finally {
+      await StarXpand.instance.disconnect();
+    }
+  }
+
+  // ── Receipt PDF builder ───────────────────────────────────────────────────
+  static Future<Uint8List> _buildReceiptPdf({
+    required Order order,
+    required String branchName,
+  }) async {
+    final pdf = pw.Document();
+
+    // Fonts
+    final font = pw.Font.ttf(
+      (await rootBundle.load('assets/fonts/Cairo-Regular.ttf'))
+          .buffer
+          .asByteData(),
+    );
+    final fontBold = pw.Font.ttf(
+      (await rootBundle.load('assets/fonts/Cairo-Bold.ttf'))
+          .buffer
+          .asByteData(),
+    );
+
+    // Logo
+    final logoData = await rootBundle.load('assets/TheRue.png');
+    final logoImage = pw.MemoryImage(logoData.buffer.asUint8List());
+
+    const charWidth = 40;
+
+    pw.TextStyle ts(pw.Font f, {double size = 9}) =>
+        pw.TextStyle(font: f, fontSize: size);
+
+    pw.Widget divider() => pw.Divider(thickness: 0.5, color: PdfColors.black);
+
+    String padRow(String left, String right) {
+      final space = charWidth - left.length - right.length;
+      if (space <= 0) return '$left $right';
+      return left + ' ' * space + right;
+    }
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat(
+          72 * PdfPageFormat.mm,
+          double.infinity,
+          marginTop: 6 * PdfPageFormat.mm,
+          marginBottom: 8 * PdfPageFormat.mm,
+          marginLeft: 4 * PdfPageFormat.mm,
+          marginRight: 4 * PdfPageFormat.mm,
+        ),
+        build: (ctx) => pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+          children: [
+            // ── Logo ──
+            pw.Center(
+              child: pw.Image(logoImage, width: 100),
+            ),
+            pw.SizedBox(height: 4),
+
+            // ── Branch name ──
+            pw.Center(
+              child: pw.Text(branchName, style: ts(font, size: 9)),
+            ),
+            pw.SizedBox(height: 6),
+            divider(),
+
+            // ── Order number + time ──
+            pw.SizedBox(height: 4),
+            pw.Text(
+              padRow(
+                'Order #${order.orderNumber}',
+                timeShort(order.createdAt),
+              ),
+              style: ts(fontBold, size: 10),
+            ),
+            pw.SizedBox(height: 4),
+            divider(),
+            pw.SizedBox(height: 4),
+
+            // ── Items ──
+            ...order.items.expand((item) {
+              final sizePart =
+                  item.sizeLabel != null ? ' (${item.sizeLabel})' : '';
+              final label = '${item.quantity}x ${item.itemName}$sizePart';
+              final price = egp(item.lineTotal);
+              return [
+                pw.Text(
+                  padRow(label, price),
+                  style: ts(fontBold, size: 9),
+                ),
+                ...item.addons.map((addon) {
+                  final aLabel = '  + ${addon.addonName}';
+                  final aPrice =
+                      addon.unitPrice > 0 ? '+${egp(addon.unitPrice)}' : '';
+                  return pw.Padding(
+                    padding: const pw.EdgeInsets.only(left: 4),
+                    child: pw.Text(
+                      aPrice.isNotEmpty ? padRow(aLabel, aPrice) : aLabel,
+                      style: ts(font, size: 8),
+                    ),
+                  );
+                }),
+                pw.SizedBox(height: 3),
+              ];
+            }),
+
+            divider(),
+            pw.SizedBox(height: 4),
+
+            // ── Totals ──
+            pw.Text(
+              padRow('Subtotal', egp(order.subtotal)),
+              style: ts(font, size: 9),
+            ),
+            if (order.discountAmount > 0)
+              pw.Text(
+                padRow('Discount', '- ${egp(order.discountAmount)}'),
+                style: ts(font, size: 9),
+              ),
+            if (order.taxAmount > 0)
+              pw.Text(
+                padRow('Tax', egp(order.taxAmount)),
+                style: ts(font, size: 9),
+              ),
+            pw.SizedBox(height: 3),
+            pw.Text(
+              padRow('TOTAL', egp(order.totalAmount)),
+              style: ts(fontBold, size: 13),
+            ),
+            pw.SizedBox(height: 4),
+            divider(),
+            pw.SizedBox(height: 4),
+
+            // ── Footer info ──
+            pw.Text(
+              padRow(
+                'Payment',
+                order.paymentMethod[0].toUpperCase() +
+                    order.paymentMethod.substring(1).replaceAll('_', ' '),
+              ),
+              style: ts(font, size: 9),
+            ),
+            if (order.customerName != null && order.customerName!.isNotEmpty)
+              pw.Text(
+                padRow('Customer', order.customerName!),
+                style: ts(font, size: 9),
+              ),
+            if (order.tellerName.isNotEmpty)
+              pw.Text(
+                padRow('Teller', order.tellerName),
+                style: ts(font, size: 9),
+              ),
+            pw.SizedBox(height: 10),
+
+            // ── Thank you ──
+            pw.Center(
+              child: pw.Text(
+                'Thank you for visiting!',
+                style: ts(fontBold, size: 9),
+              ),
+            ),
+            pw.SizedBox(height: 6),
+            divider(),
+          ],
+        ),
+      ),
+    );
+
+    return pdf.save();
+  }
+}

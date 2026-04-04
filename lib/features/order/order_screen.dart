@@ -941,92 +941,133 @@ class ItemDetailSheet extends ConsumerStatefulWidget {
 
 class _ItemDetailSheetState extends ConsumerState<ItemDetailSheet> {
   String? _selectedSize;
-  final Map<String, String> _single = {};
-  final Map<String, Set<String>> _multi = {};
+  final Map<String, String> _single = {}; // SlotID -> AddonID
+  final Map<String, Set<String>> _multi = {}; // SlotID -> Set<AddonID>
+  final Set<String> _extras = {}; // Set of AddonIDs from General
   int _qty = 1;
 
   @override
   void initState() {
     super.initState();
-    if (widget.item.sizes.isNotEmpty)
+    if (widget.item.sizes.isNotEmpty) {
       _selectedSize = widget.item.sizes.first.label;
+    }
   }
 
   int get _unitPrice => widget.item.priceForSize(_selectedSize);
+
   int get _addonsTotal {
+    final addons = ref.read(menuProvider).addons;
     int t = 0;
-    for (final g in widget.item.optionGroups) {
-      if (g.isMultiSelect) {
-        for (final o in g.items) {
-          if ((_multi[g.id] ?? {}).contains(o.id)) t += o.price;
-        }
-      } else {
-        for (final o in g.items) {
-          if (o.id == _single[g.id]) {
-            t += o.price;
-            break;
-          }
-        }
+
+    // From slots
+    for (final sId in _single.keys) {
+      final aId = _single[sId];
+      final a = addons.firstWhere((element) => element.id == aId,
+          orElse: () => const AddonItem(
+              id: '',
+              orgId: '',
+              name: '',
+              addonType: '',
+              defaultPrice: 0,
+              isActive: false,
+              displayOrder: 0));
+      if (a.id.isNotEmpty) t += a.defaultPrice;
+    }
+    for (final sId in _multi.keys) {
+      for (final aId in _multi[sId]!) {
+        final a = addons.firstWhere((element) => element.id == aId,
+            orElse: () => const AddonItem(
+                id: '',
+                orgId: '',
+                name: '',
+                addonType: '',
+                defaultPrice: 0,
+                isActive: false,
+                displayOrder: 0));
+        if (a.id.isNotEmpty) t += a.defaultPrice;
       }
     }
+
+    // From extras
+    for (final aId in _extras) {
+      final a = addons.firstWhere((element) => element.id == aId,
+          orElse: () => const AddonItem(
+              id: '',
+              orgId: '',
+              name: '',
+              addonType: '',
+              defaultPrice: 0,
+              isActive: false,
+              displayOrder: 0));
+      if (a.id.isNotEmpty) t += a.defaultPrice;
+    }
+
     return t;
   }
 
   int get _lineTotal => (_unitPrice + _addonsTotal) * _qty;
+
   bool get _canAdd {
-    for (final g in widget.item.optionGroups) {
-      if (!g.isRequired) continue;
-      if (g.isMultiSelect) {
-        if ((_multi[g.id] ?? {}).isEmpty) return false;
-      } else {
-        if (!_single.containsKey(g.id)) return false;
-      }
+    for (final s in widget.item.addonSlots) {
+      if (!s.isRequired) continue;
+      final count = s.maxSelections == 1
+          ? (_single.containsKey(s.id) ? 1 : 0)
+          : (_multi[s.id]?.length ?? 0);
+      if (count < s.minSelections) return false;
     }
     return true;
   }
 
-  void _toggleSingle(String gId, String oId, bool req) => setState(() {
-        if (_single[gId] == oId) {
-          if (!req) _single.remove(gId);
+  void _toggleSingle(String sId, String aId, bool req) => setState(() {
+        if (_single[sId] == aId) {
+          if (!req) _single.remove(sId);
         } else {
-          _single[gId] = oId;
+          _single[sId] = aId;
         }
       });
 
-  void _toggleMulti(String gId, String oId) => setState(() {
-        final s = _multi.putIfAbsent(gId, () => {});
-        s.contains(oId) ? s.remove(oId) : s.add(oId);
-        if (s.isEmpty) _multi.remove(gId);
+  void _toggleMulti(String sId, String aId, int? max) => setState(() {
+        final s = _multi.putIfAbsent(sId, () => {});
+        if (s.contains(aId)) {
+          s.remove(aId);
+        } else {
+          if (max == null || s.length < max) {
+            s.add(aId);
+          }
+        }
+        if (s.isEmpty) _multi.remove(sId);
+      });
+
+  void _toggleExtra(String aId) => setState(() {
+        _extras.contains(aId) ? _extras.remove(aId) : _extras.add(aId);
       });
 
   void _addToCart() {
     final addons = <SelectedAddon>[];
-    for (final g in widget.item.optionGroups) {
-      if (g.isMultiSelect) {
-        for (final o in g.items) {
-          if ((_multi[g.id] ?? {}).contains(o.id)) {
-            addons.add(SelectedAddon(
-                addonItemId: o.addonItemId,
-                drinkOptionItemId: o.id,
-                name: o.name,
-                priceModifier: o.price));
-          }
-        }
-      } else {
-        final sId = _single[g.id];
-        if (sId == null) continue;
-        for (final o in g.items) {
-          if (o.id == sId) {
-            addons.add(SelectedAddon(
-                addonItemId: o.addonItemId,
-                drinkOptionItemId: o.id,
-                name: o.name,
-                priceModifier: o.price));
-            break;
-          }
-        }
+    final globalAddons = ref.read(menuProvider).addons;
+
+    // Collect from single-slots
+    for (final aId in _single.values) {
+      final a = globalAddons.firstWhere((x) => x.id == aId);
+      addons.add(SelectedAddon(
+          addonItemId: a.id, name: a.name, priceModifier: a.defaultPrice));
+    }
+    // Collect from multi-slots
+    for (final sIds in _multi.values) {
+      for (final aId in sIds) {
+        final a = globalAddons.firstWhere((x) => x.id == aId);
+        addons.add(SelectedAddon(
+            addonItemId: a.id, name: a.name, priceModifier: a.defaultPrice));
       }
     }
+    // Collect from extras
+    for (final aId in _extras) {
+      final a = globalAddons.firstWhere((x) => x.id == aId);
+      addons.add(SelectedAddon(
+          addonItemId: a.id, name: a.name, priceModifier: a.defaultPrice));
+    }
+
     ref.read(cartProvider.notifier).add(CartItem(
         menuItemId: widget.item.id,
         itemName: normaliseName(widget.item.name),
@@ -1040,6 +1081,8 @@ class _ItemDetailSheetState extends ConsumerState<ItemDetailSheet> {
   @override
   Widget build(BuildContext context) {
     final mq = MediaQuery.of(context);
+    final globalAddons = ref.watch(menuProvider).addons;
+
     return Padding(
       padding: EdgeInsets.only(bottom: mq.viewInsets.bottom),
       child: Container(
@@ -1126,17 +1169,43 @@ class _ItemDetailSheetState extends ConsumerState<ItemDetailSheet> {
                         .toList()),
                 const SizedBox(height: 20),
               ],
-              for (final g in widget.item.optionGroups) ...[
-                _OptionGroupCard(
-                  group: g,
-                  selectedSingle: _single[g.id],
-                  selectedMulti: _multi[g.id] ?? {},
-                  onToggleSingle: (oId) =>
-                      _toggleSingle(g.id, oId, g.isRequired),
-                  onToggleMulti: (oId) => _toggleMulti(g.id, oId),
+
+              // ── Categorized Slots ──
+              for (final s in widget.item.addonSlots) ...[
+                _AddonCard(
+                  title: s.displayName,
+                  isRequired: s.isRequired,
+                  isMulti: (s.maxSelections ?? 99) > 1,
+                  items: globalAddons
+                      .where((a) => a.addonType == s.addonType)
+                      .toList(),
+                  selectedSingle: _single[s.id],
+                  selectedMulti: _multi[s.id] ?? {},
+                  onToggleSingle: (aId) => _toggleSingle(s.id, aId, s.isRequired),
+                  onToggleMulti: (aId) => _toggleMulti(s.id, aId, s.maxSelections),
                 ),
                 const SizedBox(height: 12),
               ],
+
+              // ── General Extras ──
+              if (globalAddons.any((a) => !widget.item.addonSlots
+                  .any((s) => s.addonType == a.addonType))) ...[
+                _AddonCard(
+                  title: 'Extras',
+                  isRequired: false,
+                  isMulti: true,
+                  items: globalAddons
+                      .where((a) => !widget.item.addonSlots
+                          .any((s) => s.addonType == a.addonType))
+                      .toList(),
+                  selectedSingle: null,
+                  selectedMulti: _extras,
+                  onToggleSingle: (_) {},
+                  onToggleMulti: (aId) => _toggleExtra(aId),
+                ),
+                const SizedBox(height: 12),
+              ],
+
               const SizedBox(height: 6),
             ]),
           )),
@@ -1192,28 +1261,37 @@ class _ItemDetailSheetState extends ConsumerState<ItemDetailSheet> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  OPTION GROUP CARD
+//  ADDON CARD
 // ─────────────────────────────────────────────────────────────────────────────
-class _OptionGroupCard extends StatefulWidget {
-  final DrinkOptionGroup group;
+class _AddonCard extends StatefulWidget {
+  final String title;
+  final bool isRequired;
+  final bool isMulti;
+  final List<AddonItem> items;
   final String? selectedSingle;
   final Set<String> selectedMulti;
   final void Function(String) onToggleSingle;
   final void Function(String) onToggleMulti;
-  const _OptionGroupCard({
-    required this.group,
+
+  const _AddonCard({
+    required this.title,
+    required this.isRequired,
+    required this.isMulti,
+    required this.items,
     required this.selectedSingle,
     required this.selectedMulti,
     required this.onToggleSingle,
     required this.onToggleMulti,
   });
+
   @override
-  State<_OptionGroupCard> createState() => _OptionGroupCardState();
+  State<_AddonCard> createState() => _AddonCardState();
 }
 
-class _OptionGroupCardState extends State<_OptionGroupCard> {
+class _AddonCardState extends State<_AddonCard> {
   final _searchCtrl = TextEditingController();
   String _query = '';
+
   @override
   void initState() {
     super.initState();
@@ -1229,15 +1307,14 @@ class _OptionGroupCardState extends State<_OptionGroupCard> {
 
   @override
   Widget build(BuildContext context) {
-    final g = widget.group;
-    final allOpts = g.items;
-    final showSearch = allOpts.length > 5;
+    final showSearch = widget.items.length > 5;
     final opts = _query.isEmpty
-        ? allOpts
-        : allOpts.where((o) => o.name.toLowerCase().contains(_query)).toList();
-    final selCount = g.isMultiSelect
-        ? widget.selectedMulti.length
-        : (widget.selectedSingle != null ? 1 : 0);
+        ? widget.items
+        : widget.items
+            .where((o) => o.name.toLowerCase().contains(_query))
+            .toList();
+    final selCount =
+        widget.isMulti ? widget.selectedMulti.length : (widget.selectedSingle != null ? 1 : 0);
 
     return Container(
       decoration: BoxDecoration(
@@ -1255,15 +1332,15 @@ class _OptionGroupCardState extends State<_OptionGroupCard> {
           child: Row(children: [
             Expanded(
                 child: Row(children: [
-              Text(g.displayName.toUpperCase(),
+              Text(widget.title.toUpperCase(),
                   style: cairo(
                       fontSize: 10,
                       fontWeight: FontWeight.w700,
                       color: AppColors.textSecondary,
                       letterSpacing: 0.7)),
               const SizedBox(width: 6),
-              if (g.isRequired) const _Pill('Required', AppColors.danger),
-              if (g.isMultiSelect) ...[
+              if (widget.isRequired) const _Pill('Required', AppColors.danger),
+              if (widget.isMulti) ...[
                 const SizedBox(width: 4),
                 const _Pill('Multi', AppColors.primary)
               ],
@@ -1285,7 +1362,7 @@ class _OptionGroupCardState extends State<_OptionGroupCard> {
                     controller: _searchCtrl,
                     style: cairo(fontSize: 13),
                     decoration: InputDecoration(
-                      hintText: 'Search options…',
+                      hintText: 'Search items…',
                       hintStyle:
                           cairo(fontSize: 13, color: AppColors.textMuted),
                       prefixIcon: const Icon(Icons.search_rounded,
@@ -1308,21 +1385,21 @@ class _OptionGroupCardState extends State<_OptionGroupCard> {
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
           child: opts.isEmpty
-              ? Text('No options match "$_query"',
+              ? Text('No match for "$_query"',
                   style: cairo(fontSize: 12, color: AppColors.textMuted))
               : Wrap(
                   spacing: 7,
                   runSpacing: 7,
                   children: opts.map((opt) {
-                    final sel = g.isMultiSelect
+                    final sel = widget.isMulti
                         ? widget.selectedMulti.contains(opt.id)
                         : widget.selectedSingle == opt.id;
                     return _Chip(
                       label: normaliseName(opt.name),
-                      sublabel: opt.price > 0 ? '+${egp(opt.price)}' : null,
+                      sublabel: opt.defaultPrice > 0 ? '+${egp(opt.defaultPrice)}' : null,
                       selected: sel,
-                      checkbox: g.isMultiSelect,
-                      onTap: () => g.isMultiSelect
+                      checkbox: widget.isMulti,
+                      onTap: () => widget.isMulti
                           ? widget.onToggleMulti(opt.id)
                           : widget.onToggleSingle(opt.id),
                     );

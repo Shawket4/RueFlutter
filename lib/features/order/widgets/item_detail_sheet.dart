@@ -277,25 +277,27 @@ class _ItemDetailSheetState extends ConsumerState<ItemDetailSheet> {
     // No-op, kept for compatibility
   }
 
-  void _showRecipeSheet() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      useSafeArea: true,
-      barrierColor: Colors.black.withOpacity(0.5),
-      builder: (_) => RecipeSheet(
-        itemName: normaliseName(widget.item.name),
-        sizeLabel: _selectedSize,
-        fetchRecipe: () => ref.read(recipeApiProvider).preview(
-              menuItemId: widget.item.id,
-              sizeLabel: _selectedSize,
-              addons: _buildSelectedAddons(),
-              optionals: _buildSelectedOptionals(),
-            ),
+void _showRecipeSheet() {
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: Colors.transparent,
+    isScrollControlled: true,
+    useSafeArea: true,
+    barrierColor: Colors.black.withOpacity(0.5),
+    builder: (_) => RecipeSheet(
+      itemName: normaliseName(widget.item.name),
+      sizeLabel: _selectedSize,
+      fetchRecipe: () => ref.read(recipeApiProvider).preview(
+        menuItemId:   widget.item.id,
+        sizeLabel:    _selectedSize,
+        addons:       _buildSelectedAddons(),
+        optionals:    _buildSelectedOptionals(),
+        menuItem:     widget.item,                        // ← add
+        allAddonItems: ref.read(menuProvider).allAddons,  // ← add
       ),
-    );
-  }
+    ),
+  );
+}
 
   void _initBaseMilk() {
     final defaultId = widget.item.defaultMilkAddonId;

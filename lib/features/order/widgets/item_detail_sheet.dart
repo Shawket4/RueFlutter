@@ -63,8 +63,7 @@ class _ItemDetailSheetState extends ConsumerState<ItemDetailSheet> {
   static const _singleSelectTypes = {'milk_type'};
 
   // Optional fields state
-  List<OptionalField> _optionalFields = [];
-  bool _optionalFieldsLoading = false;
+  late List<OptionalField> _optionalFields;
   final Set<String> _selectedOptionals = {};
 
   // Recipe preview state
@@ -79,8 +78,8 @@ class _ItemDetailSheetState extends ConsumerState<ItemDetailSheet> {
       _selectedSize = widget.item.sizes.first.label;
     }
 
-    _loadOptionalFields();
-    _loadBaseRecipeAndSelectMilk();
+    _optionalFields = widget.item.optionalFields.where((f) => f.isActive).toList();
+    _initBaseMilk();
 
     // Pre-populate from existing cart item when editing
     if (_isEdit) {
@@ -132,39 +131,39 @@ class _ItemDetailSheetState extends ConsumerState<ItemDetailSheet> {
       .where((f) => _selectedOptionals.contains(f.id))
       .fold(0, (s, f) => s + f.price);
 
+  int _adjustedPrice(AddonItem a) {
+    if (a.addonType == 'milk_type' || a.addonType == 'coffee_type') {
+      final base = _baseSwapPrices[a.addonType] ?? 0;
+      final diff = a.defaultPrice - base;
+      return diff > 0 ? diff : 0;
+    }
+    return a.defaultPrice;
+  }
+
   int get _addonsTotal {
     final allAddons = ref.read(menuProvider).allAddons;
     int t = 0;
 
-    int adjustedPrice(AddonItem a) {
-      if (a.addonType == 'milk_type' || a.addonType == 'coffee_type') {
-        final base = _baseSwapPrices[a.addonType] ?? 0;
-        final diff = a.defaultPrice - base;
-        return diff > 0 ? diff : 0;
-      }
-      return a.defaultPrice;
-    }
-
     for (final aId in _single.values) {
       final matches = allAddons.where((a) => a.id == aId);
-      if (matches.isNotEmpty) t += adjustedPrice(matches.first);
+      if (matches.isNotEmpty) t += _adjustedPrice(matches.first);
     }
     for (final qtyMap in _multi.values) {
       for (final entry in qtyMap.entries) {
         final matches = allAddons.where((a) => a.id == entry.key);
-        if (matches.isNotEmpty) t += adjustedPrice(matches.first) * entry.value;
+        if (matches.isNotEmpty) t += _adjustedPrice(matches.first) * entry.value;
       }
     }
     for (final typeMap in _extras.values) {
       for (final entry in typeMap.entries) {
         final matches = allAddons.where((a) => a.id == entry.key);
-        if (matches.isNotEmpty) t += adjustedPrice(matches.first) * entry.value;
+        if (matches.isNotEmpty) t += _adjustedPrice(matches.first) * entry.value;
       }
     }
     // Single-select unslotted types (e.g. milk_type) — always qty 1
     for (final aId in _extrasSingle.values) {
       final matches = allAddons.where((a) => a.id == aId);
-      if (matches.isNotEmpty) t += adjustedPrice(matches.first);
+      if (matches.isNotEmpty) t += _adjustedPrice(matches.first);
     }
     return t;
   }
@@ -298,53 +297,19 @@ class _ItemDetailSheetState extends ConsumerState<ItemDetailSheet> {
     );
   }
 
-  Future<void> _loadOptionalFields() async {
-    setState(() => _optionalFieldsLoading = true);
-    try {
-      final fields =
-          await ref.read(menuApiProvider).optionalFields(widget.item.id);
-      if (mounted) {
-        setState(() {
-          _optionalFields = fields.where((f) => f.isActive).toList();
-          _optionalFieldsLoading = false;
-        });
+  void _initBaseMilk() {
+    final defaultId = widget.item.defaultMilkAddonId;
+    if (defaultId == null) return;
+
+    final allAddons = ref.read(menuProvider).allAddons;
+    final defaultMilkAddon = allAddons.where((a) => a.id == defaultId).firstOrNull;
+
+    if (defaultMilkAddon != null) {
+      _baseSwapPrices['milk_type'] = defaultMilkAddon.defaultPrice;
+      if (!_isEdit && _extrasSingle['milk_type'] == null) {
+        _extrasSingle['milk_type'] = defaultMilkAddon.id;
       }
-    } catch (_) {
-      if (mounted) setState(() => _optionalFieldsLoading = false);
     }
-  }
-
-  Future<void> _loadBaseRecipeAndSelectMilk() async {
-    if (_isEdit) return;
-
-    try {
-      final recipe = await ref.read(recipeApiProvider).preview(
-            menuItemId: widget.item.id,
-            sizeLabel: _selectedSize,
-            addons: [],
-            optionals: [],
-          );
-      if (!mounted) return;
-
-      final baseMilk = recipe.where((i) => i.isBase && i.category == 'milk').firstOrNull;
-      if (baseMilk != null && baseMilk.orgIngredientId != null) {
-        final allAddons = ref.read(menuProvider).allAddons;
-        final defaultMilkAddon = allAddons.where((a) =>
-            a.addonType == 'milk_type' &&
-            a.isActive &&
-            a.primaryIngredientId == baseMilk.orgIngredientId).firstOrNull;
-
-        if (defaultMilkAddon != null) {
-          setState(() {
-            _baseSwapPrices['milk_type'] = defaultMilkAddon.defaultPrice;
-            if (_extrasSingle['milk_type'] == null) {
-              _extrasSingle['milk_type'] = defaultMilkAddon.id;
-              _clearRecipe();
-            }
-          });
-        }
-      }
-    } catch (_) {}
   }
 
   List<SelectedOptional> _buildSelectedOptionals() {
@@ -376,7 +341,7 @@ class _ItemDetailSheetState extends ConsumerState<ItemDetailSheet> {
         result.add(SelectedAddon(
             addonItemId: a.id,
             name: a.name,
-            priceModifier: a.defaultPrice,
+            priceModifier: _adjustedPrice(a),
             quantity: 1));
       }
     }
@@ -389,7 +354,7 @@ class _ItemDetailSheetState extends ConsumerState<ItemDetailSheet> {
           result.add(SelectedAddon(
               addonItemId: a.id,
               name: a.name,
-              priceModifier: a.defaultPrice,
+              priceModifier: _adjustedPrice(a),
               quantity: entry.value));
         }
       }
@@ -403,7 +368,7 @@ class _ItemDetailSheetState extends ConsumerState<ItemDetailSheet> {
           result.add(SelectedAddon(
               addonItemId: a.id,
               name: a.name,
-              priceModifier: a.defaultPrice,
+              priceModifier: _adjustedPrice(a),
               quantity: entry.value));
         }
       }
@@ -416,7 +381,7 @@ class _ItemDetailSheetState extends ConsumerState<ItemDetailSheet> {
         result.add(SelectedAddon(
             addonItemId: a.id,
             name: a.name,
-            priceModifier: a.defaultPrice,
+            priceModifier: _adjustedPrice(a),
             quantity: 1));
       }
     }
@@ -473,14 +438,12 @@ class _ItemDetailSheetState extends ConsumerState<ItemDetailSheet> {
     List<AddonItem> getItemsWithAdjustedPrice(String type) {
       final list = (byType[type] ?? []).where((a) => a.isActive).toList();
       if (type == 'milk_type' || type == 'coffee_type') {
-        final base = _baseSwapPrices[type] ?? 0;
         return list.map((a) {
-          final diff = a.defaultPrice - base;
           return AddonItem(
             id: a.id,
             name: a.name,
             addonType: a.addonType,
-            defaultPrice: diff > 0 ? diff : 0,
+            defaultPrice: _adjustedPrice(a),
             isActive: a.isActive,
             displayOrder: a.displayOrder,
             primaryIngredientId: a.primaryIngredientId,
@@ -638,9 +601,46 @@ class _ItemDetailSheetState extends ConsumerState<ItemDetailSheet> {
                 const SizedBox(height: 12),
               ],
 
-              // Unslotted types — EACH gets its own separate card
-              // milk_type = single-select, others = multi-select with qty
-              for (final addonType in unslottedTypes) ...[
+              // Unslotted milk_type first (if present)
+              if (unslottedTypes.contains('milk_type')) ...[
+                AddonCard(
+                  title: addonTypeLabel('milk_type'),
+                  isRequired: false,
+                  isMulti: false,
+                  maxSelections: null,
+                  items: getItemsWithAdjustedPrice('milk_type'),
+                  selectedSingle: _extrasSingle['milk_type'],
+                  selectedMulti: const {},
+                  onToggleSingle: (aId) =>
+                      _toggleExtraSingle('milk_type', aId),
+                  onToggleMulti: (_) {},
+                  onIncrement: (_) {},
+                  onDecrement: (_) {},
+                  accentColor: addonTypeColor('milk_type'),
+                ),
+                const SizedBox(height: 12),
+              ],
+
+              // Optionals section immediately after milk
+              if (_optionalFields.isNotEmpty) ...[
+                OptionalFieldsCard(
+                  fields: _optionalFields,
+                  selected: _selectedOptionals,
+                  sizeLabel: _selectedSize,
+                  onToggle: (id) => setState(() {
+                    if (_selectedOptionals.contains(id)) {
+                      _selectedOptionals.remove(id);
+                    } else {
+                      _selectedOptionals.add(id);
+                    }
+                    _clearRecipe();
+                  }),
+                ),
+                const SizedBox(height: 12),
+              ],
+
+              // Other Unslotted types (excluding milk_type)
+              for (final addonType in unslottedTypes.where((t) => t != 'milk_type')) ...[
                 if (_singleSelectTypes.contains(addonType))
                   AddonCard(
                     title: addonTypeLabel(addonType),
@@ -672,36 +672,6 @@ class _ItemDetailSheetState extends ConsumerState<ItemDetailSheet> {
                     onDecrement: (aId) => _decrementExtra(addonType, aId),
                     accentColor: addonTypeColor(addonType),
                   ),
-                const SizedBox(height: 12),
-              ],
-
-              const SizedBox(height: 6),
-
-              // Optionals section
-              if (_optionalFieldsLoading)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8),
-                  child: Center(
-                      child: SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: AppColors.primary))),
-                )
-              else if (_optionalFields.isNotEmpty) ...[
-                OptionalFieldsCard(
-                  fields: _optionalFields,
-                  selected: _selectedOptionals,
-                  sizeLabel: _selectedSize,
-                  onToggle: (id) => setState(() {
-                    if (_selectedOptionals.contains(id)) {
-                      _selectedOptionals.remove(id);
-                    } else {
-                      _selectedOptionals.add(id);
-                    }
-                    _clearRecipe();
-                  }),
-                ),
                 const SizedBox(height: 12),
               ],
 

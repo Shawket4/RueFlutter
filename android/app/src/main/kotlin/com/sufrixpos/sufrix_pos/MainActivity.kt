@@ -1,4 +1,4 @@
-package com.ruepos.rue_pos
+package com.sufrixpos.sufrix_pos
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "com.ruepos" "\0"
-            VALUE "FileDescription", "rue_pos" "\0"
+            VALUE "CompanyName", "com.sufrixpos" "\0"
+            VALUE "FileDescription", "sufrix_pos" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "rue_pos" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 com.ruepos. All rights reserved." "\0"
-            VALUE "OriginalFilename", "rue_pos.exe" "\0"
-            VALUE "ProductName", "rue_pos" "\0"
+            VALUE "InternalName", "sufrix_pos" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 com.sufrixpos. All rights reserved." "\0"
+            VALUE "OriginalFilename", "sufrix_pos.exe" "\0"
+            VALUE "ProductName", "sufrix_pos" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

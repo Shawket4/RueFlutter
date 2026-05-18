@@ -60,7 +60,7 @@ class DioClient {
 
   DioClient() {
     _dio = Dio(BaseOptions(
-      baseUrl:        'https://rue-pos.ddns.net/api',
+      baseUrl:        'https://sufrix-pos.ddns.net/api',
       connectTimeout: const Duration(seconds: 10),
       sendTimeout:    const Duration(seconds: 20),
       receiveTimeout: const Duration(seconds: 20),
@@ -2436,7 +2436,7 @@ class ConnectivityService {
   Timer? _pingTimer;
 
   final _dio = Dio(BaseOptions(
-    baseUrl: 'https://rue-pos.ddns.net/api',
+    baseUrl: 'https://sufrix-pos.ddns.net/api',
     connectTimeout: const Duration(seconds: 5),
     receiveTimeout: const Duration(seconds: 5),
   ));
@@ -2993,7 +2993,7 @@ class PrinterService {
     final fontB = pw.Font.ttf(
         (await rootBundle.load('assets/fonts/Cairo-SemiBold.ttf')).buffer.asByteData());
     final logo  = pw.MemoryImage(
-        (await rootBundle.load('assets/TheRue.png')).buffer.asUint8List());
+        (await rootBundle.load('assets/TheSufrix.png')).buffer.asUint8List());
 
     pw.TextStyle ts(pw.Font f, {double sz = 8, PdfColor? color}) =>
         pw.TextStyle(font: f, fontSize: sz, color: color);
@@ -3084,7 +3084,7 @@ class PrinterService {
     final fontB = pw.Font.ttf(
         (await rootBundle.load('assets/fonts/Cairo-SemiBold.ttf')).buffer.asByteData());
     final logo  = pw.MemoryImage(
-        (await rootBundle.load('assets/TheRue.png')).buffer.asUint8List());
+        (await rootBundle.load('assets/TheSufrix.png')).buffer.asUint8List());
 
     pw.TextStyle ts(pw.Font f, {double sz = 8, PdfColor? color}) =>
         pw.TextStyle(font: f, fontSize: sz, color: color);
@@ -3768,7 +3768,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
           constraints: const BoxConstraints(maxWidth: 380),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             // ── Logo ────────────────────────────────────────────────────────
-            Image.asset('assets/TheRue.png', height: 48),
+            Image.asset('assets/TheSufrix.png', height: 48),
             const SizedBox(height: 8),
             Text(
               'Point of Sale',
@@ -3972,7 +3972,7 @@ class _TabletLayout extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Image.asset('assets/TheRue.png',
+                    Image.asset('assets/TheSufrix.png',
                         height: 56,
                         color: Colors.white,
                         colorBlendMode: BlendMode.srcIn),
@@ -4114,7 +4114,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-              Image.asset('assets/TheRue.png', height: isTablet ? 52 : 44),
+              Image.asset('assets/TheSufrix.png', height: isTablet ? 52 : 44),
               const Spacer(),
               Text(user.name,
                   style: cairo(
@@ -5410,7 +5410,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lottie/lottie.dart';
-import 'package:rue_pos/core/models/pending_action.dart';
+import 'package:sufrix_pos/core/models/pending_action.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/api/order_api.dart';
 import '../../core/models/cart.dart';
@@ -9381,7 +9381,7 @@ class _AppState extends ConsumerState<_App> {
 
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
-      title: 'Rue POS',
+      title: 'Sufrix POS',
       theme: AppTheme.light,
       routerConfig: router,
     );
@@ -9397,7 +9397,7 @@ class _SplashScreen extends StatelessWidget {
     home: Scaffold(
       backgroundColor: Colors.white,
       body: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Image.asset('assets/TheRue.png', height: 64),
+        Image.asset('assets/TheSufrix.png', height: 64),
         const SizedBox(height: 32),
         const SizedBox(width: 24, height: 24,
             child: CircularProgressIndicator(

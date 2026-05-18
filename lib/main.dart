@@ -10,6 +10,7 @@ import 'core/services/connectivity_service.dart';
 import 'core/services/offline_queue.dart';
 import 'core/storage/storage_service.dart';
 import 'core/theme/app_theme.dart';
+import 'core/widgets/sufrix_logo.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -78,7 +79,7 @@ class _AppState extends ConsumerState<_App> {
 
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
-      title: 'Rue POS',
+      title: 'Sufrix POS',
       theme: AppTheme.light,
       routerConfig: router,
     );
@@ -92,9 +93,9 @@ class _SplashScreen extends StatelessWidget {
     debugShowCheckedModeBanner: false,
     theme: AppTheme.light,
     home: Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.bg,
       body: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Image.asset('assets/TheRue.png', height: 64),
+        const SufrixLongLogo(height: 56),
         const SizedBox(height: 32),
         const SizedBox(width: 24, height: 24,
             child: CircularProgressIndicator(

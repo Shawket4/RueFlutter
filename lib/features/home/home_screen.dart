@@ -13,6 +13,7 @@ import '../../core/utils/formatting.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/card_container.dart';
 import '../../shared/widgets/sync_status_banner.dart';
+import '../../core/widgets/sufrix_logo.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -93,7 +94,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-              Image.asset('assets/TheRue.png', height: isTablet ? 52 : 44),
+              SufrixLongLogo(height: isTablet ? 40 : 34),
               const Spacer(),
               Text(user.name,
                   style: cairo(
@@ -174,15 +175,12 @@ class _OpenShiftView extends ConsumerWidget {
         width: double.infinity,
         padding: EdgeInsets.all(isTablet ? 30 : 24),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-              colors: [AppColors.primary, AppColors.secondary],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight),
+          color: AppColors.primary,
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-                color: AppColors.primary.withOpacity(0.25),
-                blurRadius: 24,
+                color: AppColors.primary.withOpacity(0.08),
+                blurRadius: 20,
                 offset: const Offset(0, 8))
           ],
         ),
@@ -242,63 +240,123 @@ class _OpenShiftView extends ConsumerWidget {
                 isTablet: isTablet),
           ]),
           SizedBox(height: isTablet ? 28 : 22),
-          Row(children: [
-            Expanded(
-                child: _CardBtn(
-                    label: 'New Order',
-                    icon: Icons.add_shopping_cart_rounded,
-                    onTap: () => context.go('/order'),
-                    isTablet: isTablet)),
-            const SizedBox(width: 8),
-            Expanded(
-                child: _CardBtn(
-                    label: 'History',
-                    icon: Icons.receipt_long_rounded,
-                    onTap: () => context.go('/order-history'),
-                    isTablet: isTablet)),
-            const SizedBox(width: 8),
-            Expanded(
-                child: _CardBtn(
-                    label: 'Shifts',
-                    icon: Icons.history_rounded,
-                    onTap: () => context.go('/shift-history'),
-                    isTablet: isTablet)),
-            const SizedBox(width: 8),
-            Expanded(
-                child: _CardBtn(
-              label: 'Pending',
-              icon: Icons.pending_actions_rounded,
-              onTap: () => context.go('/pending-orders'),
-              isTablet: isTablet,
-            )),
-            const SizedBox(width: 8),
-            Expanded(
-                child: _CardBtn(
-              label: 'Cash',
-              icon: Icons.payments_outlined,
-              isTablet: isTablet,
-              onTap: () => CashMovementSheet.show(
-                context,
-                shiftId: shift.id,
-                onSuccess: onRefresh,
-              ))), // Task 2.3: Remove tooltip/disabled check so offline works
-            const SizedBox(width: 8),
-            Expanded(
-                // Task 2.4: Added Tooltip 
-                child: Tooltip(
-                  message: !isOnline ? 'Internet connection required to close shift.' : '',
-                  child: _CardBtn(
-                                label: 'Close',
-                                icon: Icons.lock_outline_rounded,
-                                danger: true,
-                                isTablet: isTablet,
-                                disabled: !isOnline,
-                                onTap: !isOnline
-                                    ? () {}
-                                    : () => _confirmClose(context),
-                              ),
-                )),
-          ]),
+          isTablet
+              ? Row(children: [
+                  Expanded(
+                      child: _CardBtn(
+                          label: 'New Order',
+                          icon: Icons.add_shopping_cart_rounded,
+                          onTap: () => context.go('/order'),
+                          isTablet: isTablet)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                      child: _CardBtn(
+                          label: 'History',
+                          icon: Icons.receipt_long_rounded,
+                          onTap: () => context.go('/order-history'),
+                          isTablet: isTablet)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                      child: _CardBtn(
+                          label: 'Shifts',
+                          icon: Icons.history_rounded,
+                          onTap: () => context.go('/shift-history'),
+                          isTablet: isTablet)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                      child: _CardBtn(
+                    label: 'Pending',
+                    icon: Icons.pending_actions_rounded,
+                    onTap: () => context.go('/pending-orders'),
+                    isTablet: isTablet,
+                  )),
+                  const SizedBox(width: 8),
+                  Expanded(
+                      child: _CardBtn(
+                    label: 'Cash',
+                    icon: Icons.payments_outlined,
+                    isTablet: isTablet,
+                    onTap: () => CashMovementSheet.show(
+                      context,
+                      shiftId: shift.id,
+                      onSuccess: onRefresh,
+                    ))),
+                  const SizedBox(width: 8),
+                  Expanded(
+                      child: Tooltip(
+                    message: !isOnline ? 'Internet connection required to close shift.' : '',
+                    child: _CardBtn(
+                      label: 'Close',
+                      icon: Icons.lock_outline_rounded,
+                      danger: true,
+                      isTablet: isTablet,
+                      disabled: !isOnline,
+                      onTap: !isOnline
+                          ? () {}
+                          : () => _confirmClose(context),
+                    ),
+                  )),
+                ])
+              : Column(children: [
+                  Row(children: [
+                    Expanded(
+                        child: _CardBtn(
+                            label: 'New Order',
+                            icon: Icons.add_shopping_cart_rounded,
+                            onTap: () => context.go('/order'),
+                            isTablet: isTablet)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                        child: _CardBtn(
+                            label: 'History',
+                            icon: Icons.receipt_long_rounded,
+                            onTap: () => context.go('/order-history'),
+                            isTablet: isTablet)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                        child: _CardBtn(
+                      label: 'Pending',
+                      icon: Icons.pending_actions_rounded,
+                      onTap: () => context.go('/pending-orders'),
+                      isTablet: isTablet,
+                    )),
+                  ]),
+                  const SizedBox(height: 8),
+                  Row(children: [
+                    Expanded(
+                        child: _CardBtn(
+                            label: 'Shifts',
+                            icon: Icons.history_rounded,
+                            onTap: () => context.go('/shift-history'),
+                            isTablet: isTablet)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                        child: _CardBtn(
+                      label: 'Cash',
+                      icon: Icons.payments_outlined,
+                      isTablet: isTablet,
+                      onTap: () => CashMovementSheet.show(
+                        context,
+                        shiftId: shift.id,
+                        onSuccess: onRefresh,
+                      ))),
+                    const SizedBox(width: 8),
+                    Expanded(
+                        child: Tooltip(
+                      message: !isOnline ? 'Internet connection required to close shift.' : '',
+                      child: _CardBtn(
+                        label: 'Close',
+                        icon: Icons.lock_outline_rounded,
+                        danger: true,
+                        isTablet: isTablet,
+                        disabled: !isOnline,
+                        onTap: !isOnline
+                            ? () {}
+                            : () => _confirmClose(context),
+                      ),
+                    )),
+                  ]),
+                ]),
         ]),
       ),
     ]);

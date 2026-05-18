@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers/auth_notifier.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/widgets/sufrix_logo.dart';
 import '../../shared/widgets/pin_pad.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -100,7 +101,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         : authError;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.bg,
       body: useSideBySide
           ? _TabletLayout(
               form: _buildForm(
@@ -130,8 +131,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         child: ConstrainedBox(
           constraints: BoxConstraints(maxWidth: isWide ? 420 : 380),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Image.asset('assets/TheRue.png', height: 48),
-            const SizedBox(height: 8),
+            const SufrixLongLogo(height: 40),
+            const SizedBox(height: 16),
             Text(
               'Point of Sale',
               style: cairo(
@@ -326,10 +327,12 @@ class _TabletLayout extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Image.asset('assets/TheRue.png',
-                        height: 56,
-                        color: Colors.white,
-                        colorBlendMode: BlendMode.srcIn),
+                    const SufrixLongLogo(
+                      height: 48,
+                      textColor: Colors.white,
+                      crossColor: Colors.white,
+                      centerColor: AppColors.secondary,
+                    ),
                     const SizedBox(height: 40),
                     Text('Welcome\nback.',
                         style: cairo(
@@ -360,7 +363,7 @@ class _TabletLayout extends StatelessWidget {
         ),
         Expanded(
           flex: 4,
-          child: Container(color: Colors.white, child: form),
+          child: Container(color: AppColors.bg, child: form),
         ),
       ]);
 }

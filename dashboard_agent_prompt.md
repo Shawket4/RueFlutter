@@ -1,7 +1,7 @@
 # Agent Prompt: Audit & Fix Order Item Optionals/Modifiers Handling
 
 ## 📋 Context & Objective
-In the POS companion app (`rue_pos`), we recently audited and fixed the handling logic for order item optionals/modifiers (e.g., custom choices like "No Onions", "Extra Cheese", etc.). We discovered they were missing from the physical receipts, local offline fallbacks, and the order history detail views.
+In the POS companion app (`sufrix_pos`), we recently audited and fixed the handling logic for order item optionals/modifiers (e.g., custom choices like "No Onions", "Extra Cheese", etc.). We discovered they were missing from the physical receipts, local offline fallbacks, and the order history detail views.
 
 **Objective:** Audit the `RueDashboard` codebase and implement similar fixes so that optionals are correctly parsed, rendered in all order views (order list, detail cards, invoice templates), and included in any thermal printing/PDF generation logic.
 

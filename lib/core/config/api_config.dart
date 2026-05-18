@@ -1,1 +1,1 @@
-const String kApiBaseUrl = 'https://rue-pos.ddns.net/api';
+const String kApiBaseUrl = 'https://sufrix.duckdns.org/api';

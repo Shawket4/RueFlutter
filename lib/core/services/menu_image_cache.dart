@@ -20,7 +20,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// Cache manager dedicated to menu images. Lives in its own on-disk
 /// directory so clearing it doesn't touch other cached files in the app.
 class MenuImageCacheManager extends CacheManager with ImageCacheManager {
-  static const key = 'rue_menu_images';
+  static const key = 'sufrix_menu_images';
   static final MenuImageCacheManager _instance = MenuImageCacheManager._();
   factory MenuImageCacheManager() => _instance;
 

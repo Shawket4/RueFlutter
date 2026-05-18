@@ -2,19 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppColors {
-  static const primary = Color(0xFF1a56db);
-  static const secondary = Color(0xFF3b28cc);
-  static const success = Color(0xFF059669);
-  static const danger = Color(0xFFDC2626);
-  static const warning = Color(0xFFD97706);
+  static const primary = Color(0xFF0A2540); // Sufrix Navy
+  static const secondary = Color(0xFFC25B3F); // Terracotta
+  static const success = Color(0xFF16A34A); // Success Green
+  static const danger = Color(0xFFDC2626); // Destructive Red
+  static const warning = Color(0xFFD97706); // Warning Amber
 
-  static const bg = Color(0xFFF2F3F7);
+  static const bg = Color(0xFFF4F6F8); // Slate White Background
   static const surface = Colors.white;
-  static const border = Color(0xFFE5E7EB);
-  static const borderLight = Color(0xFFF3F4F6);
+  static const border = Color(0xFFE5E7EB); // Light gray border
+  static const borderLight = Color(0xFFF3F4F6); // Extra light gray border
 
-  static const textPrimary = Color(0xFF111827);
-  static const textSecondary = Color(0xFF6B7280);
+  static const textPrimary = Color(0xFF0A2540); // Sufrix Navy for primary text
+  static const textSecondary = Color(0xFF6B7280); // Muted Slate Gray for secondary text
   static const textMuted = Color(0xFF9CA3AF);
 
   static Color primaryTint(double opacity) => primary.withOpacity(opacity);

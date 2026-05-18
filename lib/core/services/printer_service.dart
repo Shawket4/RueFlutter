@@ -253,7 +253,7 @@ class PrinterService {
     final fontB = pw.Font.ttf(
         (await rootBundle.load('assets/fonts/Cairo-SemiBold.ttf')).buffer.asByteData());
     final logo  = pw.MemoryImage(
-        (await rootBundle.load('assets/TheRue.png')).buffer.asUint8List());
+        (await rootBundle.load('assets/Icon.png')).buffer.asUint8List());
 
     pw.TextStyle ts(pw.Font f, {double sz = 8, PdfColor? color}) =>
         pw.TextStyle(font: f, fontSize: sz, color: color);
@@ -353,7 +353,7 @@ class PrinterService {
     final fontB = pw.Font.ttf(
         (await rootBundle.load('assets/fonts/Cairo-SemiBold.ttf')).buffer.asByteData());
     final logo  = pw.MemoryImage(
-        (await rootBundle.load('assets/TheRue.png')).buffer.asUint8List());
+        (await rootBundle.load('assets/Icon.png')).buffer.asUint8List());
 
     pw.TextStyle ts(pw.Font f, {double sz = 8, PdfColor? color}) =>
         pw.TextStyle(font: f, fontSize: sz, color: color);

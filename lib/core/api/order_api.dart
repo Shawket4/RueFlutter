@@ -49,11 +49,11 @@ class OrderApi {
 
   /// Fetches all orders for the given filters.
   ///
-  /// Backend (`GET /orders`) paginates with default `per_page=30` and returns:
+  /// Backend (`GET /orders`) paginates (shift default `per_page=1000`) and returns:
   /// `{ data, total, page, per_page, total_pages, summary }`.
   Future<List<Order>> list({String? shiftId, String? branchId}) async {
     final baseParams = <String, dynamic>{
-      // RueRust API allows up to 999999; use a high page size for POS shift loads.
+      // Sufrix API allows up to 999999; use a high page size for POS shift loads.
       'per_page': 500,
     };
     if (shiftId  != null) baseParams['shift_id']  = shiftId;
@@ -74,7 +74,7 @@ class OrderApi {
         final raw = body['data'];
         if (raw is! List) break;
         items = raw;
-        // RueRust: top-level total_pages (not Laravel-style meta.last_page)
+        // Sufrix: top-level total_pages (not Laravel-style meta.last_page)
         totalPages = _asInt(body['total_pages']);
         if (totalPages == null) {
           final meta = body['meta'];

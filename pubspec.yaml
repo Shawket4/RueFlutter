@@ -1,5 +1,5 @@
-name: rue_pos
-description: Rue Coffee POS — Teller App (v2 Riverpod)
+name: sufrix_pos
+description: Sufrix POS — Teller App (v2 Riverpod)
 publish_to: none
 version: 2.0.0+1
 
@@ -24,20 +24,29 @@ dependencies:
   printing: ^5.14.2
   cached_network_image: ^3.4.1
   flutter_cache_manager: ^3.4.1
+  flutter_svg: ^2.0.10+1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
   flutter_launcher_icons: ^0.14.1
+  flutter_native_splash: ^2.4.0
 
 flutter_launcher_icons:
   android: true
   ios: true
   image_path: "assets/Icon.png"
-  background_color: "#ffffff"
-  adaptive_icon_background: "#ffffff"
-  adaptive_icon_foreground: "assets/TheRue.png"
+  adaptive_icon_background: "#0a2540"
+  adaptive_icon_foreground: "assets/IconForeground.png"
+  adaptive_icon_monochrome: "assets/IconMonochrome.png"
+
+flutter_native_splash:
+  color: "#F4F6F8"
+  image: "assets/Logo.png"
+  android: true
+  ios: true
+  web: false
 
 flutter:
   uses-material-design: true
@@ -48,5 +57,7 @@ flutter:
         - asset: assets/fonts/Cairo-SemiBold.ttf
           weight: 700
   assets:
-    - assets/TheRue.png
+    - assets/Icon.png
+    - assets/Icon.svg
+    - assets/Logo.svg
     - assets/lottie/

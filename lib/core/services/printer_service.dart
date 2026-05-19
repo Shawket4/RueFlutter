@@ -14,20 +14,21 @@ import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 
 class PrinterService {
   static const _printerWidth = 576;
-  static const _timeout      = Duration(seconds: 5);
+  static const _timeout = Duration(seconds: 5);
 
   // ── Public entry points ────────────────────────────────────────────────────
 
   static Future<String?> print({
-    required String       ip,
-    required int          port,
+    required String ip,
+    required int port,
     required PrinterBrand brand,
-    required Order        order,
-    required String       branchName,
-    String?               logoUrl,
-    bool                  kickDrawer = false,
+    required Order order,
+    required String branchName,
+    String? logoUrl,
+    bool kickDrawer = false,
   }) async {
-    final pdfBytes = await _buildReceiptPdf(order: order, branchName: branchName, logoUrl: logoUrl);
+    final pdfBytes = await _buildReceiptPdf(
+        order: order, branchName: branchName, logoUrl: logoUrl);
     return _send(
       ip: ip,
       port: port,
@@ -38,29 +39,30 @@ class PrinterService {
   }
 
   static Future<String?> printShiftReport({
-    required String       ip,
-    required int          port,
+    required String ip,
+    required int port,
     required PrinterBrand brand,
-    required ShiftReport  report,
-    required String       branchName,
-    String?               logoUrl,
+    required ShiftReport report,
+    required String branchName,
+    String? logoUrl,
   }) async {
-    final pdfBytes = await _buildShiftReportPdf(report: report, branchName: branchName, logoUrl: logoUrl);
+    final pdfBytes = await _buildShiftReportPdf(
+        report: report, branchName: branchName, logoUrl: logoUrl);
     return _send(ip: ip, port: port, brand: brand, pdfBytes: pdfBytes);
   }
 
   // ── Transport ──────────────────────────────────────────────────────────────
 
   static Future<String?> _send({
-    required String       ip,
-    required int          port,
+    required String ip,
+    required int port,
     required PrinterBrand brand,
-    required Uint8List    pdfBytes,
-    bool                  kickDrawer = false,
+    required Uint8List pdfBytes,
+    bool kickDrawer = false,
   }) {
     final cleanIp = ip.split('/').first;
     return switch (brand) {
-      PrinterBrand.star  => _printStar(
+      PrinterBrand.star => _printStar(
           ip: cleanIp,
           pdfBytes: pdfBytes,
           kickDrawer: kickDrawer,
@@ -75,9 +77,9 @@ class PrinterService {
   }
 
   static Future<String?> _printStar({
-    required String    ip,
+    required String ip,
     required Uint8List pdfBytes,
-    bool               kickDrawer = false,
+    bool kickDrawer = false,
   }) async {
     // 1. Kick drawer if requested (Star BEL command: 0x07)
     if (kickDrawer) {
@@ -93,10 +95,12 @@ class PrinterService {
 
     // 2. Print PDF
     try {
-      final device    = StarDevice(ip, StarInterfaceType.lan);
-      final connected = await StarXpand.instance.connect(device, monitor: false);
+      final device = StarDevice(ip, StarInterfaceType.lan);
+      final connected =
+          await StarXpand.instance.connect(device, monitor: false);
       if (!connected) return 'Could not connect to Star printer';
-      final ok = await StarXpand.instance.printPdf(pdfBytes, width: _printerWidth);
+      final ok =
+          await StarXpand.instance.printPdf(pdfBytes, width: _printerWidth);
       return ok ? null : 'Star print failed';
     } catch (e) {
       return 'Star printer error: $e';
@@ -106,17 +110,17 @@ class PrinterService {
   }
 
   static Future<String?> _printEpson({
-    required String    ip,
-    required int       port,
+    required String ip,
+    required int port,
     required Uint8List pdfBytes,
-    bool               kickDrawer = false,
+    bool kickDrawer = false,
   }) async {
     Socket? socket;
     try {
-      final page     = await Printing.raster(pdfBytes, dpi: 203).first;
-      final png      = await page.toPng();
+      final page = await Printing.raster(pdfBytes, dpi: 203).first;
+      final png = await page.toPng();
       final imgBytes = await _pngToEscPos(png, page.width, page.height);
-      
+
       socket = await Socket.connect(ip, port, timeout: _timeout);
       socket.setOption(SocketOption.tcpNoDelay, true);
 
@@ -142,18 +146,24 @@ class PrinterService {
   // ── ESC/POS rasteriser ─────────────────────────────────────────────────────
 
   static Future<Uint8List> _pngToEscPos(Uint8List png, int w, int h) async {
-    final codec   = await ui.instantiateImageCodec(png);
-    final frame   = await codec.getNextFrame();
-    final imgData = await frame.image.toByteData(format: ui.ImageByteFormat.rawRgba);
+    final codec = await ui.instantiateImageCodec(png);
+    final frame = await codec.getNextFrame();
+    final imgData =
+        await frame.image.toByteData(format: ui.ImageByteFormat.rawRgba);
     if (imgData == null) throw Exception('Failed to decode image');
     final pixels = imgData.buffer.asUint8List();
-    final buf    = <int>[];
+    final buf = <int>[];
     buf.addAll([0x1B, 0x40]);
     final wB = (w + 7) ~/ 8;
     buf.addAll([
-      0x1D, 0x76, 0x30, 0x00,
-      wB & 0xFF, (wB >> 8) & 0xFF,
-      h  & 0xFF, (h  >> 8) & 0xFF,
+      0x1D,
+      0x76,
+      0x30,
+      0x00,
+      wB & 0xFF,
+      (wB >> 8) & 0xFF,
+      h & 0xFF,
+      (h >> 8) & 0xFF,
     ]);
     for (int y = 0; y < h; y++) {
       for (int xB = 0; xB < wB; xB++) {
@@ -162,13 +172,13 @@ class PrinterService {
           final x = xB * 8 + bit;
           if (x < w) {
             final idx = (y * w + x) * 4;
-            final r   = pixels[idx];
-            final g   = pixels[idx + 1];
-            final b   = pixels[idx + 2];
-            final a   = pixels[idx + 3];
-            final rW  = ((r * a) + (255 * (255 - a))) ~/ 255;
-            final gW  = ((g * a) + (255 * (255 - a))) ~/ 255;
-            final bW  = ((b * a) + (255 * (255 - a))) ~/ 255;
+            final r = pixels[idx];
+            final g = pixels[idx + 1];
+            final b = pixels[idx + 2];
+            final a = pixels[idx + 3];
+            final rW = ((r * a) + (255 * (255 - a))) ~/ 255;
+            final gW = ((g * a) + (255 * (255 - a))) ~/ 255;
+            final bW = ((b * a) + (255 * (255 - a))) ~/ 255;
             if ((0.299 * rW + 0.587 * gW + 0.114 * bW).round() < 128) {
               byte |= (0x80 >> bit);
             }
@@ -188,24 +198,24 @@ class PrinterService {
   //  _divider / _thinDivider — consistent separators.
 
   static pw.Widget _row(
-    String    label,
-    String    value, {
-    required  pw.Font font,
-    required  pw.Font fontB,
-    double    sz        = 8,
-    bool      bold      = false,
-    bool      boldValue = false,
+    String label,
+    String value, {
+    required pw.Font font,
+    required pw.Font fontB,
+    double sz = 8,
+    bool bold = false,
+    bool boldValue = false,
     PdfColor? valueColor,
-    double    leftIndent = 0,
+    double leftIndent = 0,
   }) {
     final labelStyle = pw.TextStyle(
-      font:     bold ? fontB : font,
+      font: bold ? fontB : font,
       fontSize: sz,
     );
     final valueStyle = pw.TextStyle(
-      font:     (bold || boldValue) ? fontB : font,
+      font: (bold || boldValue) ? fontB : font,
       fontSize: sz,
-      color:    valueColor,
+      color: valueColor,
     );
     return pw.Padding(
       padding: pw.EdgeInsets.only(left: leftIndent, bottom: 1.5),
@@ -234,29 +244,32 @@ class PrinterService {
   /// Formats a payment method string for the order receipt footer.
   /// Handles all known Talabat variants and underscore-separated names.
   static String _fmtPayment(String raw) => switch (raw) {
-    'cash'           => 'Cash',
-    'card'           => 'Card',
-    'digital_wallet' => 'Digital Wallet',
-    'mixed'          => 'Mixed',
-    'talabat_online' => 'Talabat Online',
-    'talabat_cash'   => 'Talabat Cash',
-    _                => raw[0].toUpperCase() +
-                        raw.substring(1).replaceAll('_', ' '),
-  };
+        'cash' => 'Cash',
+        'card' => 'Card',
+        'digital_wallet' => 'Digital Wallet',
+        'mixed' => 'Mixed',
+        'talabat_online' => 'Talabat Online',
+        'talabat_cash' => 'Talabat Cash',
+        _ => raw[0].toUpperCase() + raw.substring(1).replaceAll('_', ' '),
+      };
 
   // ── Order receipt PDF ──────────────────────────────────────────────────────
 
   static Future<Uint8List> _buildReceiptPdf({
-    required Order  order,
+    required Order order,
     required String branchName,
-    String?         logoUrl,
+    String? logoUrl,
   }) async {
-    final pdf   = pw.Document();
-    final font  = pw.Font.ttf(
-        (await rootBundle.load('assets/fonts/Cairo-Regular.ttf')).buffer.asByteData());
+    final pdf = pw.Document();
+    final font = pw.Font.ttf(
+        (await rootBundle.load('assets/fonts/Cairo-Regular.ttf'))
+            .buffer
+            .asByteData());
     final fontB = pw.Font.ttf(
-        (await rootBundle.load('assets/fonts/Cairo-SemiBold.ttf')).buffer.asByteData());
-    
+        (await rootBundle.load('assets/fonts/Cairo-SemiBold.ttf'))
+            .buffer
+            .asByteData());
+
     pw.MemoryImage? logo;
     if (logoUrl != null && logoUrl.isNotEmpty) {
       try {
@@ -266,8 +279,9 @@ class PrinterService {
         }
       } catch (_) {}
     }
-    logo ??= pw.MemoryImage(
-        (await rootBundle.load('assets/IconForeground.png')).buffer.asUint8List());
+    logo ??= pw.MemoryImage((await rootBundle.load('assets/IconForeground.png'))
+        .buffer
+        .asUint8List());
 
     pw.TextStyle ts(pw.Font f, {double sz = 8, PdfColor? color}) =>
         pw.TextStyle(font: f, fontSize: sz, color: color);
@@ -275,15 +289,13 @@ class PrinterService {
     final dts = _fmtDt(order.createdAt);
 
     pdf.addPage(pw.Page(
-      pageFormat: const PdfPageFormat(
-          72 * PdfPageFormat.mm, double.infinity,
-          marginTop:    2 * PdfPageFormat.mm,
+      pageFormat: const PdfPageFormat(72 * PdfPageFormat.mm, double.infinity,
+          marginTop: 2 * PdfPageFormat.mm,
           marginBottom: 2 * PdfPageFormat.mm,
-          marginLeft:   2 * PdfPageFormat.mm,
-          marginRight:  2 * PdfPageFormat.mm),
-      build: (ctx) => pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.stretch, children: [
-
+          marginLeft: 2 * PdfPageFormat.mm,
+          marginRight: 2 * PdfPageFormat.mm),
+      build: (ctx) => pw
+          .Column(crossAxisAlignment: pw.CrossAxisAlignment.stretch, children: [
         // Header
         pw.Center(child: pw.Image(logo!, width: 56)),
         pw.SizedBox(height: 2),
@@ -292,8 +304,8 @@ class PrinterService {
         _divider(),
 
         // Order number + timestamp
-        _row('Order #${order.orderNumber}', dts, font: font, fontB: fontB,
-            bold: true, sz: 8),
+        _row('Order #${order.orderNumber}', dts,
+            font: font, fontB: fontB, bold: true, sz: 8),
         _divider(),
 
         // Items
@@ -301,7 +313,8 @@ class PrinterService {
           final sizePart = item.sizeLabel != null ? ' (${item.sizeLabel})' : '';
           return [
             _row('${item.quantity}x ${item.itemName}$sizePart',
-                egp(item.lineTotal), font: font, fontB: fontB, bold: true, sz: 8),
+                egp(item.lineTotal),
+                font: font, fontB: fontB, bold: true, sz: 8),
             ...item.addons.map((a) {
               final aPrice = a.unitPrice > 0 ? '+${egp(a.unitPrice)}' : '';
               return aPrice.isNotEmpty
@@ -309,7 +322,8 @@ class PrinterService {
                       font: font, fontB: fontB, sz: 7.5, leftIndent: 4)
                   : pw.Padding(
                       padding: const pw.EdgeInsets.only(left: 4, bottom: 1.5),
-                      child: pw.Text('  + ${a.addonName}', style: ts(font, sz: 7.5)));
+                      child: pw.Text('  + ${a.addonName}',
+                          style: ts(font, sz: 7.5)));
             }),
             ...item.optionals.map((o) {
               final oPrice = o.price > 0 ? '+${egp(o.price)}' : '';
@@ -318,7 +332,8 @@ class PrinterService {
                       font: font, fontB: fontB, sz: 7.5, leftIndent: 4)
                   : pw.Padding(
                       padding: const pw.EdgeInsets.only(left: 4, bottom: 1.5),
-                      child: pw.Text('  + ${o.fieldName}', style: ts(font, sz: 7.5)));
+                      child: pw.Text('  + ${o.fieldName}',
+                          style: ts(font, sz: 7.5)));
             }),
           ];
         }),
@@ -326,11 +341,11 @@ class PrinterService {
 
         // Totals
         if (order.discountAmount > 0)
-          _row('Subtotal', egp(order.subtotal), font: font, fontB: fontB, sz: 8),
+          _row('Subtotal', egp(order.subtotal),
+              font: font, fontB: fontB, sz: 8),
         if (order.discountAmount > 0)
           _row('Discount', '- ${egp(order.discountAmount)}',
-              font: font, fontB: fontB, sz: 8,
-              valueColor: PdfColors.red700),
+              font: font, fontB: fontB, sz: 8, valueColor: PdfColors.red700),
         if (order.taxAmount > 0)
           _row('Tax', egp(order.taxAmount), font: font, fontB: fontB, sz: 8),
         _row('TOTAL', egp(order.totalAmount),
@@ -347,7 +362,9 @@ class PrinterService {
           _row('Teller', order.tellerName, font: font, fontB: fontB, sz: 7.5),
 
         pw.SizedBox(height: 4),
-        pw.Center(child: pw.Text('Thank you for visiting!', style: ts(font, sz: 7.5))),
+        pw.Center(
+            child:
+                pw.Text('Thank you for visiting!', style: ts(font, sz: 7.5))),
         pw.SizedBox(height: 2),
         _divider(),
       ]),
@@ -359,14 +376,18 @@ class PrinterService {
 
   static Future<Uint8List> _buildShiftReportPdf({
     required ShiftReport report,
-    required String      branchName,
-    String?              logoUrl,
+    required String branchName,
+    String? logoUrl,
   }) async {
-    final pdf   = pw.Document();
-    final font  = pw.Font.ttf(
-        (await rootBundle.load('assets/fonts/Cairo-Regular.ttf')).buffer.asByteData());
+    final pdf = pw.Document();
+    final font = pw.Font.ttf(
+        (await rootBundle.load('assets/fonts/Cairo-Regular.ttf'))
+            .buffer
+            .asByteData());
     final fontB = pw.Font.ttf(
-        (await rootBundle.load('assets/fonts/Cairo-SemiBold.ttf')).buffer.asByteData());
+        (await rootBundle.load('assets/fonts/Cairo-SemiBold.ttf'))
+            .buffer
+            .asByteData());
 
     pw.MemoryImage? logo;
     if (logoUrl != null && logoUrl.isNotEmpty) {
@@ -377,29 +398,37 @@ class PrinterService {
         }
       } catch (_) {}
     }
-    logo ??= pw.MemoryImage(
-        (await rootBundle.load('assets/IconForeground.png')).buffer.asUint8List());
+    logo ??= pw.MemoryImage((await rootBundle.load('assets/IconForeground.png'))
+        .buffer
+        .asUint8List());
 
     pw.TextStyle ts(pw.Font f, {double sz = 8, PdfColor? color}) =>
         pw.TextStyle(font: f, fontSize: sz, color: color);
 
     // Helpers that close over font/fontB
     pw.Widget row(String l, String v,
-            {bool bold = false, bool boldVal = false,
-             double sz = 8, PdfColor? color, double indent = 0}) =>
+            {bool bold = false,
+            bool boldVal = false,
+            double sz = 8,
+            PdfColor? color,
+            double indent = 0}) =>
         _row(l, v,
-            font: font, fontB: fontB,
-            bold: bold, boldValue: boldVal,
-            sz: sz, valueColor: color, leftIndent: indent);
+            font: font,
+            fontB: fontB,
+            bold: bold,
+            boldValue: boldVal,
+            sz: sz,
+            valueColor: color,
+            leftIndent: indent);
 
-    pw.Widget div()     => _divider();
+    pw.Widget div() => _divider();
     pw.Widget thinDiv() => _thinDivider();
 
     // Formatted timestamps
-    final openDt  = report.openedAt.toLocal();
-    final bizDate = '${openDt.day.toString().padLeft(2,'0')}/'
-                    '${openDt.month.toString().padLeft(2,'0')}/${openDt.year}';
-    final openTs  = _fmtDt(report.openedAt);
+    final openDt = report.openedAt.toLocal();
+    final bizDate = '${openDt.day.toString().padLeft(2, '0')}/'
+        '${openDt.month.toString().padLeft(2, '0')}/${openDt.year}';
+    final openTs = _fmtDt(report.openedAt);
     final closeTs = report.closedAt != null ? _fmtDt(report.closedAt!) : null;
 
     // The timestamp shown at the top:
@@ -412,29 +441,32 @@ class PrinterService {
 
     // Cash shortage: positive = drawer short (declared < system), negative = over
     // shortage = system - declared  →  positive means you're missing money
-    final shortage = (report.closingCashDeclared != null &&
-                      report.closingCashSystem   != null)
-        ? report.closingCashSystem! - report.closingCashDeclared!
-        : null;
+    final shortage =
+        (report.closingCashDeclared != null && report.closingCashSystem != null)
+            ? report.closingCashSystem! - report.closingCashDeclared!
+            : null;
 
     pdf.addPage(pw.Page(
-      pageFormat: const PdfPageFormat(
-          72 * PdfPageFormat.mm, double.infinity,
-          marginTop:    3 * PdfPageFormat.mm,
+      pageFormat: const PdfPageFormat(72 * PdfPageFormat.mm, double.infinity,
+          marginTop: 3 * PdfPageFormat.mm,
           marginBottom: 3 * PdfPageFormat.mm,
-          marginLeft:   3 * PdfPageFormat.mm,
-          marginRight:  3 * PdfPageFormat.mm),
-      build: (ctx) => pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.stretch, children: [
-
+          marginLeft: 3 * PdfPageFormat.mm,
+          marginRight: 3 * PdfPageFormat.mm),
+      build: (ctx) => pw
+          .Column(crossAxisAlignment: pw.CrossAxisAlignment.stretch, children: [
         // ── Header ────────────────────────────────────────────────────────────
         pw.Center(child: pw.Image(logo!, width: 56)),
         pw.SizedBox(height: 3),
-        pw.Center(child: pw.Text(branchName,         style: ts(fontB, sz: 8.5))),
-        pw.Center(child: pw.Text('Till Close Report', style: ts(fontB, sz: 9.5))),
+        pw.Center(child: pw.Text(branchName, style: ts(fontB, sz: 8.5))),
+        pw.Center(
+            child: pw.Text('Till Close Report', style: ts(fontB, sz: 9.5))),
         pw.SizedBox(height: 4),
-        pw.Center(child: pw.Text('Business Date: $bizDate', style: ts(font, sz: 7.5))),
-        pw.Center(child: pw.Text('$topTsLabel: $topTsValue', style: ts(font, sz: 7.5))),
+        pw.Center(
+            child:
+                pw.Text('Business Date: $bizDate', style: ts(font, sz: 7.5))),
+        pw.Center(
+            child:
+                pw.Text('$topTsLabel: $topTsValue', style: ts(font, sz: 7.5))),
         pw.SizedBox(height: 4),
         div(),
 
@@ -445,34 +477,37 @@ class PrinterService {
         if (closeTs != null)
           row('Closed', closeTs, sz: 7.5)
         else
-          pw.Center(child: pw.Text(
-              '— Interim Report (Shift Still Open) —',
-              style: ts(font, sz: 7, color: PdfColors.grey600))),
+          pw.Center(
+              child: pw.Text('— Interim Report (Shift Still Open) —',
+                  style: ts(font, sz: 7, color: PdfColors.grey600))),
         pw.SizedBox(height: 2),
         div(),
 
         // ── Payments breakdown ────────────────────────────────────────────────
         pw.SizedBox(height: 2),
-        pw.Center(child: pw.Text('PAYMENTS', style: ts(fontB, sz: 7.5,
-            color: PdfColors.grey700))),
+        pw.Center(
+            child: pw.Text('PAYMENTS',
+                style: ts(fontB, sz: 7.5, color: PdfColors.grey700))),
         pw.SizedBox(height: 4),
 
         // Each payment method — label, order count sub-line, amount right-aligned
         ...report.paymentSummary.map((p) => pw.Padding(
-          padding: const pw.EdgeInsets.only(bottom: 3),
-          child: pw.Row(children: [
-            pw.Expanded(child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-                pw.Text(p.displayLabel,
-                    style: ts(fontB, sz: 8)),
-                pw.Text('${p.orderCount} order${p.orderCount == 1 ? '' : 's'}',
-                    style: ts(font, sz: 7, color: PdfColors.grey600)),
-              ],
+              padding: const pw.EdgeInsets.only(bottom: 3),
+              child: pw.Row(children: [
+                pw.Expanded(
+                    child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text(p.displayLabel, style: ts(fontB, sz: 8)),
+                    pw.Text(
+                        '${p.orderCount} order${p.orderCount == 1 ? '' : 's'}',
+                        style: ts(font, sz: 7, color: PdfColors.grey600)),
+                  ],
+                )),
+                pw.Text(egp(p.total),
+                    style: ts(fontB, sz: 8), textAlign: pw.TextAlign.right),
+              ]),
             )),
-            pw.Text(egp(p.total),
-                style: ts(fontB, sz: 8), textAlign: pw.TextAlign.right),
-          ]),
-        )),
 
         pw.SizedBox(height: 2),
         thinDiv(),
@@ -487,11 +522,12 @@ class PrinterService {
 
         // ── Drawer operations ─────────────────────────────────────────────────
         pw.SizedBox(height: 2),
-        pw.Center(child: pw.Text('DRAWER OPERATIONS', style: ts(fontB, sz: 7.5,
-            color: PdfColors.grey700))),
+        pw.Center(
+            child: pw.Text('DRAWER OPERATIONS',
+                style: ts(fontB, sz: 7.5, color: PdfColors.grey700))),
         pw.SizedBox(height: 4),
 
-        row('Pay In',  egp(report.cashMovementsIn),  sz: 8),
+        row('Pay In', egp(report.cashMovementsIn), sz: 8),
         row('Pay Out', egp(report.cashMovementsOut), sz: 8),
 
         if (report.cashMovements.isNotEmpty) ...[
@@ -499,11 +535,11 @@ class PrinterService {
           thinDiv(),
           pw.SizedBox(height: 2),
           ...report.cashMovements.map((m) {
-            final sign   = m.isIn ? '+' : '−';
+            final sign = m.isIn ? '+' : '−';
             final amount = '$sign ${egp(m.amount.abs())}';
-            final time   = () {
+            final time = () {
               final l = m.createdAt.toLocal();
-              return '${l.hour.toString().padLeft(2,'0')}:${l.minute.toString().padLeft(2,'0')}';
+              return '${l.hour.toString().padLeft(2, '0')}:${l.minute.toString().padLeft(2, '0')}';
             }();
             // Two-line: note on top, time + amount on the row
             return pw.Padding(
@@ -517,8 +553,10 @@ class PrinterService {
                         style: ts(font, sz: 7, color: PdfColors.grey600)),
                     pw.Spacer(),
                     pw.Text(amount,
-                        style: ts(m.isIn ? fontB : font, sz: 7.5,
-                            color: m.isIn ? PdfColors.green700 : PdfColors.red700),
+                        style: ts(m.isIn ? fontB : font,
+                            sz: 7.5,
+                            color:
+                                m.isIn ? PdfColors.green700 : PdfColors.red700),
                         textAlign: pw.TextAlign.right),
                   ]),
                 ],
@@ -532,8 +570,9 @@ class PrinterService {
 
         // ── Cash reconciliation ───────────────────────────────────────────────
         pw.SizedBox(height: 2),
-        pw.Center(child: pw.Text('CASH RECONCILIATION', style: ts(fontB, sz: 7.5,
-            color: PdfColors.grey700))),
+        pw.Center(
+            child: pw.Text('CASH RECONCILIATION',
+                style: ts(fontB, sz: 7.5, color: PdfColors.grey700))),
         pw.SizedBox(height: 4),
 
         row('Opening Cash', egp(report.openingCash), sz: 8),
@@ -545,8 +584,9 @@ class PrinterService {
           row('Actual in Drawer', egp(report.closingCashDeclared!),
               bold: true, sz: 8)
         else
-          pw.Center(child: pw.Text('(Shift not yet closed)',
-              style: ts(font, sz: 7.5, color: PdfColors.grey600))),
+          pw.Center(
+              child: pw.Text('(Shift not yet closed)',
+                  style: ts(font, sz: 7.5, color: PdfColors.grey600))),
 
         if (shortage != null) ...[
           pw.SizedBox(height: 2),
@@ -568,8 +608,9 @@ class PrinterService {
 
         // ── Footer ────────────────────────────────────────────────────────────
         pw.SizedBox(height: 4),
-        pw.Center(child: pw.Text('— End of Report —',
-            style: ts(fontB, sz: 8, color: PdfColors.grey600))),
+        pw.Center(
+            child: pw.Text('— End of Report —',
+                style: ts(fontB, sz: 8, color: PdfColors.grey600))),
         pw.SizedBox(height: 2),
         div(),
       ]),
@@ -586,16 +627,21 @@ class PrinterService {
     } catch (_) {}
 
     try {
-      final file = await DefaultCacheManager().getSingleFile(url).timeout(const Duration(seconds: 4));
+      final file = await DefaultCacheManager()
+          .getSingleFile(url)
+          .timeout(const Duration(seconds: 4));
       return await file.readAsBytes();
     } catch (_) {}
 
     try {
       final client = HttpClient();
-      final request = await client.getUrl(Uri.parse(url)).timeout(const Duration(seconds: 3));
+      final request = await client
+          .getUrl(Uri.parse(url))
+          .timeout(const Duration(seconds: 3));
       final response = await request.close();
       if (response.statusCode == 200) {
-        final bytes = await response.fold<List<int>>([], (previous, element) => previous..addAll(element));
+        final bytes = await response.fold<List<int>>(
+            [], (previous, element) => previous..addAll(element));
         return Uint8List.fromList(bytes);
       }
     } catch (_) {}

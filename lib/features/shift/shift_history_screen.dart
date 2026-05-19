@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../core/api/order_api.dart';
-import '../../core/api/shift_api.dart';
+import '../../core/repositories/order_repository.dart';
+import '../../core/repositories/shift_repository.dart';
 import 'shift_report_preview_sheet.dart';
+import '../order/widgets/receipt_preview_sheet.dart';
 import '../../core/models/order.dart';
 import '../../core/models/shift.dart';
 import '../../core/providers/auth_notifier.dart';
-import '../../core/services/printer_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatting.dart';
 import '../../shared/widgets/error_banner.dart';
@@ -37,7 +37,7 @@ class _ShiftHistoryScreenState extends ConsumerState<ShiftHistoryScreen> {
     }
     setState(() { _loading = true; _error = null; });
     try {
-      final shifts = await ref.read(shiftApiProvider).list(branchId);
+      final shifts = await ref.read(shiftRepositoryProvider).listShifts(branchId);
       if (mounted) setState(() { _shifts = shifts; _loading = false; });
     } catch (e) {
       if (mounted) setState(() { _error = e.toString(); _loading = false; });
@@ -102,7 +102,7 @@ class _ShiftTileState extends ConsumerState<_ShiftTile> {
     }
     setState(() { _loadingOrders = true; _expanded = true; });
     try {
-      final orders = await ref.read(orderApiProvider).list(shiftId: widget.shift.id);
+      final orders = await ref.read(orderRepositoryProvider).listForShift(widget.shift.id);
       if (mounted) setState(() { _orders = orders; _loadingOrders = false; });
     } catch (e) {
       if (mounted) setState(() { _ordersError = e.toString(); _loadingOrders = false; });
@@ -112,7 +112,7 @@ class _ShiftTileState extends ConsumerState<_ShiftTile> {
   Future<void> _printReport() async {
     setState(() => _printing = true);
     try {
-      final report = await ref.read(shiftApiProvider).getReport(widget.shift.id);
+      final report = await ref.read(shiftRepositoryProvider).getReport(widget.shift.id);
       if (mounted) {
         setState(() => _printing = false);
         await ShiftReportPreviewSheet.show(context, report);
@@ -247,31 +247,16 @@ class _PastOrderRowState extends ConsumerState<_PastOrderRow> {
   bool _printing = false;
 
   Future<void> _print() async {
-    final branch = ref.read(authProvider).branch;
-    if (branch == null || !branch.hasPrinter) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('No printer configured'),
-          backgroundColor: AppColors.warning));
-      return;
-    }
     setState(() => _printing = true);
     try {
       Order full;
       try {
-        full = await ref.read(orderApiProvider).get(widget.order.id);
+        full = await ref.read(orderRepositoryProvider).get(widget.order.id);
       } catch (_) {
         full = widget.order;
       }
-      final err = await PrinterService.print(
-          ip:         branch.printerIp!,
-          port:       branch.printerPort,
-          order:      full,
-          branchName: branch.name,
-          brand:      branch.printerBrand!);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content:         Text(err ?? 'Receipt printed'),
-            backgroundColor: err != null ? AppColors.danger : AppColors.success));
+        await ReceiptPreviewSheet.show(context, full);
       }
     } finally {
       if (mounted) setState(() => _printing = false);

@@ -4,6 +4,7 @@ import '../api/shift_api.dart';
 import '../api/inventory_api.dart';
 import '../models/shift.dart';
 import '../models/inventory.dart';
+import '../models/shift_report.dart';
 import '../storage/storage_service.dart';
 
 class ShiftRepository {
@@ -34,8 +35,17 @@ class ShiftRepository {
     }
   }
 
-  Future<List<Shift>> listShifts(String branchId) =>
-      _shiftApi.list(branchId);
+  Future<List<Shift>> listShifts(String branchId) async {
+    try {
+      final shifts = await _shiftApi.list(branchId);
+      await _storage.saveShifts(branchId, shifts.map((s) => s.toJson()).toList());
+      return shifts;
+    } catch (_) {
+      final cached = _storage.loadShifts(branchId);
+      if (cached != null) return cached.map(Shift.fromJson).toList();
+      rethrow;
+    }
+  }
 
   Future<Shift> openShift(String branchId, int openingCash) async {
     final shift = await _shiftApi.open(branchId, openingCash);
@@ -68,8 +78,27 @@ class ShiftRepository {
   }
 
   Future<List<InventoryItem>> getInventory(String branchId) async {
-    try { return await _inventoryApi.items(branchId); }
-    catch (_) { return []; }
+    try {
+      final items = await _inventoryApi.items(branchId);
+      await _storage.saveInventory(branchId, items.map((i) => i.toJson()).toList().cast<Map<String, dynamic>>());
+      return items;
+    } catch (_) {
+      final cached = _storage.loadInventory(branchId);
+      if (cached != null) return cached.map(InventoryItem.fromJson).toList();
+      return [];
+    }
+  }
+
+  Future<ShiftReport> getReport(String shiftId) async {
+    try {
+      final report = await _shiftApi.getReport(shiftId);
+      await _storage.saveShiftReport(shiftId, report.toJson());
+      return report;
+    } catch (_) {
+      final cached = _storage.loadShiftReport(shiftId);
+      if (cached != null) return ShiftReport.fromJson(cached);
+      rethrow;
+    }
   }
 }
 

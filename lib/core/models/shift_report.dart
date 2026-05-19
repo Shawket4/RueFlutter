@@ -16,6 +16,12 @@ class PaymentSummaryItem {
         orderCount: (j['order_count'] as num).toInt(),
       );
 
+  Map<String, dynamic> toJson() => {
+        'payment_method': paymentMethod,
+        'total': total,
+        'order_count': orderCount,
+      };
+
   String get displayLabel => switch (paymentMethod) {
         'cash' => 'Cash',
         'card' => 'Card',
@@ -49,6 +55,13 @@ class CashMovementItem {
         movedByName: j['moved_by_name'] as String,
         createdAt: DateTime.parse(j['created_at'] as String),
       );
+
+  Map<String, dynamic> toJson() => {
+        'amount': amount,
+        'note': note,
+        'moved_by_name': movedByName,
+        'created_at': createdAt.toIso8601String(),
+      };
 }
 
 class ShiftReport {
@@ -125,9 +138,33 @@ class ShiftReport {
       printedAt: DateTime.parse(j['printed_at'] as String),
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'shift': {
+          'id': shiftId,
+          'branch_id': branchId,
+          'teller_name': tellerName,
+          'status': status,
+          'opening_cash': openingCash,
+          'closing_cash_declared': closingCashDeclared,
+          'closing_cash_system': closingCashSystem,
+          'opened_at': openedAt.toIso8601String(),
+          'closed_at': closedAt?.toIso8601String(),
+        },
+        'payment_summary': paymentSummary.map((p) => p.toJson()).toList(),
+        'cash_movements': cashMovements.map((c) => c.toJson()).toList(),
+        'total_payments': totalPayments,
+        'net_payments': netPayments,
+        'cash_movements_in': cashMovementsIn,
+        'cash_movements_out': cashMovementsOut,
+        'voided_amount': totalReturns,
+        'printed_at': printedAt.toIso8601String(),
+      };
+
   int get expectedCash {
-    if (closingCashSystem != null)
+    if (closingCashSystem != null) {
       return closingCashSystem!; // closed shift — use server value
+    }
     final cashPayments = paymentSummary
         .where((p) =>
             p.paymentMethod == 'cash' || p.paymentMethod == 'talabat_cash')

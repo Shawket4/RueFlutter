@@ -4,7 +4,6 @@ import 'package:lottie/lottie.dart';
 import '../../../core/providers/auth_notifier.dart';
 import '../../../core/providers/menu_notifier.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../core/utils/formatting.dart';
 import 'menu_card.dart';
 import 'shared_widgets.dart';
 

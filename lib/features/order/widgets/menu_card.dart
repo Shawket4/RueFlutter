@@ -76,7 +76,7 @@ class _MenuCardState extends ConsumerState<MenuCard>
                     ? MenuImage(
                         url: item.imageUrl!,
                         fit: BoxFit.cover,
-                        placeholder: ImageSkeleton(),
+                        placeholder: const ImageSkeleton(),
                         errorWidget: MissingItemCard(item: item, style: style),
                       )
                     : MissingItemCard(item: item, style: style),
@@ -288,6 +288,8 @@ class _MenuCardSkeletonState extends State<MenuCardSkeleton>
 }
 
 class ImageSkeleton extends StatefulWidget {
+  const ImageSkeleton({super.key});
+
   @override
   State<ImageSkeleton> createState() => _ImageSkeletonState();
 }

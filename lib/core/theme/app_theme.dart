@@ -30,6 +30,7 @@ TextStyle cairo({
   double? height,
   double letterSpacing = 0,
   TextDecoration? decoration,
+  FontStyle? fontStyle,
 }) =>
     GoogleFonts.cairo(
       fontSize: fontSize,
@@ -38,6 +39,7 @@ TextStyle cairo({
       height: height,
       letterSpacing: letterSpacing,
       decoration: decoration,
+      fontStyle: fontStyle,
     );
 
 class AppShadows {

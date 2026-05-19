@@ -56,8 +56,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     if (name.isEmpty) {
       _shakeCtrl.forward(from: 0);
       setState(() => _pin = '');
-      ref.read(authProvider.notifier).state =
-          ref.read(authProvider).copyWith(error: 'Please enter your name');
+      ref.read(authProvider.notifier).setError('Please enter your name');
       return;
     }
     if (_pin.length < 4) return;
@@ -144,7 +143,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             const SizedBox(height: 32),
 
             if (expiry == SessionExpiry.expired)
-              _InfoBanner(
+              const _InfoBanner(
                 icon: Icons.lock_clock_outlined,
                 text: 'Your session expired — please sign in again.',
                 color: AppColors.warning,

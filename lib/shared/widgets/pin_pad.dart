@@ -155,7 +155,7 @@ class _KeyState extends State<_Key> with SingleTickerProviderStateMixin {
               ),
               alignment: Alignment.center,
               child: widget.isBack
-                  ? Icon(Icons.backspace_outlined,
+                  ? const Icon(Icons.backspace_outlined,
                       size: 20, color: AppColors.textSecondary)
                   : Text(
                       widget.label,

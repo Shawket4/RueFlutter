@@ -47,6 +47,12 @@ flutter_native_splash:
   android: true
   ios: true
   web: false
+  android_gravity: center
+  ios_content_mode: scaleAspectFit
+  fullscreen: false
+  android_12:
+    image: "assets/IconForeground.png"
+    color: "#F4F6F8"
 
 flutter:
   uses-material-design: true
@@ -58,6 +64,7 @@ flutter:
           weight: 700
   assets:
     - assets/Icon.png
+    - assets/IconForeground.png
     - assets/Icon.svg
     - assets/Logo.svg
     - assets/lottie/

@@ -22,6 +22,7 @@ import '../../../shared/widgets/responsive_sheet.dart';
 import '../../../shared/widgets/sync_status_banner.dart';
 import '../helpers/payment_helpers.dart';
 import 'receipt_sheet.dart';
+import 'receipt_preview_sheet.dart';
 import 'shared_widgets.dart';
 
 class CheckoutSheet extends ConsumerStatefulWidget {
@@ -101,6 +102,98 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
   }
 
   bool get _tipIsCash => isCashMethod(_tipPaymentMethod);
+
+  void _previewReceipt() {
+    final cart = ref.read(cartProvider);
+    final shift = ref.read(shiftProvider).shift;
+    final customer =
+        _customerCtrl.text.trim().isEmpty ? null : _customerCtrl.text.trim();
+
+    if (cart.isEmpty) {
+      setState(() => _error = 'Cart is empty');
+      return;
+    }
+    if (shift == null) {
+      setState(() => _error = 'No open shift');
+      return;
+    }
+    if (!_isSplit && cart.payment.isEmpty) {
+      setState(() => _error = 'Select a payment method');
+      return;
+    }
+
+    final int? tip = _parsedTip;
+    final String? tipMethod = tip != null ? _tipPaymentMethod : null;
+
+    final int? tendered = _showTendered && !_isSplit
+        ? (double.tryParse(_tenderedCtrl.text) != null
+            ? (double.parse(_tenderedCtrl.text) * 100).round()
+            : null)
+        : null;
+
+    List<PaymentSplit>? splits;
+    if (_isSplit) {
+      splits = _buildSplits();
+    }
+
+    final discountType =
+        _selectedDiscount?.dtype ?? cart.discountType?.apiValue;
+    final discountValue = _selectedDiscount?.value ?? cart.discountValue;
+    final discountId = _selectedDiscount?.id;
+    final paymentMethod = _isSplit
+        ? (splits != null && splits.isNotEmpty ? (splits.length == 1 ? splits.first.method : 'mixed') : 'mixed')
+        : cart.payment;
+
+    final draftOrder = Order(
+      id: '',
+      branchId: shift.branchId,
+      shiftId: shift.id,
+      tellerId: ref.read(authProvider).user?.id ?? '',
+      tellerName: ref.read(authProvider).user?.name ?? '',
+      orderNumber: 0,
+      status: 'draft',
+      paymentMethod: paymentMethod,
+      subtotal: cart.subtotal,
+      discountType: discountType,
+      discountValue: discountValue ?? 0,
+      discountAmount: cart.discountAmount,
+      taxAmount: 0,
+      totalAmount: cart.total,
+      customerName: customer,
+      notes: cart.notes,
+      amountTendered: tendered,
+      tipAmount: tip,
+      tipPaymentMethod: tipMethod,
+      discountId: discountId,
+      createdAt: DateTime.now(),
+      items: cart.items.map((ci) => OrderItem(
+        id: '',
+        itemName: ci.itemName,
+        sizeLabel: ci.sizeLabel,
+        unitPrice: ci.unitPrice,
+        quantity: ci.quantity,
+        lineTotal: ci.lineTotal,
+        addons: ci.addons.map((a) => OrderItemAddon(
+          id: '',
+          orderItemId: '',
+          addonItemId: a.addonItemId,
+          addonName: a.name,
+          unitPrice: a.priceModifier,
+          quantity: a.quantity,
+          lineTotal: a.priceModifier * a.quantity,
+        )).toList(),
+        optionals: ci.optionals.map((o) => OrderItemOptional(
+          id: '',
+          orderItemId: '',
+          optionalFieldId: o.optionalFieldId,
+          fieldName: o.name,
+          price: o.price,
+        )).toList(),
+      )).toList(),
+    );
+
+    ReceiptPreviewSheet.show(context, draftOrder, title: 'Draft Receipt Preview');
+  }
 
   Future<void> _place() async {
     final cart = ref.read(cartProvider);
@@ -507,7 +600,9 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
                       onToggle: () => setState(() {
                         _isSplit = !_isSplit;
                         if (!_isSplit) {
-                          for (final c in _splitCtrs.values) c.clear();
+                          for (final c in _splitCtrs.values) {
+                            c.clear();
+                          }
                           _activeSplitMethods.clear();
                           final pay = ref.read(cartProvider).payment;
                           _showTendered =
@@ -598,13 +693,48 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
             decoration: const BoxDecoration(
                 color: Colors.white,
                 border: Border(top: BorderSide(color: AppColors.border))),
-            child: AppButton(
-              label: 'Place Order',
-              loading: _loading,
-              width: double.infinity,
-              height: 52,
-              icon: Icons.check_rounded,
-              onTap: _place,
+            child: Row(
+              children: [
+                Expanded(
+                  child: AppButton(
+                    label: 'Place Order',
+                    loading: _loading,
+                    width: double.infinity,
+                    height: 52,
+                    icon: Icons.check_rounded,
+                    onTap: _place,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                SizedBox(
+                  height: 52,
+                  child: OutlinedButton(
+                    onPressed: _previewReceipt,
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: AppColors.primary, width: 1.5),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.receipt_long_rounded, color: AppColors.primary, size: 18),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Preview',
+                          style: cairo(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],

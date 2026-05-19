@@ -54,7 +54,7 @@ class OptionalFieldsCard extends StatelessWidget {
                     color: AppColors.textSecondary,
                     letterSpacing: 0.7)),
             const SizedBox(width: 6),
-            Pill('Optional', AppColors.primary),
+            const Pill('Optional', AppColors.primary),
             const Spacer(),
             if (selCount > 0) CountBadge(count: selCount),
           ]),

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/cart.dart';
 import '../models/menu.dart';
 import 'client.dart';
+import '../storage/storage_service.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  RecipeIngredient — output model (same shape as backend response)
@@ -219,7 +220,8 @@ List<RecipeIngredient>? computeRecipeLocally({
 // ─────────────────────────────────────────────────────────────────────────────
 class RecipeApi {
   final DioClient _c;
-  RecipeApi(this._c);
+  final StorageService _storage;
+  RecipeApi(this._c, this._storage);
 
   /// Returns a recipe ingredient list for the given item + selections.
   ///
@@ -252,22 +254,38 @@ class RecipeApi {
       // local == null means data was insufficient → fall through to network
     }
 
-    // ── Network fallback ──────────────────────────────────────────────────
-    final res = await _c.dio.post('/orders/preview-recipe', data: {
-      'menu_item_id': menuItemId,
-      if (sizeLabel != null) 'size_label': sizeLabel,
-      'addons': addons
-          .map((a) => {'addon_item_id': a.addonItemId, 'quantity': a.quantity})
-          .toList(),
-      'optional_field_ids': optionals.map((o) => o.optionalFieldId).toList(),
-    });
+    final cacheKey = 'recipe_${menuItemId}_${sizeLabel ?? "nosize"}_addons_${addons.map((a) => "${a.addonItemId}:${a.quantity}").join(",")}_opts_${optionals.map((o) => o.optionalFieldId).join(",")}'.hashCode.toString();
 
-    return (res.data as List)
-        .map((e) =>
-            RecipeIngredient.fromJson(Map<String, dynamic>.from(e as Map)))
-        .toList();
+    try {
+      // ── Network fallback ──────────────────────────────────────────────────
+      final res = await _c.dio.post('/orders/preview-recipe', data: {
+        'menu_item_id': menuItemId,
+        if (sizeLabel != null) 'size_label': sizeLabel,
+        'addons': addons
+            .map((a) => {'addon_item_id': a.addonItemId, 'quantity': a.quantity})
+            .toList(),
+        'optional_field_ids': optionals.map((o) => o.optionalFieldId).toList(),
+      });
+
+      final listRaw = res.data as List;
+      await _storage.saveRecipe(cacheKey, listRaw.map((e) => Map<String, dynamic>.from(e as Map)).toList());
+
+      return listRaw
+          .map((e) =>
+              RecipeIngredient.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList();
+    } catch (_) {
+      final cached = _storage.loadRecipe(cacheKey);
+      if (cached != null) {
+        return cached.map((e) => RecipeIngredient.fromJson(e)).toList();
+      }
+      rethrow;
+    }
   }
 }
 
 final recipeApiProvider =
-    Provider<RecipeApi>((ref) => RecipeApi(ref.watch(dioClientProvider)));  
+    Provider<RecipeApi>((ref) => RecipeApi(
+          ref.watch(dioClientProvider),
+          ref.watch(storageServiceProvider),
+        ));  

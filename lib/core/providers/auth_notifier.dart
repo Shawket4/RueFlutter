@@ -66,6 +66,8 @@ class AuthNotifier extends Notifier<AuthState> {
 
   void clearError() => state = state.copyWith(clearError: true); // Task 1.8
 
+  void setError(String err) => state = state.copyWith(error: err);
+
   Future<void> init() async {
     state = state.copyWith(isLoading: true);
     final session = await ref.read(authRepositoryProvider).restoreSession();

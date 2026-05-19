@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../../../core/models/menu.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatting.dart';
-import '../helpers/payment_helpers.dart';
 import 'shared_widgets.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -115,7 +114,7 @@ class _AddonCardState extends State<AddonCard> {
                       color: AppColors.textSecondary,
                       letterSpacing: 0.7)),
               const SizedBox(width: 6),
-              if (widget.isRequired) Pill('Required', AppColors.danger),
+              if (widget.isRequired) const Pill('Required', AppColors.danger),
               if (widget.isMulti) ...[
                 const SizedBox(width: 4),
                 Pill('Multi', accent),

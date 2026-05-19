@@ -39,7 +39,19 @@ class OrderRepository {
     }
   }
 
-  Future<Order> get(String id) => _api.get(id);
+  Future<Order> get(String id) async {
+    try {
+      final order = await _api.get(id);
+      await _storage.saveOrders('single_$id', [order.toJson()]);
+      return order;
+    } catch (_) {
+      final cachedList = _storage.loadOrders('single_$id');
+      if (cachedList != null && cachedList.isNotEmpty) {
+        return Order.fromJson(cachedList.first);
+      }
+      rethrow;
+    }
+  }
 
   // Task 1.2: Remove force unwrapping on reason
   Future<Order> voidOrder(String id,

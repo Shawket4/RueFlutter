@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../core/api/shift_api.dart';
+import '../../core/repositories/shift_repository.dart';
 import 'shift_report_preview_sheet.dart';
 import '../../core/providers/auth_notifier.dart';
 import '../../core/providers/shift_notifier.dart';
@@ -47,7 +47,9 @@ class _CloseShiftScreenState extends ConsumerState<CloseShiftScreen> {
       ..removeListener(_updateDeclared)
       ..dispose();
     _noteCtrl.dispose();
-    for (final c in _invCtrs.values) c.dispose();
+    for (final c in _invCtrs.values) {
+      c.dispose();
+    }
     super.dispose();
   }
 
@@ -87,7 +89,7 @@ class _CloseShiftScreenState extends ConsumerState<CloseShiftScreen> {
     }
     setState(() => _printing = true);
     try {
-      final report = await ref.read(shiftApiProvider).getReport(shift.id);
+      final report = await ref.read(shiftRepositoryProvider).getReport(shift.id);
       if (mounted) {
         setState(() => _printing = false);
         await ShiftReportPreviewSheet.show(context, report);

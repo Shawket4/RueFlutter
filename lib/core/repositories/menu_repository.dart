@@ -37,14 +37,30 @@ class MenuRepository {
     }
   }
 
-  Future<MenuItem> fetchItem(String id) => _api.item(id);
+  Future<MenuItem> fetchItem(String id) async {
+    try {
+      final item = await _api.item(id);
+      await _storage.saveMenuItem(id, item.toJson());
+      return item;
+    } catch (_) {
+      final cached = _storage.loadMenuItem(id);
+      if (cached != null) return MenuItem.fromJson(cached);
+      rethrow;
+    }
+  }
 
-  /// Fetches all addon items for an org. Falls back to an empty list on error
-  /// so a network failure here doesn't block the whole menu load.
   Future<List<AddonItem>> fetchAddonItems(String orgId) async {
     try {
-      return await _api.addonItems(orgId);
+      final addons = await _api.addonItems(orgId);
+      await _storage.saveAddons(orgId, addons.map((a) => a.toJson()).toList());
+      return addons;
     } catch (_) {
+      final cached = _storage.loadAddons(orgId);
+      if (cached != null) {
+        return (cached as List)
+            .map((a) => AddonItem.fromJson(a as Map<String, dynamic>))
+            .toList();
+      }
       return [];
     }
   }

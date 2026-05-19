@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/api/menu_api.dart';
 import '../../../core/api/recipe_api.dart';
 import '../../../core/models/cart.dart';
 import '../../../core/models/menu.dart';
@@ -56,7 +55,7 @@ class _ItemDetailSheetState extends ConsumerState<ItemDetailSheet> {
   late List<OptionalField> _optionalFields;
   final Set<String> _selectedOptionals = {};
 
-  bool _recipeLoading = false;
+  final bool _recipeLoading = false;
 
   bool get _isEdit => widget.editIndex != null && widget.existingItem != null;
 

@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/providers/auth_notifier.dart';
 import '../../core/providers/shift_notifier.dart';
-import '../../core/services/connectivity_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatting.dart';
 import '../../shared/widgets/app_button.dart';
@@ -73,7 +72,6 @@ class _OpenShiftScreenState extends ConsumerState<OpenShiftScreen> {
   Widget build(BuildContext context) {
     // Task 3.7
     final isTablet = MediaQuery.of(context).size.shortestSide >= 600;
-    final isOnline = ref.watch(isOnlineProvider);
     final suggested =
         ref.watch(shiftProvider.select((s) => s.suggestedOpeningCash));
 

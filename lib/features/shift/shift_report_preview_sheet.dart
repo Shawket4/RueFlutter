@@ -197,7 +197,7 @@ class _ShiftReportPreviewSheetState
               // ── Shift info card ──────────────────────────────────────────
               _Card(
                   child: Column(children: [
-                _SectionTitle('SHIFT DETAILS'),
+                const _SectionTitle('SHIFT DETAILS'),
                 const SizedBox(height: 8),
                 _Row('Opened', openTs),
                 if (closeTs != null) _Row('Closed', closeTs),
@@ -217,7 +217,7 @@ class _ShiftReportPreviewSheetState
               // ── Payments card ────────────────────────────────────────────
               _Card(
                   child: Column(children: [
-                _SectionTitle('PAYMENT BREAKDOWN'),
+                const _SectionTitle('PAYMENT BREAKDOWN'),
                 const SizedBox(height: 8),
                 if (r.paymentSummary.isEmpty)
                   Padding(
@@ -294,7 +294,7 @@ class _ShiftReportPreviewSheetState
               // ── Cash movements card ──────────────────────────────────────
               _Card(
                   child: Column(children: [
-                _SectionTitle('CASH MOVEMENTS'),
+                const _SectionTitle('CASH MOVEMENTS'),
                 const SizedBox(height: 8),
                 if (r.cashMovements.isEmpty)
                   Padding(

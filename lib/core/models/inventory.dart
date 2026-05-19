@@ -15,4 +15,11 @@ class InventoryItem {
     unit:         j['unit'],
     currentStock: double.tryParse(j['current_stock'].toString()) ?? 0,
   );
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'ingredient_name': name,
+    'unit': unit,
+    'current_stock': currentStock,
+  };
 }

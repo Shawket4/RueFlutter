@@ -64,6 +64,13 @@ class ShiftNotifier extends Notifier<ShiftState> {
   @override
   ShiftState build() => const ShiftState();
 
+  void updateShiftSynced(Shift shift) {
+    state = state.copyWith(
+      shift: shift,
+      isLocalShift: false,
+    );
+  }
+
   Future<void> load(String branchId) async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {

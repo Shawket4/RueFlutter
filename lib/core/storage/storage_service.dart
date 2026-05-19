@@ -56,6 +56,17 @@ class StorageService {
     try { return DateTime.parse(raw); } catch (_) { return null; }
   }
 
+  Future<void> saveAddons(String orgId, List<Map<String, dynamic>> addons) =>
+      _prefs.setString('addons_$orgId', jsonEncode(addons));
+
+  List<Map<String, dynamic>>? loadAddons(String orgId) {
+    final raw = _prefs.getString('addons_$orgId');
+    if (raw == null) return null;
+    try { return (jsonDecode(raw) as List).cast<Map<String, dynamic>>(); } catch (_) { 
+      _prefs.remove('addons_$orgId'); return null; 
+    }
+  }
+
   Future<void> saveDiscounts(String orgId, List<Map<String, dynamic>> discounts) =>
       _prefs.setString('discounts_$orgId', jsonEncode(discounts));
 
@@ -75,6 +86,61 @@ class StorageService {
     if (raw == null) return null;
     try { return (jsonDecode(raw) as List).cast<Map<String, dynamic>>(); } catch (_) { 
       _prefs.remove('orders_$shiftId'); return null; 
+    }
+  }
+
+  Future<void> saveShifts(String branchId, List<Map<String, dynamic>> shifts) =>
+      _prefs.setString('shifts_list_$branchId', jsonEncode(shifts));
+
+  List<Map<String, dynamic>>? loadShifts(String branchId) {
+    final raw = _prefs.getString('shifts_list_$branchId');
+    if (raw == null) return null;
+    try { return (jsonDecode(raw) as List).cast<Map<String, dynamic>>(); } catch (_) {
+      _prefs.remove('shifts_list_$branchId'); return null;
+    }
+  }
+
+  Future<void> saveInventory(String branchId, List<Map<String, dynamic>> items) =>
+      _prefs.setString('inventory_$branchId', jsonEncode(items));
+
+  List<Map<String, dynamic>>? loadInventory(String branchId) {
+    final raw = _prefs.getString('inventory_$branchId');
+    if (raw == null) return null;
+    try { return (jsonDecode(raw) as List).cast<Map<String, dynamic>>(); } catch (_) {
+      _prefs.remove('inventory_$branchId'); return null;
+    }
+  }
+
+  Future<void> saveMenuItem(String itemId, Map<String, dynamic> item) =>
+      _prefs.setString('menu_item_$itemId', jsonEncode(item));
+
+  Map<String, dynamic>? loadMenuItem(String itemId) {
+    final raw = _prefs.getString('menu_item_$itemId');
+    if (raw == null) return null;
+    try { return jsonDecode(raw) as Map<String, dynamic>; } catch (_) {
+      _prefs.remove('menu_item_$itemId'); return null;
+    }
+  }
+
+  Future<void> saveShiftReport(String shiftId, Map<String, dynamic> report) =>
+      _prefs.setString('shift_report_$shiftId', jsonEncode(report));
+
+  Map<String, dynamic>? loadShiftReport(String shiftId) {
+    final raw = _prefs.getString('shift_report_$shiftId');
+    if (raw == null) return null;
+    try { return jsonDecode(raw) as Map<String, dynamic>; } catch (_) {
+      _prefs.remove('shift_report_$shiftId'); return null;
+    }
+  }
+
+  Future<void> saveRecipe(String key, List<Map<String, dynamic>> recipe) =>
+      _prefs.setString('recipe_preview_$key', jsonEncode(recipe));
+
+  List<Map<String, dynamic>>? loadRecipe(String key) {
+    final raw = _prefs.getString('recipe_preview_$key');
+    if (raw == null) return null;
+    try { return (jsonDecode(raw) as List).cast<Map<String, dynamic>>(); } catch (_) {
+      _prefs.remove('recipe_preview_$key'); return null;
     }
   }
 

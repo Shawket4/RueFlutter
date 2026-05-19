@@ -2,17 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lottie/lottie.dart';
-import '../../core/api/order_api.dart';
+import '../../core/repositories/order_repository.dart';
 import '../../core/models/order.dart';
-import '../../core/providers/auth_notifier.dart';
 import '../../core/providers/order_history_notifier.dart';
 import '../../core/providers/shift_notifier.dart';
-import '../../core/services/printer_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatting.dart';
 import '../../shared/widgets/error_banner.dart';
 import '../../shared/widgets/label_value.dart';
 import 'void_order_sheet.dart';
+import 'widgets/receipt_preview_sheet.dart';
 import 'helpers/payment_helpers.dart';
 
 class OrderHistoryScreen extends ConsumerStatefulWidget {
@@ -199,7 +198,7 @@ class _OrderTileState extends ConsumerState<_OrderTile> {
     if (_loading) return;
     setState(() => _loading = true);
     try {
-      final full = await ref.read(orderApiProvider).get(widget.order.id);
+      final full = await ref.read(orderRepositoryProvider).get(widget.order.id);
       if (mounted) {
         setState(() => _loading = false);
         _show(full);
@@ -401,39 +400,11 @@ class _OrderDetailSheet extends ConsumerStatefulWidget {
 
 class _OrderDetailSheetState extends ConsumerState<_OrderDetailSheet> {
   late Order _order;
-  bool _printing = false;
-  String? _printError;
 
   @override
   void initState() {
     super.initState();
     _order = widget.order;
-  }
-
-  Future<void> _print() async {
-    final branch = ref.read(authProvider).branch;
-    if (branch == null || !branch.hasPrinter) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('No printer configured for this branch'),
-        backgroundColor: AppColors.warning,
-      ));
-      return;
-    }
-    setState(() {
-      _printing = true;
-      _printError = null;
-    });
-    final err = await PrinterService.print(
-        ip: branch.printerIp!,
-        port: branch.printerPort,
-        brand: branch.printerBrand!,
-        order: _order,
-        branchName: branch.name);
-    if (mounted)
-      setState(() {
-        _printing = false;
-        _printError = err;
-      });
   }
 
   void _onVoided(Order voided) {
@@ -494,21 +465,11 @@ class _OrderDetailSheetState extends ConsumerState<_OrderDetailSheet> {
                   ],
                 ])),
             if (!isVoided && !isPending) ...[
-              _printing
-                  ? const Padding(
-                      padding: EdgeInsets.all(8),
-                      child: SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: AppColors.primary)))
-                  : _SheetAction(
-                      icon: Icons.print_rounded,
-                      label: _printError != null ? 'Retry' : 'Print',
-                      color: _printError != null
-                          ? AppColors.danger
-                          : AppColors.primary,
-                      onTap: _print),
+              _SheetAction(
+                  icon: Icons.print_rounded,
+                  label: 'Print',
+                  color: AppColors.primary,
+                  onTap: () => ReceiptPreviewSheet.show(context, order)),
               const SizedBox(width: 8),
               _SheetAction(
                   icon: Icons.cancel_outlined,

@@ -82,7 +82,9 @@ class MenuNotifier extends Notifier<MenuState> {
     if (!force &&
         state.loadedOrgId == orgId &&
         state.items.isNotEmpty &&
-        !state.fromCache) return;
+        !state.fromCache) {
+      return;
+    }
 
     state = state.copyWith(isLoading: true, clearError: true);
     try {

@@ -35,7 +35,7 @@ class TopBar extends ConsumerWidget {
         SmallIconBtn(
             icon: Icons.arrow_back_rounded, onTap: () => context.go('/home')),
         const SizedBox(width: 6),
-        SyncBtn(),
+        const SyncBtn(),
         const SizedBox(width: 6),
         Text(lastSynced,
             style: cairo(fontSize: 11, color: AppColors.textMuted)),
@@ -169,6 +169,8 @@ class StatusBanner extends StatelessWidget {
 //  SYNC BUTTON
 // ─────────────────────────────────────────────────────────────────────────────
 class SyncBtn extends ConsumerStatefulWidget {
+  const SyncBtn({super.key});
+
   @override
   ConsumerState<SyncBtn> createState() => _SyncBtnState();
 }

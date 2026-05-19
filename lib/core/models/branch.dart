@@ -10,6 +10,7 @@ class Branch {
   final String?       printerIp;
   final int           printerPort;
   final bool          isActive;
+  final String?       orgLogoUrl;
 
   const Branch({
     required this.id,
@@ -21,6 +22,7 @@ class Branch {
     this.printerIp,
     this.printerPort = 9100,
     required this.isActive,
+    this.orgLogoUrl,
   });
 
   bool get hasPrinter =>
@@ -38,12 +40,14 @@ class Branch {
     printerIp:    j['printer_ip']   as String?,
     printerPort:  (j['printer_port'] as int?) ?? 9100,
     isActive:     (j['is_active']   as bool?) ?? true,
+    orgLogoUrl:   (j['org_logo_url'] ?? j['org_url'] ?? j['logo_url']) as String?,
   );
 
   Map<String, dynamic> toJson() => {
     'id': id, 'org_id': orgId, 'name': name, 'address': address,
     'phone': phone, 'printer_brand': printerBrand?.name,
     'printer_ip': printerIp, 'printer_port': printerPort,
-    'is_active': isActive,
+    'is_active': isActive, 'org_logo_url': orgLogoUrl,
   };
 }
+

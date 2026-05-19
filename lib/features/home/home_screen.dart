@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,6 +6,11 @@ import '../../core/models/shift.dart';
 import '../../core/providers/auth_notifier.dart';
 import '../../core/providers/order_history_notifier.dart';
 import '../../core/providers/shift_notifier.dart';
+import '../../core/providers/menu_notifier.dart';
+import '../../core/providers/discount_notifier.dart';
+import '../../core/repositories/shift_repository.dart';
+import '../../core/repositories/order_repository.dart';
+import '../../core/api/recipe_api.dart';
 import '../shift/cash_movement_sheet.dart';
 import '../../core/services/connectivity_service.dart';
 import '../../core/services/offline_queue.dart';
@@ -22,17 +28,100 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
+  StreamSubscription<bool>? _connectivitySub;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+    _connectivitySub = ConnectivityService.instance.stream.listen((online) {
+      if (online && mounted) {
+        _load();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _connectivitySub?.cancel();
+    super.dispose();
   }
 
   Future<void> _load() async {
     final branchId = ref.read(authProvider).user?.branchId;
     if (branchId == null) return;
+
+    // 1. Load active shift status (works offline/online)
     await ref.read(shiftProvider.notifier).load(branchId);
+
     final shift = ref.read(shiftProvider).shift;
+    final user = ref.read(authProvider).user;
+    final orgId = user?.orgId;
+
+    // Trigger proactive background pre-fetching asynchronously if online
+    final isOnline = ConnectivityService.instance.isOnline;
+    if (isOnline) {
+      unawaited(() async {
+        try {
+          // Pre-fetch shifts history list
+          final shiftsList = await ref.read(shiftRepositoryProvider).listShifts(branchId);
+          // Optimization: deep-crawl only the 5 most recent shifts to balance offline utility and performance
+          final recentShifts = shiftsList.take(5);
+          for (final s in recentShifts) {
+            try {
+              // Pre-fetch the report for each shift
+              await ref.read(shiftRepositoryProvider).getReport(s.id);
+              
+              final shiftOrders = await ref.read(orderRepositoryProvider).listForShift(s.id);
+              for (final o in shiftOrders) {
+                try {
+                  await ref.read(orderRepositoryProvider).get(o.id);
+                } catch (_) {}
+              }
+            } catch (_) {}
+          }
+        } catch (_) {}
+
+        try {
+          // Pre-fetch branch inventory list
+          await ref.read(shiftRepositoryProvider).getInventory(branchId);
+        } catch (_) {}
+
+        if (orgId != null) {
+          try {
+            // Pre-fetch categories, products, and addon items
+            await ref.read(menuProvider.notifier).load(orgId, force: true);
+
+            // Pre-fetch active discounts list
+            await ref.read(discountProvider.notifier).load(orgId, force: true);
+
+            // Pre-fetch recipe previews for all loaded items
+            final menuItems = ref.read(menuProvider).items;
+            final allAddons = ref.read(menuProvider).allAddons;
+            for (final item in menuItems) {
+              try {
+                await ref.read(recipeApiProvider).preview(
+                  menuItemId: item.id,
+                  addons: [],
+                  optionals: [],
+                  menuItem: item,
+                  allAddonItems: allAddons,
+                );
+              } catch (_) {}
+            }
+          } catch (_) {}
+        }
+
+        if (shift != null) {
+          try {
+            // Pre-fetch current shift report
+            await ref.read(shiftRepositoryProvider).getReport(shift.id);
+          } catch (_) {}
+        }
+      }());
+    }
+
+    // 2. Load system cash and orders (works offline/online)
     if (shift != null) {
       await ref
           .read(orderHistoryProvider.notifier)

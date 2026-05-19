@@ -10,6 +10,7 @@ import '../models/branch.dart';
 import '../models/order.dart';
 import '../models/shift_report.dart';
 import '../utils/formatting.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 
 class PrinterService {
   static const _printerWidth = 576;
@@ -23,9 +24,10 @@ class PrinterService {
     required PrinterBrand brand,
     required Order        order,
     required String       branchName,
+    String?               logoUrl,
     bool                  kickDrawer = false,
   }) async {
-    final pdfBytes = await _buildReceiptPdf(order: order, branchName: branchName);
+    final pdfBytes = await _buildReceiptPdf(order: order, branchName: branchName, logoUrl: logoUrl);
     return _send(
       ip: ip,
       port: port,
@@ -41,8 +43,9 @@ class PrinterService {
     required PrinterBrand brand,
     required ShiftReport  report,
     required String       branchName,
+    String?               logoUrl,
   }) async {
-    final pdfBytes = await _buildShiftReportPdf(report: report, branchName: branchName);
+    final pdfBytes = await _buildShiftReportPdf(report: report, branchName: branchName, logoUrl: logoUrl);
     return _send(ip: ip, port: port, brand: brand, pdfBytes: pdfBytes);
   }
 
@@ -246,14 +249,25 @@ class PrinterService {
   static Future<Uint8List> _buildReceiptPdf({
     required Order  order,
     required String branchName,
+    String?         logoUrl,
   }) async {
     final pdf   = pw.Document();
     final font  = pw.Font.ttf(
         (await rootBundle.load('assets/fonts/Cairo-Regular.ttf')).buffer.asByteData());
     final fontB = pw.Font.ttf(
         (await rootBundle.load('assets/fonts/Cairo-SemiBold.ttf')).buffer.asByteData());
-    final logo  = pw.MemoryImage(
-        (await rootBundle.load('assets/Icon.png')).buffer.asUint8List());
+    
+    pw.MemoryImage? logo;
+    if (logoUrl != null && logoUrl.isNotEmpty) {
+      try {
+        final bytes = await _downloadImage(logoUrl);
+        if (bytes != null) {
+          logo = pw.MemoryImage(bytes);
+        }
+      } catch (_) {}
+    }
+    logo ??= pw.MemoryImage(
+        (await rootBundle.load('assets/IconForeground.png')).buffer.asUint8List());
 
     pw.TextStyle ts(pw.Font f, {double sz = 8, PdfColor? color}) =>
         pw.TextStyle(font: f, fontSize: sz, color: color);
@@ -271,7 +285,7 @@ class PrinterService {
           crossAxisAlignment: pw.CrossAxisAlignment.stretch, children: [
 
         // Header
-        pw.Center(child: pw.Image(logo, width: 56)),
+        pw.Center(child: pw.Image(logo!, width: 56)),
         pw.SizedBox(height: 2),
         pw.Center(child: pw.Text(branchName, style: ts(font, sz: 7.5))),
         pw.SizedBox(height: 2),
@@ -346,14 +360,25 @@ class PrinterService {
   static Future<Uint8List> _buildShiftReportPdf({
     required ShiftReport report,
     required String      branchName,
+    String?              logoUrl,
   }) async {
     final pdf   = pw.Document();
     final font  = pw.Font.ttf(
         (await rootBundle.load('assets/fonts/Cairo-Regular.ttf')).buffer.asByteData());
     final fontB = pw.Font.ttf(
         (await rootBundle.load('assets/fonts/Cairo-SemiBold.ttf')).buffer.asByteData());
-    final logo  = pw.MemoryImage(
-        (await rootBundle.load('assets/Icon.png')).buffer.asUint8List());
+
+    pw.MemoryImage? logo;
+    if (logoUrl != null && logoUrl.isNotEmpty) {
+      try {
+        final bytes = await _downloadImage(logoUrl);
+        if (bytes != null) {
+          logo = pw.MemoryImage(bytes);
+        }
+      } catch (_) {}
+    }
+    logo ??= pw.MemoryImage(
+        (await rootBundle.load('assets/IconForeground.png')).buffer.asUint8List());
 
     pw.TextStyle ts(pw.Font f, {double sz = 8, PdfColor? color}) =>
         pw.TextStyle(font: f, fontSize: sz, color: color);
@@ -403,7 +428,7 @@ class PrinterService {
           crossAxisAlignment: pw.CrossAxisAlignment.stretch, children: [
 
         // ── Header ────────────────────────────────────────────────────────────
-        pw.Center(child: pw.Image(logo, width: 56)),
+        pw.Center(child: pw.Image(logo!, width: 56)),
         pw.SizedBox(height: 3),
         pw.Center(child: pw.Text(branchName,         style: ts(fontB, sz: 8.5))),
         pw.Center(child: pw.Text('Till Close Report', style: ts(fontB, sz: 9.5))),
@@ -550,5 +575,30 @@ class PrinterService {
       ]),
     ));
     return pdf.save();
+  }
+
+  static Future<Uint8List?> _downloadImage(String url) async {
+    try {
+      final fileInfo = await DefaultCacheManager().getFileFromCache(url);
+      if (fileInfo != null) {
+        return await fileInfo.file.readAsBytes();
+      }
+    } catch (_) {}
+
+    try {
+      final file = await DefaultCacheManager().getSingleFile(url).timeout(const Duration(seconds: 4));
+      return await file.readAsBytes();
+    } catch (_) {}
+
+    try {
+      final client = HttpClient();
+      final request = await client.getUrl(Uri.parse(url)).timeout(const Duration(seconds: 3));
+      final response = await request.close();
+      if (response.statusCode == 200) {
+        final bytes = await response.fold<List<int>>([], (previous, element) => previous..addAll(element));
+        return Uint8List.fromList(bytes);
+      }
+    } catch (_) {}
+    return null;
   }
 }

@@ -14,16 +14,31 @@ class OrderRepository {
     required String shiftId,
     required CartState cart,
     required String idempotencyKey,
+    String? customerName,
+    String? discountType,
+    int? discountValue,
+    String? discountId,
+    int? amountTendered,
+    int? tipAmount,
+    String? tipPaymentMethod,
+    List<PaymentSplit>? paymentSplits,
+    DateTime? createdAt,
   }) =>
       _api.create(
         branchId: branchId,
         shiftId: shiftId,
         paymentMethod: cart.payment,
         items: cart.items,
-        customerName: cart.customerName,
-        discountType: cart.discountType?.apiValue,
-        discountValue: cart.discountValue,
+        customerName: customerName ?? cart.customerName,
+        discountType: discountType ?? cart.discountType?.apiValue,
+        discountValue: discountValue ?? cart.discountValue,
+        discountId: discountId ?? cart.discountId,
+        amountTendered: amountTendered ?? cart.amountTendered,
+        tipAmount: tipAmount ?? cart.tipAmount,
+        tipPaymentMethod: tipPaymentMethod,
+        paymentSplits: paymentSplits ?? cart.paymentSplits,
         idempotencyKey: idempotencyKey,
+        createdAt: createdAt,
       );
 
   Future<List<Order>> listForShift(String shiftId) async {
@@ -53,12 +68,12 @@ class OrderRepository {
     }
   }
 
-  // Task 1.2: Remove force unwrapping on reason
   Future<Order> voidOrder(String id,
           {String? reason, bool restoreInventory = false}) =>
-      _api.voidOrder(id, reason: reason ?? 'No reason provided', restoreInventory: restoreInventory);
+      _api.voidOrder(id,
+          reason: reason ?? 'No reason provided',
+          restoreInventory: restoreInventory);
 
-  // Task 1.1: Replace append with save since the notifier handles the list merging
   void saveOrdersToCache(String shiftId, List<Order> current) {
     _storage.saveOrders(shiftId, current.map((o) => o.toJson()).toList());
   }

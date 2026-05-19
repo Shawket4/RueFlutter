@@ -186,6 +186,9 @@ class PaymentSplit {
 // ── CartState ─────────────────────────────────────────────────
 @immutable
 class CartState {
+  final String?             id;
+  final String?             displayName;
+  final DateTime?           createdAt;
   final List<CartItem>      items;
   final String              payment;
   final String?             customerName;
@@ -198,6 +201,9 @@ class CartState {
   final List<PaymentSplit>? paymentSplits;
 
   const CartState({
+    this.id,
+    this.displayName,
+    this.createdAt,
     this.items          = const [],
     this.payment        = 'cash',
     this.customerName,
@@ -216,9 +222,10 @@ class CartState {
 
   int get discountAmount {
     if (discountType == null || (discountValue ?? 0) == 0) return 0;
-    return discountType == DiscountType.percentage
-        ? (subtotal * discountValue! / 100).round()
-        : discountValue!;
+    if (discountType == DiscountType.percentage) {
+      return (subtotal * discountValue! / 100).round();
+    }
+    return discountValue!.clamp(0, subtotal);
   }
 
   int get total => subtotal - discountAmount;
@@ -232,6 +239,9 @@ class CartState {
       paymentSplits != null && paymentSplits!.isNotEmpty;
 
   CartState copyWith({
+    String?              id,
+    String?              displayName,
+    DateTime?            createdAt,
     List<CartItem>?      items,
     String?              payment,
     String?              customerName,
@@ -248,6 +258,9 @@ class CartState {
     bool clearSplits     = false,
     bool clearDiscountId = false,
   }) => CartState(
+    id:             id             ?? this.id,
+    displayName:    displayName    ?? this.displayName,
+    createdAt:      createdAt      ?? this.createdAt,
     items:          items          ?? this.items,
     payment:        payment        ?? this.payment,
     customerName:   clearCustomer   ? null : (customerName  ?? this.customerName),
@@ -259,6 +272,48 @@ class CartState {
     tipAmount:      tipAmount       ?? this.tipAmount,
     paymentSplits:  clearSplits     ? null : (paymentSplits ?? this.paymentSplits),
   );
+
+  Map<String, dynamic> toStorageJson() => {
+        'id': id,
+        'display_name': displayName,
+        'created_at': createdAt?.toIso8601String(),
+        'items': items.map((i) => i.toStorageJson()).toList(),
+        'payment': payment,
+        'customer_name': customerName,
+        'notes': notes,
+        'discount_type': discountType?.name,
+        'discount_value': discountValue,
+        'discount_id': discountId,
+        'amount_tendered': amountTendered,
+        'tip_amount': tipAmount,
+        'payment_splits': paymentSplits?.map((s) => s.toApiJson()).toList(),
+      };
+
+  factory CartState.fromStorageJson(Map<String, dynamic> j) => CartState(
+        id: j['id'] as String?,
+        displayName: j['display_name'] as String?,
+        createdAt: j['created_at'] != null ? DateTime.tryParse(j['created_at'] as String) : null,
+        items: (j['items'] as List? ?? [])
+            .map((i) => CartItem.fromStorageJson(i as Map<String, dynamic>))
+            .toList(),
+        payment: j['payment'] as String? ?? 'cash',
+        customerName: j['customer_name'] as String?,
+        notes: j['notes'] as String?,
+        discountType: j['discount_type'] != null
+            ? DiscountType.values
+                .firstWhere((e) => e.name == j['discount_type'])
+            : null,
+        discountValue: j['discount_value'] as int?,
+        discountId: j['discount_id'] as String?,
+        amountTendered: j['amount_tendered'] as int?,
+        tipAmount: j['tip_amount'] as int?,
+        paymentSplits: (j['payment_splits'] as List? ?? [])
+            .map((s) => PaymentSplit(
+                  method: s['method'] as String,
+                  amount: (s['amount'] as num).toInt(),
+                ))
+            .toList(),
+      );
 
   static const empty = CartState();
 }

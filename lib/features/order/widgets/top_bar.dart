@@ -39,7 +39,31 @@ class TopBar extends ConsumerWidget {
         const SizedBox(width: 6),
         Text(lastSynced,
             style: cairo(fontSize: 11, color: AppColors.textMuted)),
-        const SizedBox(width: 14),
+        const SizedBox(width: 12),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: AppColors.primary.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(AppRadius.xs),
+            border: Border.all(color: AppColors.primary.withOpacity(0.25)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.shopping_bag_rounded, size: 12, color: AppColors.primary),
+              const SizedBox(width: 5),
+              Text(
+                cart.displayName ?? 'Order 1',
+                style: cairo(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primary,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 12),
         Expanded(
           child: Container(
             height: 38,

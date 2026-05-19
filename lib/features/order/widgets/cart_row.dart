@@ -90,7 +90,14 @@ class CartRow extends ConsumerWidget {
               icon: Icons.remove,
               onTap: () {
                 HapticFeedback.lightImpact();
-                ref.read(cartProvider.notifier).setQty(index, item.quantity - 1);
+                if (item.quantity == 1) {
+                  _confirmRemove(context, ref, item.itemName, () {
+                    ref.read(cartProvider.notifier).setQty(index, 0);
+                    _showSnackbar(context, ref, item.itemName);
+                  });
+                } else {
+                  ref.read(cartProvider.notifier).setQty(index, item.quantity - 1);
+                }
               }),
           Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -131,31 +138,10 @@ class CartRow extends ConsumerWidget {
           GestureDetector(
             onTap: () {
               HapticFeedback.mediumImpact();
-              final cartNotifier = ref.read(cartProvider.notifier);
-              final itemName = item.itemName;
-              
-              cartNotifier.removeAt(index);
-              
-              ScaffoldMessenger.of(context).clearSnackBars();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('$itemName removed', 
-                      style: cairo(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w600)),
-                  backgroundColor: Colors.white,
-                  elevation: 8,
-                  behavior: SnackBarBehavior.floating,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    side: const BorderSide(color: AppColors.border),
-                  ),
-                  action: SnackBarAction(
-                    label: 'Undo',
-                    textColor: AppColors.primary,
-                    onPressed: () => cartNotifier.restoreLastRemoved(),
-                  ),
-                  duration: const Duration(seconds: 4),
-                ),
-              );
+              _confirmRemove(context, ref, item.itemName, () {
+                ref.read(cartProvider.notifier).removeAt(index);
+                _showSnackbar(context, ref, item.itemName);
+              });
             },
             child: Container(
                 width: 28,
@@ -169,6 +155,53 @@ class CartRow extends ConsumerWidget {
           ),
         ]),
       ]),
+    );
+  }
+
+  void _confirmRemove(BuildContext context, WidgetRef ref, String itemName, VoidCallback onRemove) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
+        title: Text('Remove Item?', style: cairo(fontWeight: FontWeight.w700)),
+        content: Text('Are you sure you want to remove "$itemName" from the cart?', style: cairo(fontSize: 13, color: AppColors.textSecondary)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Cancel', style: cairo(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              onRemove();
+            },
+            child: Text('Remove', style: cairo(color: AppColors.danger, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSnackbar(BuildContext context, WidgetRef ref, String itemName) {
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('$itemName removed',
+            style: cairo(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w600)),
+        backgroundColor: Colors.white,
+        elevation: 8,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: AppColors.border),
+        ),
+        action: SnackBarAction(
+          label: 'Undo',
+          textColor: AppColors.primary,
+          onPressed: () => ref.read(cartProvider.notifier).restoreLastRemoved(),
+        ),
+        duration: const Duration(seconds: 4),
+      ),
     );
   }
 }

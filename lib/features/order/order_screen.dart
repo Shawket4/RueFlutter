@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers/auth_notifier.dart';
+import '../../core/providers/draft_carts_notifier.dart';
 import '../../core/providers/menu_notifier.dart';
 import '../../core/providers/discount_notifier.dart';
 import '../../core/theme/app_theme.dart';
@@ -30,6 +31,8 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
         ref.read(menuProvider.notifier).load(orgId);
         ref.read(discountProvider.notifier).load(orgId);
       }
+
+      ref.read(draftCartsProvider.notifier).promoteOldestDraftIfActiveEmpty();
     });
 
     // Task 3.3: Debounce menu search

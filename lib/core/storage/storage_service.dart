@@ -157,6 +157,75 @@ class StorageService {
     }
   }
 
+  static const _legacyDraftKey = 'draft_carts_v1';
+
+  String _draftCartsKey(String scope) => 'draft_carts_v1_$scope';
+  String _activeCartKey(String scope) => 'active_cart_v1_$scope';
+
+  Future<void> saveDraftCarts(String scope, List<Map<String, dynamic>> drafts) =>
+      _prefs.setString(_draftCartsKey(scope), jsonEncode(drafts));
+
+  List<Map<String, dynamic>> loadDraftCarts(String scope) {
+    final raw = _prefs.getString(_draftCartsKey(scope));
+    if (raw == null) return [];
+    try {
+      return (jsonDecode(raw) as List).cast<Map<String, dynamic>>();
+    } catch (_) {
+      _prefs.remove(_draftCartsKey(scope));
+      return [];
+    }
+  }
+
+  /// Migrates unscoped `draft_carts_v1` into [scope] once, then removes legacy key.
+  List<Map<String, dynamic>> loadDraftCartsWithLegacyMigration(String scope) {
+    var drafts = loadDraftCarts(scope);
+    if (drafts.isNotEmpty) return drafts;
+
+    final legacyRaw = _prefs.getString(_legacyDraftKey);
+    if (legacyRaw == null) return [];
+
+    try {
+      drafts = (jsonDecode(legacyRaw) as List).cast<Map<String, dynamic>>();
+      if (drafts.isNotEmpty) {
+        saveDraftCarts(scope, drafts);
+        _prefs.remove(_legacyDraftKey);
+      }
+      return drafts;
+    } catch (_) {
+      _prefs.remove(_legacyDraftKey);
+      return [];
+    }
+  }
+
+  Future<void> saveActiveCart(String scope, Map<String, dynamic> cart) =>
+      _prefs.setString(_activeCartKey(scope), jsonEncode(cart));
+
+  Map<String, dynamic>? loadActiveCart(String scope) {
+    final raw = _prefs.getString(_activeCartKey(scope));
+    if (raw == null) return null;
+    try {
+      return jsonDecode(raw) as Map<String, dynamic>;
+    } catch (_) {
+      _prefs.remove(_activeCartKey(scope));
+      return null;
+    }
+  }
+
+  Future<void> clearCartDataForScope(String scope) async {
+    await _prefs.remove(_draftCartsKey(scope));
+    await _prefs.remove(_activeCartKey(scope));
+  }
+
+  Future<void> clearAllCartStorage() async {
+    final keys = _prefs.getKeys().where((k) =>
+        k == _legacyDraftKey ||
+        k.startsWith('draft_carts_v1_') ||
+        k.startsWith('active_cart_v1_'));
+    for (final k in keys) {
+      await _prefs.remove(k);
+    }
+  }
+
   Future<void> clearAuth() async {
     await removeToken();
     await removeUser();

@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/api/client.dart';
-import '../../../core/api/order_api.dart';
+import '../../../core/providers/draft_carts_notifier.dart';
+import '../../../core/repositories/order_repository.dart';
 import '../../../core/models/cart.dart';
 import '../../../core/models/discount.dart';
 import '../../../core/models/order.dart';
@@ -59,6 +60,15 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
     super.initState();
     final cart = ref.read(cartProvider);
     _showTendered = cart.payment == 'cash' || cart.payment == 'talabat_cash';
+    if (cart.customerName != null && cart.customerName!.isNotEmpty) {
+      _customerCtrl.text = cart.customerName!;
+    }
+    if (cart.amountTendered != null && cart.amountTendered! > 0) {
+      _tenderedCtrl.text = (cart.amountTendered! / 100).toStringAsFixed(2);
+    }
+    if (cart.tipAmount != null && cart.tipAmount! > 0) {
+      _tipCtrl.text = (cart.tipAmount! / 100).toStringAsFixed(2);
+    }
   }
 
   @override
@@ -102,6 +112,39 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
   }
 
   bool get _tipIsCash => isCashMethod(_tipPaymentMethod);
+
+  void _syncCheckoutToCart({
+    required String? customer,
+    required String paymentMethod,
+    required int? tendered,
+    required int? tip,
+    required List<PaymentSplit>? splits,
+    required DiscountType? discountType,
+    required int? discountValue,
+    required String? discountId,
+  }) {
+    ref.read(cartProvider.notifier).applyCheckoutFields(
+          customerName: customer,
+          amountTendered: tendered,
+          tipAmount: tip,
+          paymentSplits: splits,
+          payment: paymentMethod,
+          discountType: discountType,
+          discountValue: discountValue,
+          discountId: discountId,
+        );
+  }
+
+  Future<void> _dismissCheckoutAndMaybeCartSheet(BuildContext context) async {
+    final navigator = Navigator.of(context);
+    final isMobile = MediaQuery.of(context).size.shortestSide < 600;
+    navigator.pop();
+    final promoted =
+        await ref.read(draftCartsProvider.notifier).promoteOldestDraftWithItems();
+    if (!promoted && isMobile && navigator.mounted && navigator.canPop()) {
+      navigator.pop();
+    }
+  }
 
   void _previewReceipt() {
     final cart = ref.read(cartProvider);
@@ -271,13 +314,33 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
       _error = null;
     });
 
-    final discountType =
-        _selectedDiscount?.dtype ?? cart.discountType?.apiValue;
+    final DiscountType? discountTypeEnum = _selectedDiscount != null
+        ? DiscountType.values.firstWhere(
+            (e) => e.name == _selectedDiscount!.dtype,
+            orElse: () => DiscountType.percentage,
+          )
+        : cart.discountType;
     final discountValue = _selectedDiscount?.value ?? cart.discountValue;
-    final discountId = _selectedDiscount?.id;
+    final discountId = _selectedDiscount?.id ?? cart.discountId;
+    final discountTypeApi =
+        _selectedDiscount?.dtype ?? cart.discountType?.apiValue;
     final paymentMethod = _isSplit
         ? (splits!.length == 1 ? splits.first.method : 'mixed')
         : cart.payment;
+
+    _syncCheckoutToCart(
+      customer: customer,
+      paymentMethod: paymentMethod,
+      tendered: tendered,
+      tip: tip,
+      splits: splits,
+      discountType: discountTypeEnum,
+      discountValue: discountValue,
+      discountId: discountId,
+    );
+
+    final syncedCart = ref.read(cartProvider);
+    final idempotencyKey = ref.read(cartProvider.notifier).idempotencyKey();
 
     if (!isOnline) {
       final localId = const Uuid().v4();
@@ -287,14 +350,14 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
         shiftId: shift.id,
         paymentMethod: paymentMethod,
         customerName: customer,
-        discountType: discountType,
+        discountType: discountTypeApi,
         discountValue: discountValue,
         discountId: discountId,
         amountTendered: tendered,
         tipAmount: tip,
         tipPaymentMethod: tipMethod,
         paymentSplits: splits,
-        items: cart.items,
+        items: syncedCart.items,
         orderedAt: DateTime.now(),
         createdAt: DateTime.now(),
       ));
@@ -309,20 +372,20 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
         orderNumber: -1,
         status: 'pending_sync',
         paymentMethod: paymentMethod,
-        subtotal: cart.subtotal,
-        discountType: discountType,
+        subtotal: syncedCart.subtotal,
+        discountType: discountTypeApi,
         discountValue: discountValue ?? 0,
-        discountAmount: cart.discountAmount,
+        discountAmount: syncedCart.discountAmount,
         taxAmount: 0,
-        totalAmount: cart.total,
+        totalAmount: syncedCart.total,
         customerName: customer,
-        notes: cart.notes,
+        notes: syncedCart.notes,
         amountTendered: tendered,
         tipAmount: tip,
         tipPaymentMethod: tipMethod,
         discountId: discountId,
         createdAt: DateTime.now(),
-        items: cart.items.map((ci) => OrderItem(
+        items: syncedCart.items.map((ci) => OrderItem(
           id: const Uuid().v4(),
           itemName: ci.itemName,
           sizeLabel: ci.sizeLabel,
@@ -349,11 +412,11 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
       );
       ref.read(orderHistoryProvider.notifier).addOrder(optimistic);
 
-      final total = cart.total;
+      final total = syncedCart.total;
       ref.read(cartProvider.notifier).clear();
-      
+
       if (mounted) {
-        Navigator.pop(context);
+        await _dismissCheckoutAndMaybeCartSheet(context);
         ReceiptSheet.show(context,
             order: optimistic,
             total: total,
@@ -364,26 +427,25 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
     }
 
     try {
-      final order = await ref.read(orderApiProvider).create(
+      final order = await ref.read(orderRepositoryProvider).create(
             branchId: shift.branchId,
             shiftId: shift.id,
-            paymentMethod: paymentMethod,
-            items: cart.items,
+            cart: syncedCart,
+            idempotencyKey: idempotencyKey,
             customerName: customer,
-            discountType: discountType,
+            discountType: discountTypeApi,
             discountValue: discountValue,
             discountId: discountId,
             amountTendered: tendered,
             tipAmount: tip,
             tipPaymentMethod: tipMethod,
             paymentSplits: splits,
-            idempotencyKey: const Uuid().v4(),
           );
       ref.read(orderHistoryProvider.notifier).addOrder(order);
-      final total = cart.total;
+      final total = syncedCart.total;
       ref.read(cartProvider.notifier).clear();
       if (mounted) {
-        Navigator.pop(context);
+        await _dismissCheckoutAndMaybeCartSheet(context);
         ReceiptSheet.show(context,
             order: order,
             total: total,
@@ -399,14 +461,14 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
           shiftId: shift.id,
           paymentMethod: paymentMethod,
           customerName: customer,
-          discountType: discountType,
+          discountType: discountTypeApi,
           discountValue: discountValue,
           discountId: discountId,
           amountTendered: tendered,
           tipAmount: tip,
           tipPaymentMethod: tipMethod,
           paymentSplits: splits,
-          items: cart.items,
+          items: syncedCart.items,
           createdAt: DateTime.now(),
           orderedAt: DateTime.now(),
         ));
@@ -421,20 +483,20 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
           orderNumber: -1,
           status: 'pending_sync',
           paymentMethod: paymentMethod,
-          subtotal: cart.subtotal,
-          discountType: discountType,
+          subtotal: syncedCart.subtotal,
+          discountType: discountTypeApi,
           discountValue: discountValue ?? 0,
-          discountAmount: cart.discountAmount,
+          discountAmount: syncedCart.discountAmount,
           taxAmount: 0,
-          totalAmount: cart.total,
+          totalAmount: syncedCart.total,
           customerName: customer,
-          notes: cart.notes,
+          notes: syncedCart.notes,
           amountTendered: tendered,
           tipAmount: tip,
           tipPaymentMethod: tipMethod,
           discountId: discountId,
           createdAt: DateTime.now(),
-          items: cart.items.map((ci) => OrderItem(
+          items: syncedCart.items.map((ci) => OrderItem(
             id: const Uuid().v4(),
             itemName: ci.itemName,
             sizeLabel: ci.sizeLabel,
@@ -461,10 +523,10 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
         );
         ref.read(orderHistoryProvider.notifier).addOrder(optimistic);
 
-        final total = cart.total;
+        final total = syncedCart.total;
         ref.read(cartProvider.notifier).clear();
         if (mounted) {
-          Navigator.pop(context);
+          await _dismissCheckoutAndMaybeCartSheet(context);
           ReceiptSheet.show(context,
             order: optimistic,
             total: total,

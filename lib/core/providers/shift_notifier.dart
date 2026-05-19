@@ -9,6 +9,7 @@ import '../services/connectivity_service.dart';
 import '../services/offline_queue.dart';
 import '../storage/storage_service.dart';
 import 'auth_notifier.dart';
+import 'cart_storage.dart';
 
 class ShiftState {
   final bool               isLoading;
@@ -173,6 +174,7 @@ class ShiftNotifier extends Notifier<ShiftState> {
     }
 
     final shiftId  = state.shift!.id;
+    final cartScope = cartStorageScope(state.shift);
 
     try {
       await ref.read(shiftRepositoryProvider).closeShift(
@@ -182,6 +184,9 @@ class ShiftNotifier extends Notifier<ShiftState> {
         note:            note,
         inventoryCounts: inventoryCounts,
       );
+      if (cartScope != null) {
+        await ref.read(storageServiceProvider).clearCartDataForScope(cartScope);
+      }
       await ref.read(storageServiceProvider).removeShift(branchId);
       state = state.copyWith(
           isLoading: false, clearShift: true, systemCash: 0);

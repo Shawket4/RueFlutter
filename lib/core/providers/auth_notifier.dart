@@ -7,6 +7,8 @@ import '../models/shift.dart';
 import '../models/user.dart';
 import '../repositories/auth_repository.dart';
 import '../storage/storage_service.dart';
+import 'cart_notifier.dart';
+import 'draft_carts_notifier.dart';
 
 enum SessionExpiry { none, expired, blockedByOtherShift }
 
@@ -175,13 +177,21 @@ class AuthNotifier extends Notifier<AuthState> {
     }
   }
 
+  Future<void> _clearCartSession() async {
+    await ref.read(storageServiceProvider).clearAllCartStorage();
+    ref.invalidate(cartProvider);
+    ref.invalidate(draftCartsProvider);
+  }
+
   Future<void> logout() async {
+    await _clearCartSession();
     await ref.read(authRepositoryProvider).logout();
     state = const AuthState(isLoading: false);
   }
 
   // Task 1.7: Await logout
   Future<void> _forceLogout({required SessionExpiry expiry}) async {
+    await _clearCartSession();
     await ref.read(authRepositoryProvider).logout();
     state = AuthState(isLoading: false, sessionExpiry: expiry);
   }

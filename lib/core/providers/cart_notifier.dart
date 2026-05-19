@@ -1,17 +1,65 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/cart.dart';
+import '../storage/storage_service.dart';
+import 'cart_storage.dart';
+import 'shift_notifier.dart';
 
 class CartNotifier extends Notifier<CartState> {
   CartItem? _lastRemovedItem;
   int? _lastRemovedIndex;
+  String? _loadedScope;
+
+  static CartState _defaultCart() => CartState(
+        id: 'order_1',
+        displayName: 'Order 1',
+        createdAt: DateTime.now(),
+      );
+
+  String? _scope() => cartStorageScope(ref.read(shiftProvider).shift);
 
   @override
-  CartState build() => CartState.empty;
+  CartState build() {
+    ref.listen(shiftProvider, (prev, next) {
+      final oldScope = cartStorageScope(prev?.shift);
+      final newScope = cartStorageScope(next.shift);
+      if (oldScope != newScope) {
+        _loadedScope = newScope;
+        state = _loadForScope(newScope);
+      }
+    });
+
+    _loadedScope = _scope();
+    return _loadForScope(_loadedScope);
+  }
+
+  CartState _loadForScope(String? scope) {
+    if (scope == null) return _defaultCart();
+    final raw = ref.read(storageServiceProvider).loadActiveCart(scope);
+    if (raw == null) return _defaultCart();
+    try {
+      return CartState.fromStorageJson(raw);
+    } catch (_) {
+      return _defaultCart();
+    }
+  }
+
+  void _update(CartState next) {
+    state = next;
+    _persist();
+  }
+
+  Future<void> _persist() async {
+    final scope = _scope();
+    if (scope == null || scope != _loadedScope) return;
+    await ref
+        .read(storageServiceProvider)
+        .saveActiveCart(scope, state.toStorageJson());
+  }
 
   void add(CartItem incoming) {
     final idx = state.items.indexWhere((i) =>
         i.menuItemId == incoming.menuItemId &&
-        i.sizeLabel  == incoming.sizeLabel &&
+        i.sizeLabel == incoming.sizeLabel &&
         CartItem.addonsMatch(i.addons, incoming.addons) &&
         CartItem.optionalsMatch(i.optionals, incoming.optionals));
 
@@ -19,81 +67,145 @@ class CartNotifier extends Notifier<CartState> {
       final updated = List<CartItem>.of(state.items);
       updated[idx] = updated[idx]
           .copyWith(quantity: updated[idx].quantity + incoming.quantity);
-      state = state.copyWith(items: updated);
+      _update(state.copyWith(items: updated));
     } else {
-      state = state.copyWith(items: [...state.items, incoming]);
+      _update(state.copyWith(items: [...state.items, incoming]));
     }
   }
 
   void removeAt(int index) {
+    if (index < 0 || index >= state.items.length) return;
     _lastRemovedItem = state.items[index];
     _lastRemovedIndex = index;
     final updated = List<CartItem>.of(state.items)..removeAt(index);
-    state = state.copyWith(items: updated);
+    _update(state.copyWith(items: updated));
   }
 
-  // Task 3.6: Restore method
   void restoreLastRemoved() {
     if (_lastRemovedItem == null || _lastRemovedIndex == null) return;
-    
+
     final safeIndex = _lastRemovedIndex!.clamp(0, state.items.length);
-    final updated = List<CartItem>.of(state.items)..insert(safeIndex, _lastRemovedItem!);
-    state = state.copyWith(items: updated);
-    
+    final updated = List<CartItem>.of(state.items)
+      ..insert(safeIndex, _lastRemovedItem!);
+    _update(state.copyWith(items: updated));
+
     _lastRemovedItem = null;
     _lastRemovedIndex = null;
   }
 
   void setQty(int index, int qty) {
-    if (qty <= 0) { removeAt(index); return; }
+    if (index < 0 || index >= state.items.length) return;
+    if (qty <= 0) {
+      removeAt(index);
+      return;
+    }
     final updated = List<CartItem>.of(state.items);
     updated[index] = updated[index].copyWith(quantity: qty);
-    state = state.copyWith(items: updated);
+    _update(state.copyWith(items: updated));
   }
 
   void replaceAt(int index, CartItem incoming) {
+    if (index < 0 || index >= state.items.length) return;
     final updated = List<CartItem>.of(state.items);
     updated[index] = incoming;
-    state = state.copyWith(items: updated);
+    _update(state.copyWith(items: updated));
   }
 
   void setPayment(String m) =>
-      state = state.copyWith(payment: m, clearSplits: true);
+      _update(state.copyWith(payment: m, clearSplits: true));
 
   void setCustomer(String? n) =>
-      state = state.copyWith(customerName: n, clearCustomer: n == null);
+      _update(state.copyWith(customerName: n, clearCustomer: n == null));
 
-  void setNotes(String? n) => state = state.copyWith(notes: n);
+  void setNotes(String? n) => _update(state.copyWith(notes: n));
 
-  void setDiscount(DiscountType? type, int? value) => state = type == null
+  void setDiscount(DiscountType? type, int? value) => _update(type == null
       ? state.copyWith(clearDiscount: true, clearDiscountId: true)
       : state.copyWith(
-          discountType: type, discountValue: value, clearDiscountId: true);
+          discountType: type, discountValue: value, clearDiscountId: true));
 
-  void setDiscountById(String id, DiscountType type, int value) => state =
-      state.copyWith(discountId: id, discountType: type, discountValue: value);
+  void setDiscountById(String id, DiscountType type, int value) => _update(
+      state.copyWith(
+          discountId: id, discountType: type, discountValue: value));
 
   void clearDiscount() =>
-      state = state.copyWith(clearDiscount: true, clearDiscountId: true);
+      _update(state.copyWith(clearDiscount: true, clearDiscountId: true));
 
-  void setAmountTendered(int? amount) => state =
-      state.copyWith(amountTendered: amount, clearTendered: amount == null);
+  void setAmountTendered(int? amount) => _update(state.copyWith(
+      amountTendered: amount, clearTendered: amount == null));
 
-  void setTip(int? tip) => state = state.copyWith(tipAmount: tip);
+  void setTip(int? tip) => _update(state.copyWith(tipAmount: tip));
 
   void setPaymentSplits(List<PaymentSplit> splits) {
     final method = splits.length == 1 ? splits.first.method : 'mixed';
-    state = state.copyWith(paymentSplits: splits, payment: method);
+    _update(state.copyWith(paymentSplits: splits, payment: method));
   }
 
   void clearSplits() =>
-      state = state.copyWith(clearSplits: true, payment: 'cash');
+      _update(state.copyWith(clearSplits: true, payment: 'cash'));
+
+  /// Writes checkout sheet values onto the active cart before place/park.
+  void applyCheckoutFields({
+    String? customerName,
+    int? amountTendered,
+    int? tipAmount,
+    List<PaymentSplit>? paymentSplits,
+    required String payment,
+    DiscountType? discountType,
+    int? discountValue,
+    String? discountId,
+  }) {
+    _update(state.copyWith(
+      customerName: customerName,
+      clearCustomer: customerName == null,
+      amountTendered: amountTendered,
+      clearTendered: amountTendered == null,
+      tipAmount: tipAmount,
+      paymentSplits: paymentSplits,
+      clearSplits: paymentSplits == null,
+      payment: payment,
+      discountType: discountType,
+      discountValue: discountValue,
+      discountId: discountId,
+      clearDiscount: discountType == null && (discountValue ?? 0) == 0,
+      clearDiscountId: discountId == null,
+    ));
+  }
 
   void clear() {
     _lastRemovedItem = null;
     _lastRemovedIndex = null;
-    state = CartState.empty;
+    _update(CartState(
+      id: state.id,
+      displayName: state.displayName,
+      createdAt: state.createdAt ?? DateTime.now(),
+    ));
   }
+
+  void replaceWith(CartState newState) {
+    _lastRemovedItem = null;
+    _lastRemovedIndex = null;
+    _update(newState);
+  }
+
+  void startNewOrder({String? id, String? displayName}) {
+    _lastRemovedItem = null;
+    _lastRemovedIndex = null;
+    _update(CartState(
+      id: id ?? 'order_${DateTime.now().millisecondsSinceEpoch}',
+      displayName: displayName ?? 'Order 1',
+      createdAt: DateTime.now(),
+    ));
+  }
+
+  void renameDisplayName(String name) {
+    _update(state.copyWith(
+      displayName: name.trim().isEmpty ? 'Order' : name.trim(),
+    ));
+  }
+
+  /// Idempotency key for [POST /orders] — stable per tab until a new order starts.
+  String idempotencyKey() => state.id ?? 'order_${DateTime.now().millisecondsSinceEpoch}';
 }
 
 final cartProvider =

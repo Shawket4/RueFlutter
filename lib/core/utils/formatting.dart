@@ -14,3 +14,21 @@ String normaliseName(String s) => s
     .split(' ')
     .map((w) => w.isEmpty ? '' : w[0].toUpperCase() + w.substring(1).toLowerCase())
     .join(' ');
+
+/// Combo / bundle label strings.
+const String kComboLabelEn = 'Combo';
+const String kComboLabelAr = 'كومبو';
+
+String comboLabel({bool useArabic = false}) =>
+    useArabic ? kComboLabelAr : kComboLabelEn;
+
+String bundleItemCountLabel(int count, {bool useArabic = false}) =>
+    useArabic ? '$count أصناف' : '$count items';
+
+String bundleOutOfStockHint(String itemName, {bool useArabic = false}) =>
+    useArabic ? '$itemName غير متوفر' : '$itemName is out of stock';
+
+String bundleSaveLabel(int piastres, {bool useArabic = false}) {
+  final amount = egp(piastres);
+  return useArabic ? 'وفر $amount' : 'Save $amount';
+}

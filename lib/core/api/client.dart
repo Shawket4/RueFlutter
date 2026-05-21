@@ -47,13 +47,7 @@ final dioClientProvider = Provider<DioClient>((ref) => DioClient());
 
 String friendlyError(Object e) {
   if (e is DioException) {
-    final code = e.response?.statusCode;
-    if (code == 401) return 'Session expired — please sign in again';
-    if (code == 403) return 'You do not have permission to do that';
-    if (code == 404) return 'Not found';
-    if (code == 409) return 'A conflict occurred — resource already exists';
-    if (code == 422) return 'Invalid data submitted';
-    if (code != null && code >= 500) return 'Server error — please try again';
+    // ── Timeout / connectivity ──────────────────────────────────────────
     if (e.type == DioExceptionType.connectionTimeout ||
         e.type == DioExceptionType.sendTimeout       ||
         e.type == DioExceptionType.receiveTimeout) {
@@ -62,11 +56,50 @@ String friendlyError(Object e) {
     if (e.type == DioExceptionType.connectionError) {
       return 'No internet connection';
     }
-    final msg = e.response?.data;
-    if (msg is Map && msg['message'] != null) return msg['message'].toString();
-    if (msg is Map && msg['error']   != null) return msg['error'].toString();
+
+    // ── Extract message from response body first ─────────────────────────
+    final body = e.response?.data;
+    final serverMsg = _extractServerMessage(body);
+
+    final code = e.response?.statusCode;
+    if (code == 401) return 'Session expired — please sign in again';
+    if (code == 403) return 'You do not have permission to do that';
+    if (code == 404) return serverMsg ?? 'Not found';
+    if (code == 409) return serverMsg ?? 'A conflict occurred — resource already exists';
+    if (code == 422) return serverMsg ?? 'Invalid data — please check your input';
+    if (code != null && code >= 500) return serverMsg ?? 'Server error — please try again';
+    if (serverMsg != null) return serverMsg;
   }
   return 'Something went wrong — please try again';
+}
+
+/// Pulls the most useful human-readable string out of a server JSON body.
+String? _extractServerMessage(dynamic body) {
+  if (body is String && body.isNotEmpty) return body;
+  if (body is! Map) return null;
+
+  // Common single-message keys
+  for (final key in ['message', 'error', 'detail', 'msg']) {
+    final v = body[key];
+    if (v is String && v.isNotEmpty) return v;
+  }
+
+  // Laravel / Express-style validation errors map
+  final errors = body['errors'];
+  if (errors is Map && errors.isNotEmpty) {
+    final msgs = <String>[];
+    for (final entry in errors.entries) {
+      final v = entry.value;
+      if (v is List) {
+        msgs.add('${entry.key}: ${v.join(', ')}');
+      } else if (v is String) {
+        msgs.add('${entry.key}: $v');
+      }
+    }
+    if (msgs.isNotEmpty) return msgs.join('\n');
+  }
+
+  return null;
 }
 
 bool isNetworkError(Object e) {

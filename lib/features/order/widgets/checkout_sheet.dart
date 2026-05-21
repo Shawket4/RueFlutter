@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
@@ -213,6 +215,8 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
         id: '',
         itemName: ci.itemName,
         sizeLabel: ci.sizeLabel,
+        bundleId: ci.bundleId,
+        bundleComponents: ci.bundleComponents ?? const [],
         unitPrice: ci.unitPrice,
         quantity: ci.quantity,
         lineTotal: ci.lineTotal,
@@ -389,6 +393,8 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
           id: const Uuid().v4(),
           itemName: ci.itemName,
           sizeLabel: ci.sizeLabel,
+          bundleId: ci.bundleId,
+          bundleComponents: ci.bundleComponents ?? const [],
           unitPrice: ci.unitPrice,
           quantity: ci.quantity,
           lineTotal: ci.lineTotal,
@@ -500,6 +506,8 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
             id: const Uuid().v4(),
             itemName: ci.itemName,
             sizeLabel: ci.sizeLabel,
+            bundleId: ci.bundleId,
+            bundleComponents: ci.bundleComponents ?? const [],
             unitPrice: ci.unitPrice,
             quantity: ci.quantity,
             lineTotal: ci.lineTotal,
@@ -534,10 +542,18 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
                 tendered != null ? (tendered - total).clamp(0, 999999) : null);
         }
       } else {
-        setState(() {
-          _error = 'Failed to place order — please retry';
-          _loading = false;
-        });
+        // Log the raw error so it's visible in the Flutter console.
+        debugPrint('[CheckoutSheet._place] order creation failed: $e');
+        if (e is DioException) {
+          debugPrint('[CheckoutSheet._place] status: ${e.response?.statusCode}');
+          debugPrint('[CheckoutSheet._place] body: ${e.response?.data}');
+        }
+        if (mounted) {
+          setState(() {
+            _error = friendlyError(e);
+            _loading = false;
+          });
+        }
       }
     }
   }

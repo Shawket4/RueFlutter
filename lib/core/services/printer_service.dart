@@ -310,6 +310,49 @@ class PrinterService {
 
         // Items
         ...order.items.expand((item) {
+          if (item.isBundleLine) {
+            return [
+              _row('${item.quantity}x ${item.itemName}',
+                  egp(item.lineTotal),
+                  font: font, fontB: fontB, bold: true, sz: 8),
+              ...item.bundleComponents.expand((c) {
+                final sizePart =
+                    c.sizeLabel != null ? ' (${c.sizeLabel})' : '';
+                return [
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.only(left: 8, bottom: 1.5),
+                    child: pw.Text('  - ${c.itemName}$sizePart',
+                        style: ts(font, sz: 7.5)),
+                  ),
+                  ...c.addons.map((a) {
+                    final line = a.priceModifier * a.quantity;
+                    final aPrice = line > 0 ? '+${egp(line)}' : '';
+                    return aPrice.isNotEmpty
+                        ? _row('    + ${a.name}', aPrice,
+                            font: font, fontB: fontB, sz: 7, leftIndent: 8)
+                        : pw.Padding(
+                            padding: const pw.EdgeInsets.only(
+                                left: 12, bottom: 1.5),
+                            child: pw.Text('    + ${a.name}',
+                                style: ts(font, sz: 7)),
+                          );
+                  }),
+                  ...c.optionals.map((o) {
+                    final oPrice = o.price > 0 ? '+${egp(o.price)}' : '';
+                    return oPrice.isNotEmpty
+                        ? _row('    + ${o.name}', oPrice,
+                            font: font, fontB: fontB, sz: 7, leftIndent: 8)
+                        : pw.Padding(
+                            padding: const pw.EdgeInsets.only(
+                                left: 12, bottom: 1.5),
+                            child: pw.Text('    + ${o.name}',
+                                style: ts(font, sz: 7)),
+                          );
+                  }),
+                ];
+              }),
+            ];
+          }
           final sizePart = item.sizeLabel != null ? ' (${item.sizeLabel})' : '';
           return [
             _row('${item.quantity}x ${item.itemName}$sizePart',

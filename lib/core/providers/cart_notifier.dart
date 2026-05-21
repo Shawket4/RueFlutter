@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../models/bundle.dart';
 import '../models/cart.dart';
 import '../storage/storage_service.dart';
 import 'cart_storage.dart';
@@ -57,11 +58,14 @@ class CartNotifier extends Notifier<CartState> {
   }
 
   void add(CartItem incoming) {
-    final idx = state.items.indexWhere((i) =>
-        i.menuItemId == incoming.menuItemId &&
-        i.sizeLabel == incoming.sizeLabel &&
-        CartItem.addonsMatch(i.addons, incoming.addons) &&
-        CartItem.optionalsMatch(i.optionals, incoming.optionals));
+    final idx = incoming.isBundleLine
+        ? state.items.indexWhere((i) => i.bundleId == incoming.bundleId)
+        : state.items.indexWhere((i) =>
+            !i.isBundleLine &&
+            i.menuItemId == incoming.menuItemId &&
+            i.sizeLabel == incoming.sizeLabel &&
+            CartItem.addonsMatch(i.addons, incoming.addons) &&
+            CartItem.optionalsMatch(i.optionals, incoming.optionals));
 
     if (idx >= 0) {
       final updated = List<CartItem>.of(state.items);
@@ -71,6 +75,20 @@ class CartNotifier extends Notifier<CartState> {
     } else {
       _update(state.copyWith(items: [...state.items, incoming]));
     }
+  }
+
+  /// Adds a bundle line with per-component configuration captured at order time.
+  void addBundle(
+    Bundle bundle,
+    List<BundleComponentSnapshot> components,
+  ) {
+    add(CartItem(
+      bundleId: bundle.id,
+      bundleComponents: components,
+      itemName: bundle.name,
+      unitPrice: bundle.price,
+      quantity: 1,
+    ));
   }
 
   void removeAt(int index) {

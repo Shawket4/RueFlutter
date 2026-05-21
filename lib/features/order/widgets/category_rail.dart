@@ -14,6 +14,7 @@ class CategoryRail extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final menu = ref.watch(menuProvider);
+    final showCombos = menu.hasActiveBundles;
     return Container(
       width: 88,
       decoration: const BoxDecoration(
@@ -21,8 +22,58 @@ class CategoryRail extends ConsumerWidget {
           border: Border(right: BorderSide(color: AppColors.borderLight))),
       child: ListView.builder(
         padding: const EdgeInsets.symmetric(vertical: 10),
-        itemCount: menu.categories.length,
+        itemCount: menu.categories.length + (showCombos ? 1 : 0),
         itemBuilder: (_, i) {
+          // ── Synthetic "Combos" entry at the end ─────────────────────────
+          if (showCombos && i == menu.categories.length) {
+            final sel = menu.selectedCategoryId == kComboCategoryId;
+            return GestureDetector(
+              onTap: () =>
+                  ref.read(menuProvider.notifier).selectCategory(kComboCategoryId),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOutCubic,
+                margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 4),
+                decoration: BoxDecoration(
+                  gradient: sel
+                      ? LinearGradient(
+                          colors: [
+                            AppColors.primary,
+                            AppColors.primary.withOpacity(0.85),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        )
+                      : null,
+                  color: sel ? null : Colors.transparent,
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                  border: sel
+                      ? null
+                      : Border.all(
+                          color: AppColors.primary.withOpacity(0.25),
+                          width: 1,
+                        ),
+                ),
+                child: Column(children: [
+                  Icon(Icons.layers_rounded,
+                      size: 20, color: sel ? Colors.white : AppColors.primary),
+                  const SizedBox(height: 5),
+                  Text('Combos',
+                      style: cairo(
+                          fontSize: 9,
+                          fontWeight: sel ? FontWeight.w700 : FontWeight.w600,
+                          color: sel ? Colors.white : AppColors.primary,
+                          height: 1.2),
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis),
+                ]),
+              ),
+            );
+          }
+
+          // ── Regular category entry ────────────────────────────────────────
           final cat = menu.categories[i];
           final sel = cat.id == menu.selectedCategoryId;
           return GestureDetector(

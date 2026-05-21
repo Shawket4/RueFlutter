@@ -100,7 +100,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         : authError;
 
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: useSideBySide ? AppColors.surface : AppColors.bg,
       body: useSideBySide
           ? _TabletLayout(
               form: _buildForm(
@@ -130,17 +130,54 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         child: ConstrainedBox(
           constraints: BoxConstraints(maxWidth: isWide ? 420 : 380),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const SufrixLongLogo(height: 40),
-            const SizedBox(height: 16),
-            Text(
-              'Point of Sale',
-              style: cairo(
-                  fontSize: 11,
+            if (isWide) ...[
+              Text(
+                'Welcome',
+                style: cairo(
+                  fontSize: 24,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.textMuted,
-                  letterSpacing: 1.6),
-            ),
-            const SizedBox(height: 32),
+                  color: AppColors.textPrimary,
+                  letterSpacing: -0.3,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Sign in to start your shift and manage orders.',
+                style: cairo(
+                  fontSize: 14,
+                  color: AppColors.onCreamMuted,
+                  height: 1.45,
+                ),
+              ),
+              const SizedBox(height: 32),
+            ] else ...[
+              Image.asset(
+                'assets/Icon.png',
+                height: 56,
+                fit: BoxFit.contain,
+                filterQuality: FilterQuality.high,
+              ),
+              const SizedBox(height: 40),
+              Text(
+                'Welcome',
+                style: cairo(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                  letterSpacing: -0.3,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Sign in to start your shift and manage orders.',
+                style: cairo(
+                  fontSize: 14,
+                  color: AppColors.textSecondary,
+                  height: 1.45,
+                ),
+              ),
+              const SizedBox(height: 32),
+            ],
 
             if (expiry == SessionExpiry.expired)
               const _InfoBanner(
@@ -159,21 +196,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                 bold: true,
               ),
 
-            Row(children: [
-              const Expanded(child: Divider(color: AppColors.borderLight)),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                child: Text('Sign in',
-                    style: cairo(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textMuted,
-                        letterSpacing: 0.6)),
-              ),
-              const Expanded(child: Divider(color: AppColors.borderLight)),
-            ]),
-            const SizedBox(height: 24),
-
             AnimatedBuilder(
               animation: _shakeAnim,
               builder: (_, child) => Transform.translate(
@@ -188,13 +210,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                     ref.read(authProvider.notifier).clearError();
                   }
                 },
-                style: cairo(fontSize: 15),
+                style: cairo(fontSize: 15, color: AppColors.textPrimary),
                 decoration: InputDecoration(
                   hintText: 'Your name',
+                  hintStyle: cairo(fontSize: 15, color: AppColors.textMuted),
                   prefixIcon: const Icon(Icons.person_outline_rounded,
                       size: 18, color: AppColors.textMuted),
                   filled: true,
-                  fillColor: AppColors.bg,
+                  fillColor: AppColors.surface,
                   border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(AppRadius.sm),
                       borderSide: const BorderSide(color: AppColors.border)),
@@ -259,6 +282,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
               const CircularProgressIndicator(
                   strokeWidth: 2.5, color: AppColors.primary),
             ],
+
+            if (!isWide) ...[
+              const SizedBox(height: 32),
+              Text(
+                '© ${DateTime.now().year} Sufrix',
+                style: cairo(fontSize: 12, color: AppColors.textMuted),
+                textAlign: TextAlign.center,
+              ),
+            ],
           ]),
         ),
       ),
@@ -308,71 +340,74 @@ class _TabletLayout extends StatelessWidget {
   const _TabletLayout({required this.form});
 
   @override
-  Widget build(BuildContext context) => Row(children: [
-        Expanded(
-          flex: 5,
-          child: Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [AppColors.primary, AppColors.secondary],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(52),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SufrixLongLogo(
-                      height: 48,
-                      textColor: Colors.white,
-                      crossColor: Colors.white,
-                      centerColor: AppColors.secondary,
+  Widget build(BuildContext context) {
+    final wide = MediaQuery.sizeOf(context).width >= 1280;
+    final asidePadding = EdgeInsets.symmetric(
+      horizontal: wide ? 80 : 56,
+      vertical: 56,
+    );
+
+    return Row(children: [
+      Expanded(
+        flex: 55,
+        child: ColoredBox(
+          color: AppColors.warmCream,
+          child: SafeArea(
+            child: Padding(
+              padding: asidePadding,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SufrixLongLogo(height: 40),
+                  const Spacer(),
+                  Text(
+                    'Welcome\nback.',
+                    style: cairo(
+                      fontSize: wide ? 48 : 36,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                      height: 1.15,
+                      letterSpacing: -0.5,
                     ),
-                    const SizedBox(height: 40),
-                    Text('Welcome\nback.',
-                        style: cairo(
-                            fontSize: 44,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
-                            height: 1.05,
-                            letterSpacing: -0.5)),
-                    const SizedBox(height: 16),
-                    Text('Sign in to start your shift\nand manage orders.',
-                        style: cairo(
-                            fontSize: 16,
-                            color: Colors.white.withOpacity(0.72),
-                            height: 1.65)),
-                    const SizedBox(height: 48),
-                    Row(children: [
-                      _Dot(AppColors.surface.withOpacity(0.6)),
-                      const SizedBox(width: 8),
-                      _Dot(AppColors.surface.withOpacity(0.3)),
-                      const SizedBox(width: 8),
-                      _Dot(AppColors.surface.withOpacity(0.15)),
-                    ]),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Sign in to start your shift\nand manage orders.',
+                    style: cairo(
+                      fontSize: 16,
+                      color: AppColors.onCreamMuted,
+                      height: 1.65,
+                    ),
+                  ),
+                  const Spacer(),
+                  Row(children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: const BoxDecoration(
+                        color: AppColors.secondary,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '© ${DateTime.now().year} Sufrix',
+                      style: cairo(
+                        fontSize: 12,
+                        color: AppColors.onCreamSubtle,
+                      ),
+                    ),
+                  ]),
+                ],
               ),
             ),
           ),
         ),
-        Expanded(
-          flex: 4,
-          child: Container(color: AppColors.bg, child: form),
-        ),
-      ]);
-}
-
-class _Dot extends StatelessWidget {
-  final Color color;
-  const _Dot(this.color);
-  @override
-  Widget build(BuildContext context) => Container(
-      width: 8,
-      height: 8,
-      decoration: BoxDecoration(color: color, shape: BoxShape.circle));
+      ),
+      Expanded(
+        flex: 45,
+        child: ColoredBox(color: AppColors.surface, child: form),
+      ),
+    ]);
+  }
 }

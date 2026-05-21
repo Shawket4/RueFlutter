@@ -12,6 +12,7 @@ import '../../shared/widgets/error_banner.dart';
 import '../../shared/widgets/label_value.dart';
 import 'void_order_sheet.dart';
 import 'widgets/receipt_preview_sheet.dart';
+import 'widgets/order_ingredients_sheet.dart';
 import 'helpers/payment_helpers.dart';
 
 class OrderHistoryScreen extends ConsumerStatefulWidget {
@@ -653,61 +654,178 @@ class _ItemRow extends StatelessWidget {
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                Text(
-                    item.itemName +
-                        (item.sizeLabel != null
-                            ? ' · ${normaliseName(item.sizeLabel!)}'
-                            : ''),
-                    style: cairo(fontSize: 13, fontWeight: FontWeight.w600)),
-                if (item.addons.isNotEmpty) ...[
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                          item.itemName +
+                              (item.sizeLabel != null
+                                  ? ' · ${normaliseName(item.sizeLabel!)}'
+                                  : ''),
+                          style: cairo(fontSize: 13, fontWeight: FontWeight.w600)),
+                    ),
+                    if (item.isBundleLine) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(AppRadius.xs),
+                          border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+                        ),
+                        child: Text(
+                          'Combo',
+                          style: cairo(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.primary,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                if (item.isBundleLine && item.bundleComponents.isNotEmpty) ...[
                   const SizedBox(height: 6),
-                  Wrap(
-                      spacing: 4,
-                      runSpacing: 4,
-                      children: item.addons.map((a) {
-                        final hasPrice = a.unitPrice > 0;
-                        return Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 7, vertical: 3),
-                          decoration: BoxDecoration(
-                              color: AppColors.primary.withOpacity(0.07),
-                              borderRadius:
-                                  BorderRadius.circular(AppRadius.xs)),
-                          child: Text(
-                              hasPrice
-                                  ? '${normaliseName(a.addonName)}  +${egp(a.lineTotal)}'
-                                  : normaliseName(a.addonName),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: item.bundleComponents.map((c) {
+                      final qty = c.quantity * item.quantity;
+                      return Padding(
+                        padding: const EdgeInsets.only(left: 12, bottom: 4),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '– ${normaliseName(c.itemName)}${c.sizeLabel != null ? ' · ${normaliseName(c.sizeLabel!)}' : ''} × $qty',
                               style: cairo(
-                                  fontSize: 10,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.w600,
-                                  color: AppColors.primary)),
-                        );
-                      }).toList()),
+                                  color: AppColors.textSecondary),
+                            ),
+                            if (c.addons.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(left: 12, top: 2),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: c.addons.map((a) {
+                                    final lineTotal = a.priceModifier * a.quantity;
+                                    return Text(
+                                      a.priceModifier > 0
+                                          ? '+ ${normaliseName(a.name)}${a.quantity > 1 ? " ×${a.quantity}" : ""}  ${egp(lineTotal)}'
+                                          : '+ ${normaliseName(a.name)}${a.quantity > 1 ? " ×${a.quantity}" : ""}',
+                                      style: cairo(fontSize: 10, color: AppColors.primary),
+                                    );
+                                  }).toList(),
+                                ),
+                              ),
+                            if (c.optionals.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(left: 12, top: 2),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: c.optionals.map((o) {
+                                    return Text(
+                                      o.price > 0
+                                          ? '+ ${normaliseName(o.name)}  ${egp(o.price)}'
+                                          : '+ ${normaliseName(o.name)}',
+                                      style: cairo(fontSize: 10, color: AppColors.warning),
+                                    );
+                                  }).toList(),
+                                ),
+                              ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ] else ...[
+                  if (item.addons.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Wrap(
+                        spacing: 4,
+                        runSpacing: 4,
+                        children: item.addons.map((a) {
+                          final hasPrice = a.unitPrice > 0;
+                          return Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 7, vertical: 3),
+                            decoration: BoxDecoration(
+                                color: AppColors.primary.withOpacity(0.07),
+                                borderRadius:
+                                    BorderRadius.circular(AppRadius.xs)),
+                            child: Text(
+                                hasPrice
+                                    ? '${normaliseName(a.addonName)}  +${egp(a.lineTotal)}'
+                                    : normaliseName(a.addonName),
+                                style: cairo(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.primary)),
+                          );
+                        }).toList()),
+                  ],
+                  if (item.optionals.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Wrap(
+                        spacing: 4,
+                        runSpacing: 4,
+                        children: item.optionals.map((o) {
+                          final hasPrice = o.price > 0;
+                          return Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 7, vertical: 3),
+                            decoration: BoxDecoration(
+                                color: AppColors.warning.withOpacity(0.08),
+                                borderRadius:
+                                    BorderRadius.circular(AppRadius.xs)),
+                            child: Text(
+                                hasPrice
+                                    ? '${normaliseName(o.fieldName)}  +${egp(o.price)}'
+                                    : normaliseName(o.fieldName),
+                                style: cairo(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.warning)),
+                          );
+                        }).toList()),
+                  ],
                 ],
-                if (item.optionals.isNotEmpty) ...[
-                  const SizedBox(height: 6),
-                  Wrap(
-                      spacing: 4,
-                      runSpacing: 4,
-                      children: item.optionals.map((o) {
-                        final hasPrice = o.price > 0;
-                        return Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 7, vertical: 3),
-                          decoration: BoxDecoration(
-                              color: AppColors.warning.withOpacity(0.08),
-                              borderRadius:
-                                  BorderRadius.circular(AppRadius.xs)),
-                          child: Text(
-                              hasPrice
-                                  ? '${normaliseName(o.fieldName)}  +${egp(o.price)}'
-                                  : normaliseName(o.fieldName),
-                              style: cairo(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.warning)),
-                        );
-                      }).toList()),
+                if (item.deductions.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: () {
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (_) => OrderIngredientsSheet(item: item),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.06),
+                        borderRadius: BorderRadius.circular(AppRadius.xs),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.science_rounded,
+                              size: 11, color: AppColors.primary),
+                          const SizedBox(width: 4),
+                          Text(
+                            'View Ingredient Use',
+                            style: cairo(
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.primary),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               ])),
           const SizedBox(width: 10),

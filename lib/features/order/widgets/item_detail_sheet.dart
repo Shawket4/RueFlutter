@@ -19,12 +19,18 @@ class ItemDetailSheet extends ConsumerStatefulWidget {
   final MenuItem item;
   final int? editIndex;
   final CartItem? existingItem;
+  final bool configureOnly;
+  final String? configureTitle;
+  final ItemLineConfiguration? initialConfig;
 
   const ItemDetailSheet({
     super.key,
     required this.item,
     this.editIndex,
     this.existingItem,
+    this.configureOnly = false,
+    this.configureTitle,
+    this.initialConfig,
   });
 
   // Task 3.2: ResponsiveSheet
@@ -34,6 +40,23 @@ class ItemDetailSheet extends ConsumerStatefulWidget {
           context: ctx,
           builder: (_) => ItemDetailSheet(
               item: item, editIndex: editIndex, existingItem: existingItem));
+
+  /// Collects size/addon/optional choices for a bundle component (same UI as a normal item).
+  static Future<ItemLineConfiguration?> showForConfiguration(
+    BuildContext ctx, {
+    required MenuItem item,
+    String? title,
+    ItemLineConfiguration? initial,
+  }) =>
+      ResponsiveSheet.show<ItemLineConfiguration?>(
+        context: ctx,
+        builder: (_) => ItemDetailSheet(
+          item: item,
+          configureOnly: true,
+          configureTitle: title,
+          initialConfig: initial,
+        ),
+      );
 
   @override
   ConsumerState<ItemDetailSheet> createState() => _ItemDetailSheetState();
@@ -57,7 +80,10 @@ class _ItemDetailSheetState extends ConsumerState<ItemDetailSheet> {
 
   final bool _recipeLoading = false;
 
-  bool get _isEdit => widget.editIndex != null && widget.existingItem != null;
+  bool get _isEdit =>
+      !widget.configureOnly &&
+      widget.editIndex != null &&
+      widget.existingItem != null;
 
   @override
   void initState() {
@@ -68,6 +94,38 @@ class _ItemDetailSheetState extends ConsumerState<ItemDetailSheet> {
 
     _optionalFields = widget.item.optionalFields.where((f) => f.isActive).toList();
     _initBaseMilk();
+
+    final initial = widget.initialConfig;
+    if (initial != null) {
+      _selectedSize = initial.sizeLabel ?? _selectedSize;
+      for (final o in initial.optionals) {
+        _selectedOptionals.add(o.optionalFieldId);
+      }
+      final allAddons = ref.read(menuProvider).allAddons;
+      for (final sa in initial.addons) {
+        final addon = allAddons.where((a) => a.id == sa.addonItemId);
+        if (addon.isEmpty) continue;
+        final addonType = addon.first.addonType;
+        final matchingSlot =
+            widget.item.addonSlots.where((s) => s.addonType == addonType);
+        if (matchingSlot.isNotEmpty) {
+          final slot = matchingSlot.first;
+          final isMulti = (slot.maxSelections ?? 2) > 1;
+          if (isMulti) {
+            _multi.putIfAbsent(slot.id, () => {})[sa.addonItemId] = sa.quantity;
+          } else {
+            _single[slot.id] = sa.addonItemId;
+          }
+        } else {
+          if (_singleSelectTypes.contains(addonType)) {
+            _extrasSingle[addonType] = sa.addonItemId;
+          } else {
+            _extras.putIfAbsent(addonType, () => {})[sa.addonItemId] =
+                sa.quantity;
+          }
+        }
+      }
+    }
 
     if (_isEdit) {
       final existing = widget.existingItem!;
@@ -352,6 +410,19 @@ class _ItemDetailSheetState extends ConsumerState<ItemDetailSheet> {
   void _addToCart() {
     final addons = _buildSelectedAddons();
     final optionals = _buildSelectedOptionals();
+
+    if (widget.configureOnly) {
+      Navigator.pop(
+        context,
+        ItemLineConfiguration(
+          sizeLabel: _selectedSize,
+          addons: addons,
+          optionals: optionals,
+        ),
+      );
+      return;
+    }
+
     final cartItem = CartItem(
       menuItemId: widget.item.id,
       itemName: normaliseName(widget.item.name),
@@ -432,7 +503,9 @@ class _ItemDetailSheetState extends ConsumerState<ItemDetailSheet> {
                   child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                    Text(normaliseName(widget.item.name),
+                    Text(
+                        normaliseName(
+                            widget.configureTitle ?? widget.item.name),
                         style: cairo(
                             fontSize: 20,
                             fontWeight: FontWeight.w800,
@@ -625,45 +698,56 @@ class _ItemDetailSheetState extends ConsumerState<ItemDetailSheet> {
             decoration: const BoxDecoration(
                 color: Colors.white,
                 border: Border(top: BorderSide(color: AppColors.border))),
-            child: Row(children: [
-              Container(
-                decoration: BoxDecoration(
-                    color: AppColors.bg,
-                    borderRadius: BorderRadius.circular(AppRadius.sm),
-                    border: Border.all(color: AppColors.border)),
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  QtyBtn(
-                      icon: Icons.remove,
-                      onTap: () =>
-                          setState(() => _qty = (_qty - 1).clamp(1, 99))),
-                  SizedBox(
-                      width: 40,
-                      child: Center(
-                          child: AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 150),
-                              transitionBuilder: (child, anim) =>
-                                  ScaleTransition(scale: anim, child: child),
-                              child: Text('$_qty',
-                                  key: ValueKey(_qty),
-                                  style: cairo(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w800))))),
-                  QtyBtn(
-                      icon: Icons.add,
-                      onTap: () =>
-                          setState(() => _qty = (_qty + 1).clamp(1, 99))),
-                ]),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                  child: AppButton(
-                label: _canAdd
-                    ? '${_isEdit ? "Update" : "Add"}  —  ${egp(_lineTotal)}'
-                    : 'Select ${_firstUnsatisfiedSlot ?? "required options"}',
-                height: 50,
-                onTap: _canAdd ? _addToCart : null,
-              )),
-            ]),
+            child: widget.configureOnly
+                ? AppButton(
+                    label: _canAdd
+                        ? 'Continue  —  ${egp(_lineTotal)}'
+                        : 'Select ${_firstUnsatisfiedSlot ?? "required options"}',
+                    height: 50,
+                    width: double.infinity,
+                    onTap: _canAdd ? _addToCart : null,
+                  )
+                : Row(children: [
+                    Container(
+                      decoration: BoxDecoration(
+                          color: AppColors.bg,
+                          borderRadius: BorderRadius.circular(AppRadius.sm),
+                          border: Border.all(color: AppColors.border)),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        QtyBtn(
+                            icon: Icons.remove,
+                            onTap: () => setState(
+                                () => _qty = (_qty - 1).clamp(1, 99))),
+                        SizedBox(
+                            width: 40,
+                            child: Center(
+                                child: AnimatedSwitcher(
+                                    duration:
+                                        const Duration(milliseconds: 150),
+                                    transitionBuilder: (child, anim) =>
+                                        ScaleTransition(
+                                            scale: anim, child: child),
+                                    child: Text('$_qty',
+                                        key: ValueKey(_qty),
+                                        style: cairo(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w800))))),
+                        QtyBtn(
+                            icon: Icons.add,
+                            onTap: () => setState(
+                                () => _qty = (_qty + 1).clamp(1, 99))),
+                      ]),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                        child: AppButton(
+                      label: _canAdd
+                          ? '${_isEdit ? "Update" : "Add"}  —  ${egp(_lineTotal)}'
+                          : 'Select ${_firstUnsatisfiedSlot ?? "required options"}',
+                      height: 50,
+                      onTap: _canAdd ? _addToCart : null,
+                    )),
+                  ]),
           ),
         ]),
       ),

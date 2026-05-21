@@ -72,10 +72,109 @@ class SelectedAddon {
   );
 }
 
+// ── BundleComponentSnapshot (order-time) ──────────────────────
+
+class BundleComponentSnapshot {
+  final String itemId;
+  final String itemName;
+  final int quantity;
+  final String? sizeLabel;
+  final List<SelectedAddon> addons;
+  final List<SelectedOptional> optionals;
+
+  const BundleComponentSnapshot({
+    required this.itemId,
+    required this.itemName,
+    required this.quantity,
+    this.sizeLabel,
+    this.addons = const [],
+    this.optionals = const [],
+  });
+
+  int get addonsPrice =>
+      addons.fold(0, (s, a) => s + a.priceModifier * a.quantity);
+
+  int get optionalsPrice => optionals.fold(0, (s, o) => s + o.price);
+
+  Map<String, dynamic> toApiJson() => {
+        'item_id': itemId,
+        'quantity': quantity,
+        if (sizeLabel != null) 'size_label': sizeLabel,
+        'addons': addons.map((a) => a.toApiJson()).toList(),
+        'optional_field_ids':
+            optionals.map((o) => o.optionalFieldId).toList(),
+      };
+
+  Map<String, dynamic> toStorageJson() => {
+        ...toApiJson(),
+        'item_name': itemName,
+        'addons': addons.map((a) => a.toStorageJson()).toList(),
+        'optionals': optionals.map((o) => o.toStorageJson()).toList(),
+      };
+
+  factory BundleComponentSnapshot.fromJson(Map<String, dynamic> j) =>
+      BundleComponentSnapshot(
+        itemId: j['item_id'] as String,
+        itemName: (j['item_name'] as String?) ?? '',
+        quantity: (j['quantity'] as int?) ?? 1,
+        sizeLabel: j['size_label'] as String?,
+        addons: (j['addons'] as List? ?? [])
+            .map((a) => _addonFromOrderJson(a as Map<String, dynamic>))
+            .toList(),
+        optionals: (j['optionals'] as List? ?? [])
+            .map((o) => _optionalFromOrderJson(o as Map<String, dynamic>))
+            .toList(),
+      );
+
+  factory BundleComponentSnapshot.fromStorageJson(Map<String, dynamic> j) =>
+      BundleComponentSnapshot(
+        itemId: j['item_id'] as String,
+        itemName: (j['item_name'] as String?) ?? '',
+        quantity: (j['quantity'] as int?) ?? 1,
+        sizeLabel: j['size_label'] as String?,
+        addons: (j['addons'] as List? ?? [])
+            .map((a) => SelectedAddon.fromStorageJson(a as Map<String, dynamic>))
+            .toList(),
+        optionals: (j['optionals'] as List? ?? [])
+            .map((o) =>
+                SelectedOptional.fromStorageJson(o as Map<String, dynamic>))
+            .toList(),
+      );
+}
+
+SelectedAddon _addonFromOrderJson(Map<String, dynamic> j) => SelectedAddon(
+      addonItemId: (j['addon_item_id'] as String?) ?? '',
+      name: (j['addon_name'] as String?) ?? '',
+      priceModifier: (j['unit_price'] as int?) ?? 0,
+      quantity: (j['quantity'] as int?) ?? 1,
+    );
+
+SelectedOptional _optionalFromOrderJson(Map<String, dynamic> j) =>
+    SelectedOptional(
+      optionalFieldId: (j['optional_field_id'] as String?) ?? '',
+      name: (j['field_name'] as String?) ?? '',
+      price: (j['price'] as int?) ?? 0,
+    );
+
+/// Configuration from [ItemDetailSheet] for one bundle component drink/item.
+class ItemLineConfiguration {
+  final String? sizeLabel;
+  final List<SelectedAddon> addons;
+  final List<SelectedOptional> optionals;
+
+  const ItemLineConfiguration({
+    this.sizeLabel,
+    this.addons = const [],
+    this.optionals = const [],
+  });
+}
+
 // ── CartItem ──────────────────────────────────────────────────
 @immutable
 class CartItem {
-  final String              menuItemId;
+  final String?             menuItemId;
+  final String?             bundleId;
+  final List<BundleComponentSnapshot>? bundleComponents;
   final String              itemName;
   final String?             sizeLabel;
   final int                 unitPrice;
@@ -85,7 +184,9 @@ class CartItem {
   final String?             notes;
 
   const CartItem({
-    required this.menuItemId,
+    this.menuItemId,
+    this.bundleId,
+    this.bundleComponents,
     required this.itemName,
     this.sizeLabel,
     required this.unitPrice,
@@ -93,7 +194,9 @@ class CartItem {
     this.addons    = const [],
     this.optionals = const [],
     this.notes,
-  });
+  }) : assert(menuItemId != null || bundleId != null);
+
+  bool get isBundleLine => bundleId != null;
 
   CartItem copyWith({
     int?                    quantity,
@@ -101,51 +204,94 @@ class CartItem {
     List<SelectedOptional>? optionals,
     String?                 notes,
   }) => CartItem(
-    menuItemId: menuItemId,
-    itemName:   itemName,
-    sizeLabel:  sizeLabel,
-    unitPrice:  unitPrice,
-    notes:      notes     ?? this.notes,
-    quantity:   quantity  ?? this.quantity,
-    addons:     addons    ?? this.addons,
-    optionals:  optionals ?? this.optionals,
+    menuItemId:        menuItemId,
+    bundleId:          bundleId,
+    bundleComponents:  bundleComponents,
+    itemName:          itemName,
+    sizeLabel:         sizeLabel,
+    unitPrice:         unitPrice,
+    notes:             notes     ?? this.notes,
+    quantity:          quantity  ?? this.quantity,
+    addons:            addons    ?? this.addons,
+    optionals:         optionals ?? this.optionals,
   );
 
   int get addonsPrice    => addons.fold(0, (s, a) => s + a.priceModifier * a.quantity);
   int get optionalsPrice => optionals.fold(0, (s, o) => s + o.price);
-  int get lineTotal      => (unitPrice + addonsPrice + optionalsPrice) * quantity;
+  int get lineTotal {
+    if (!isBundleLine) {
+      return (unitPrice + addonsPrice + optionalsPrice) * quantity;
+    }
+    final componentExtras = bundleComponents?.fold<int>(
+          0,
+          (s, c) => s + c.addonsPrice + c.optionalsPrice,
+        ) ??
+        0;
+    return (unitPrice + componentExtras) * quantity;
+  }
 
-  Map<String, dynamic> toApiJson() => {
-    'menu_item_id':       menuItemId,
-    'size_label':         sizeLabel,
-    'quantity':           quantity,
-    'addons':             addons.map((a) => a.toApiJson()).toList(),
-    'optional_field_ids': optionals.map((o) => o.optionalFieldId).toList(),
-    'notes':              notes,
-  };
+  Map<String, dynamic> toApiJson() {
+    if (isBundleLine) {
+      return {
+        'bundle_id':          bundleId,
+        'bundle_unit_price':  unitPrice,
+        'quantity':           quantity,
+        'addons':             const [],           // required by backend serde
+        'optional_field_ids': const [],           // required by backend serde
+        'bundle_components':  bundleComponents!
+            .map((c) => c.toApiJson())
+            .toList(),
+        if (notes != null) 'notes': notes,
+      };
+    }
+    return {
+      'menu_item_id':       menuItemId,
+      'size_label':         sizeLabel,
+      'quantity':           quantity,
+      'addons':             addons.map((a) => a.toApiJson()).toList(),
+      'optional_field_ids': optionals.map((o) => o.optionalFieldId).toList(),
+      if (notes != null) 'notes': notes,
+    };
+  }
 
   Map<String, dynamic> toStorageJson() => {
-    ...toApiJson(),
-    'item_name':  itemName,
-    'unit_price': unitPrice,
-    'addons':     addons.map((a) => a.toStorageJson()).toList(),
-    'optionals':  optionals.map((o) => o.toStorageJson()).toList(),
-  };
+        ...toApiJson(),
+        'item_name':  itemName,
+        'unit_price': unitPrice,
+        'addons':     addons.map((a) => a.toStorageJson()).toList(),
+        'optionals':  optionals.map((o) => o.toStorageJson()).toList(),
+        if (bundleComponents != null)
+          'bundle_components': bundleComponents!
+              .map((c) => c.toStorageJson())
+              .toList(),
+      };
 
-  factory CartItem.fromStorageJson(Map<String, dynamic> j) => CartItem(
-    menuItemId: j['menu_item_id'] as String,
-    itemName:   (j['item_name']   as String?) ?? '',
-    sizeLabel:  j['size_label']   as String?,
-    unitPrice:  (j['unit_price']  as int?)    ?? 0,
-    quantity:   (j['quantity']    as int?)    ?? 1,
-    notes:      j['notes']        as String?,
-    addons: (j['addons'] as List? ?? [])
-        .map((a) => SelectedAddon.fromStorageJson(a as Map<String, dynamic>))
-        .toList(),
-    optionals: (j['optionals'] as List? ?? [])
-        .map((o) => SelectedOptional.fromStorageJson(o as Map<String, dynamic>))
-        .toList(),
-  );
+  factory CartItem.fromStorageJson(Map<String, dynamic> j) {
+    final bundleId = j['bundle_id'] as String?;
+    final comps = bundleId != null
+        ? (j['bundle_components'] as List? ?? [])
+            .map((c) => BundleComponentSnapshot.fromStorageJson(
+                c as Map<String, dynamic>))
+            .toList()
+        : null;
+
+    return CartItem(
+      menuItemId: j['menu_item_id'] as String?,
+      bundleId: bundleId,
+      bundleComponents: comps,
+      itemName: (j['item_name'] as String?) ?? '',
+      sizeLabel: j['size_label'] as String?,
+      unitPrice: (j['unit_price'] as int?) ?? 0,
+      quantity: (j['quantity'] as int?) ?? 1,
+      notes: j['notes'] as String?,
+      addons: (j['addons'] as List? ?? [])
+          .map((a) => SelectedAddon.fromStorageJson(a as Map<String, dynamic>))
+          .toList(),
+      optionals: (j['optionals'] as List? ?? [])
+          .map((o) => SelectedOptional.fromStorageJson(o as Map<String, dynamic>))
+          .toList(),
+    );
+  }
 
   static bool addonsMatch(List<SelectedAddon> a, List<SelectedAddon> b) {
     if (a.length != b.length) return false;

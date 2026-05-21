@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../models/bundle.dart';
 import '../models/menu.dart';
 import 'client.dart';
 
@@ -30,6 +31,27 @@ class MenuApi {
     final res = await _c.dio.get('/addon-items', queryParameters: {'org_id': orgId});
     return (res.data as List)
         .map((a) => AddonItem.fromJson(a as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<List<Bundle>> bundles(String orgId, {DateTime? updatedSince}) async {
+    final params = <String, dynamic>{'org_id': orgId};
+    if (updatedSince != null) {
+      params['updated_since'] = updatedSince.toUtc().toIso8601String();
+    }
+    final res = await _c.dio.get('/bundles', queryParameters: params);
+    final data = res.data;
+    final List<dynamic> list;
+    if (data is List) {
+      list = data;
+    } else if (data is Map && data['data'] is List) {
+      list = data['data'] as List;
+    } else {
+      return [];
+    }
+    return list
+        .map((b) => Bundle.fromJson(b as Map<String, dynamic>))
+        .where((b) => b.status == BundleStatus.active)
         .toList();
   }
 }

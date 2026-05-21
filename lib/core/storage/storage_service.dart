@@ -56,6 +56,20 @@ class StorageService {
     try { return DateTime.parse(raw); } catch (_) { return null; }
   }
 
+  Future<void> saveBundles(String orgId, List<Map<String, dynamic>> bundles) =>
+      _prefs.setString('bundles_v1_$orgId', jsonEncode(bundles));
+
+  List<Map<String, dynamic>>? loadBundles(String orgId) {
+    final raw = _prefs.getString('bundles_v1_$orgId');
+    if (raw == null) return null;
+    try {
+      return (jsonDecode(raw) as List).cast<Map<String, dynamic>>();
+    } catch (_) {
+      _prefs.remove('bundles_v1_$orgId');
+      return null;
+    }
+  }
+
   Future<void> saveAddons(String orgId, List<Map<String, dynamic>> addons) =>
       _prefs.setString('addons_$orgId', jsonEncode(addons));
 

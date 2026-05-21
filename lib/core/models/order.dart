@@ -1,3 +1,5 @@
+import 'cart.dart';
+
 class OrderItemAddon {
   final String id;
   final String orderItemId;
@@ -81,31 +83,80 @@ class OrderItemOptional {
   };
 }
 
+class InventoryDeduction {
+  final String? orgIngredientId;
+  final String ingredientName;
+  final String unit;
+  final double quantity;
+  final String source;
+  final String category;
+
+  const InventoryDeduction({
+    this.orgIngredientId,
+    required this.ingredientName,
+    required this.unit,
+    required this.quantity,
+    required this.source,
+    required this.category,
+  });
+
+  factory InventoryDeduction.fromJson(Map<String, dynamic> j) => InventoryDeduction(
+    orgIngredientId: j['org_ingredient_id'] as String?,
+    ingredientName: j['ingredient_name'] as String? ?? '',
+    unit: j['unit'] as String? ?? '',
+    quantity: (j['quantity'] as num?)?.toDouble() ?? 0.0,
+    source: j['source'] as String? ?? '',
+    category: j['category'] as String? ?? '',
+  );
+
+  Map<String, dynamic> toJson() => {
+    if (orgIngredientId != null) 'org_ingredient_id': orgIngredientId,
+    'ingredient_name': ingredientName,
+    'unit': unit,
+    'quantity': quantity,
+    'source': source,
+    'category': category,
+  };
+}
+
 class OrderItem {
   final String                  id;
   final String                  itemName;
   final String?                 sizeLabel;
+  final String?                 bundleId;
+  final List<BundleComponentSnapshot> bundleComponents;
   final int                     unitPrice;
   final int                     quantity;
   final int                     lineTotal;
   final List<OrderItemAddon>    addons;
   final List<OrderItemOptional> optionals;
+  final List<InventoryDeduction> deductions;
 
   const OrderItem({
     required this.id,
     required this.itemName,
     this.sizeLabel,
+    this.bundleId,
+    this.bundleComponents = const [],
     required this.unitPrice,
     required this.quantity,
     required this.lineTotal,
     required this.addons,
     this.optionals = const [],
+    this.deductions = const [],
   });
+
+  bool get isBundleLine => bundleId != null;
 
   factory OrderItem.fromJson(Map<String, dynamic> j) => OrderItem(
     id:        j['id'],
     itemName:  j['item_name'],
     sizeLabel: j['size_label'] as String?,
+    bundleId:  j['bundle_id'] as String?,
+    bundleComponents: (j['bundle_components'] as List? ?? [])
+        .map((c) => BundleComponentSnapshot.fromJson(
+            c as Map<String, dynamic>))
+        .toList(),
     unitPrice: j['unit_price'],
     quantity:  j['quantity'],
     lineTotal: j['line_total'],
@@ -115,13 +166,21 @@ class OrderItem {
     optionals: (j['optionals'] as List? ?? [])
         .map((o) => OrderItemOptional.fromJson(o))
         .toList(),
+    deductions: (j['deductions_snapshot'] as List? ?? [])
+        .map((d) => InventoryDeduction.fromJson(d as Map<String, dynamic>))
+        .toList(),
   );
 
   Map<String, dynamic> toJson() => {
     'id': id, 'item_name': itemName, 'size_label': sizeLabel,
+    'bundle_id': bundleId,
+    if (bundleComponents.isNotEmpty)
+      'bundle_components':
+          bundleComponents.map((c) => c.toApiJson()).toList(),
     'unit_price': unitPrice, 'quantity': quantity, 'line_total': lineTotal,
     'addons':    addons.map((a) => a.toJson()).toList(),
     'optionals': optionals.map((o) => o.toJson()).toList(),
+    'deductions_snapshot': deductions.map((d) => d.toJson()).toList(),
   };
 }
 

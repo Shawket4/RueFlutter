@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api/menu_api.dart';
+import '../models/bundle.dart';
 import '../models/menu.dart';
 import '../storage/storage_service.dart';
 
@@ -62,6 +63,32 @@ class MenuRepository {
             .toList();
       }
       return [];
+    }
+  }
+
+  Future<({List<Bundle> bundles, bool fromCache})> fetchBundles(
+    String orgId, {
+    DateTime? updatedSince,
+  }) async {
+    try {
+      final bundles = await _api.bundles(orgId, updatedSince: updatedSince);
+      await _storage.saveBundles(
+        orgId,
+        bundles.map((b) => b.toJson()).toList(),
+      );
+      return (bundles: bundles, fromCache: false);
+    } catch (_) {
+      final cached = _storage.loadBundles(orgId);
+      if (cached != null) {
+        return (
+          bundles: cached
+              .map((b) => Bundle.fromJson(b))
+              .where((b) => b.status == BundleStatus.active)
+              .toList(),
+          fromCache: true,
+        );
+      }
+      return (bundles: <Bundle>[], fromCache: true);
     }
   }
 }

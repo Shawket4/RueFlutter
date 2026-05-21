@@ -420,6 +420,7 @@ class ReceiptItemRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isBundle = item.isBundleLine;
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Column(
@@ -445,28 +446,80 @@ class ReceiptItemRow extends StatelessWidget {
               ),
             ],
           ),
-          if (item.addons.isNotEmpty)
+          if (isBundle && item.bundleComponents.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.only(left: 20, top: 2),
+              padding: const EdgeInsets.only(left: 20, top: 4),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: item.addons.map<Widget>((a) => Text(
-                  '+ ${normaliseName(a.addonName)} (${egp(a.lineTotal)})',
-                  style: cairo(fontSize: 11, color: AppColors.textMuted),
-                )).toList(),
+                children: item.bundleComponents.map<Widget>((c) {
+                  final qty = c.quantity * item.quantity;
+                  final sizePart = c.sizeLabel != null ? ' · ${normaliseName(c.sizeLabel!)}' : '';
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '– ${normaliseName(c.itemName)}$sizePart × $qty',
+                          style: cairo(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                        ),
+                        if (c.addons.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 12, top: 1),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: c.addons.map<Widget>((a) {
+                                final linePrice = a.priceModifier * a.quantity;
+                                return Text(
+                                  '+ ${normaliseName(a.name)}${a.quantity > 1 ? " ×${a.quantity}" : ""}${linePrice > 0 ? " (${egp(linePrice)})" : ""}',
+                                  style: cairo(fontSize: 10, color: AppColors.primary),
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                        if (c.optionals.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 12, top: 1),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: c.optionals.map<Widget>((o) {
+                                return Text(
+                                  '• ${normaliseName(o.name)}${o.price > 0 ? " (${egp(o.price)})" : ""}',
+                                  style: cairo(fontSize: 10, color: AppColors.warning),
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                      ],
+                    ),
+                  );
+                }).toList(),
               ),
-            ),
-          if (item.optionals.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(left: 20, top: 2),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: item.optionals.map<Widget>((o) => Text(
-                  '• ${normaliseName(o.fieldName)} (${egp(o.price)})',
-                  style: cairo(fontSize: 11, color: AppColors.textMuted),
-                )).toList(),
+            )
+          else ...[
+            if (item.addons.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(left: 20, top: 2),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: item.addons.map<Widget>((a) => Text(
+                    '+ ${normaliseName(a.addonName)} (${egp(a.lineTotal)})',
+                    style: cairo(fontSize: 11, color: AppColors.textMuted),
+                  )).toList(),
+                ),
               ),
-            ),
+            if (item.optionals.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(left: 20, top: 2),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: item.optionals.map<Widget>((o) => Text(
+                    '• ${normaliseName(o.fieldName)} (${egp(o.price)})',
+                    style: cairo(fontSize: 11, color: AppColors.textMuted),
+                  )).toList(),
+                ),
+              ),
+          ],
         ],
       ),
     );

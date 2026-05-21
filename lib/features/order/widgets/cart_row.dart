@@ -5,6 +5,7 @@ import '../../../core/providers/cart_notifier.dart';
 import '../../../core/providers/menu_notifier.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatting.dart';
+import 'bundle_cart_row.dart';
 import 'item_detail_sheet.dart';
 import 'shared_widgets.dart';
 
@@ -16,6 +17,9 @@ class CartRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final cart = ref.watch(cartProvider);
     final item = cart.items[index];
+    if (item.isBundleLine) {
+      return BundleCartRow(index: index, item: item);
+    }
     final menu = ref.watch(menuProvider);
 
     return Container(
@@ -113,8 +117,10 @@ class CartRow extends ConsumerWidget {
 
           GestureDetector(
             onTap: () {
+              final menuItemId = item.menuItemId;
+              if (menuItemId == null) return;
               final menuItem =
-                  menu.items.where((m) => m.id == item.menuItemId);
+                  menu.items.where((m) => m.id == menuItemId);
               if (menuItem.isEmpty) return;
               ItemDetailSheet.show(
                 context,

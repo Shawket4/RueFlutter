@@ -9,13 +9,19 @@ class AppColors {
   static const warning = Color(0xFFD97706); // Warning Amber
 
   static const bg = Color(0xFFF4F6F8); // Slate White Background
+  static const warmCream = Color(0xFFFAF7F2); // Login aside / marketing panels
   static const surface = Colors.white;
   static const border = Color(0xFFE5E7EB); // Light gray border
   static const borderLight = Color(0xFFF3F4F6); // Extra light gray border
 
   static const textPrimary = Color(0xFF0A2540); // Sufrix Navy for primary text
-  static const textSecondary = Color(0xFF6B7280); // Muted Slate Gray for secondary text
+  static const textSecondary =
+      Color(0xFF6B7280); // Muted Slate Gray for secondary text
   static const textMuted = Color(0xFF9CA3AF);
+
+  /// Dashboard login: `#0A2540` at 60% / 50% on cream panels.
+  static const onCreamMuted = Color(0x990A2540);
+  static const onCreamSubtle = Color(0x800A2540);
 
   static Color primaryTint(double opacity) => primary.withOpacity(opacity);
   static Color successTint(double opacity) => success.withOpacity(opacity);
@@ -182,12 +188,13 @@ class AppTheme {
         contentTextStyle: GoogleFonts.cairo(
             fontSize: 14, color: AppColors.textSecondary, height: 1.5),
       ),
-      
+
       // Modern Toast SnackBar styling
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
         backgroundColor: const Color(0xFF1F2937), // Elegant dark gray
-        contentTextStyle: GoogleFonts.cairo(fontSize: 14, color: Colors.white, fontWeight: FontWeight.w500),
+        contentTextStyle: GoogleFonts.cairo(
+            fontSize: 14, color: Colors.white, fontWeight: FontWeight.w500),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         elevation: 6,
       ),

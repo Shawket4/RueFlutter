@@ -5,6 +5,7 @@ import '../../core/providers/auth_notifier.dart';
 import '../../core/providers/draft_carts_notifier.dart';
 import '../../core/providers/menu_notifier.dart';
 import '../../core/providers/discount_notifier.dart';
+import '../../core/providers/shift_notifier.dart';
 import '../../core/theme/app_theme.dart';
 import 'widgets/top_bar.dart';
 import 'widgets/category_rail.dart';
@@ -26,10 +27,15 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final orgId = ref.read(authProvider).user?.orgId;
+      final auth = ref.read(authProvider);
+      final orgId = auth.user?.orgId;
+      final branchId = auth.user?.branchId;
       if (orgId != null) {
         ref.read(menuProvider.notifier).load(orgId);
         ref.read(discountProvider.notifier).load(orgId);
+      }
+      if (branchId != null) {
+        ref.read(shiftProvider.notifier).loadInventory(branchId);
       }
 
       ref.read(draftCartsProvider.notifier).promoteOldestDraftIfActiveEmpty();

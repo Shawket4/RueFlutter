@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 import '../../../core/api/client.dart';
 import '../../../core/providers/draft_carts_notifier.dart';
 import '../../../core/repositories/order_repository.dart';
+import '../../../core/utils/time_utils.dart';
 import '../../../core/models/cart.dart';
 import '../../../core/models/discount.dart';
 import '../../../core/models/order.dart';
@@ -210,7 +211,7 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
       tipAmount: tip,
       tipPaymentMethod: tipMethod,
       discountId: discountId,
-      createdAt: DateTime.now(),
+      createdAt: TimeUtils.now(),
       items: cart.items.map((ci) => OrderItem(
         id: '',
         itemName: ci.itemName,
@@ -362,8 +363,8 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
         tipPaymentMethod: tipMethod,
         paymentSplits: splits,
         items: syncedCart.items,
-        orderedAt: DateTime.now(),
-        createdAt: DateTime.now(),
+        orderedAt: TimeUtils.now(),
+        createdAt: TimeUtils.now(),
       ));
 
       // Task 1.5: Optimistic offline order
@@ -388,7 +389,7 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
         tipAmount: tip,
         tipPaymentMethod: tipMethod,
         discountId: discountId,
-        createdAt: DateTime.now(),
+        createdAt: TimeUtils.now(),
         items: syncedCart.items.map((ci) => OrderItem(
           id: const Uuid().v4(),
           itemName: ci.itemName,
@@ -475,8 +476,8 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
           tipPaymentMethod: tipMethod,
           paymentSplits: splits,
           items: syncedCart.items,
-          createdAt: DateTime.now(),
-          orderedAt: DateTime.now(),
+          createdAt: TimeUtils.now(),
+          orderedAt: TimeUtils.now(),
         ));
 
         // Task 1.5: Optimistic offline order
@@ -501,7 +502,7 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
           tipAmount: tip,
           tipPaymentMethod: tipMethod,
           discountId: discountId,
-          createdAt: DateTime.now(),
+          createdAt: TimeUtils.now(),
           items: syncedCart.items.map((ci) => OrderItem(
             id: const Uuid().v4(),
             itemName: ci.itemName,

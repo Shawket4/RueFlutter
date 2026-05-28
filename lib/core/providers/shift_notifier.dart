@@ -8,6 +8,7 @@ import '../repositories/shift_repository.dart';
 import '../services/connectivity_service.dart';
 import '../services/offline_queue.dart';
 import '../storage/storage_service.dart';
+import '../utils/time_utils.dart';
 import 'auth_notifier.dart';
 import 'cart_storage.dart';
 
@@ -127,7 +128,7 @@ class ShiftNotifier extends Notifier<ShiftState> {
     }
 
     final shiftId  = const Uuid().v4();
-    final now      = DateTime.now();
+    final now      = TimeUtils.now();
     final localShift = Shift(
       id:           shiftId,
       branchId:     branchId,

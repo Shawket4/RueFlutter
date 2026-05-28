@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/api_config.dart';
+import '../utils/time_utils.dart';
 
 String? _currentToken;
 void setAuthToken(String? token) => _currentToken = token;
@@ -29,6 +30,7 @@ class DioClient {
         handler.next(options);
       },
       onResponse: (response, handler) {
+        TimeUtils.updateFromHeaders(response.headers.map);
         handler.next(response);
       },
       onError: (err, handler) {

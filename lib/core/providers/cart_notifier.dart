@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/bundle.dart';
 import '../models/cart.dart';
 import '../storage/storage_service.dart';
+import '../utils/time_utils.dart';
 import 'cart_storage.dart';
 import 'shift_notifier.dart';
 
@@ -13,7 +14,7 @@ class CartNotifier extends Notifier<CartState> {
   static CartState _defaultCart() => CartState(
         id: 'order_1',
         displayName: 'Order 1',
-        createdAt: DateTime.now(),
+        createdAt: TimeUtils.now(),
       );
 
   String? _scope() => cartStorageScope(ref.read(shiftProvider).shift);
@@ -196,7 +197,7 @@ class CartNotifier extends Notifier<CartState> {
     _update(CartState(
       id: state.id,
       displayName: state.displayName,
-      createdAt: state.createdAt ?? DateTime.now(),
+      createdAt: state.createdAt ?? TimeUtils.now(),
     ));
   }
 
@@ -210,9 +211,9 @@ class CartNotifier extends Notifier<CartState> {
     _lastRemovedItem = null;
     _lastRemovedIndex = null;
     _update(CartState(
-      id: id ?? 'order_${DateTime.now().millisecondsSinceEpoch}',
+      id: id ?? 'order_${TimeUtils.now().millisecondsSinceEpoch}',
       displayName: displayName ?? 'Order 1',
-      createdAt: DateTime.now(),
+      createdAt: TimeUtils.now(),
     ));
   }
 
@@ -223,7 +224,7 @@ class CartNotifier extends Notifier<CartState> {
   }
 
   /// Idempotency key for [POST /orders] — stable per tab until a new order starts.
-  String idempotencyKey() => state.id ?? 'order_${DateTime.now().millisecondsSinceEpoch}';
+  String idempotencyKey() => state.id ?? 'order_${TimeUtils.now().millisecondsSinceEpoch}';
 }
 
 final cartProvider =

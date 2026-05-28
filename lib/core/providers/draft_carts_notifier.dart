@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/cart.dart';
 import '../storage/storage_service.dart';
+import '../utils/time_utils.dart';
 import 'cart_notifier.dart';
 import 'cart_storage.dart';
 import 'shift_notifier.dart';
@@ -137,10 +138,10 @@ class DraftCartsNotifier extends Notifier<List<CartDraft>> {
     if (current.isEmpty) return false;
 
     final draft = CartDraft(
-      id: current.id ?? 'order_${DateTime.now().millisecondsSinceEpoch}',
+      id: current.id ?? 'order_${TimeUtils.now().millisecondsSinceEpoch}',
       name: current.displayName ?? _nextAutoName(current),
       cartState: current,
-      createdAt: current.createdAt ?? DateTime.now(),
+      createdAt: current.createdAt ?? TimeUtils.now(),
     );
 
     state = [...state, draft];
@@ -148,7 +149,7 @@ class DraftCartsNotifier extends Notifier<List<CartDraft>> {
 
     final nextName = _nextAutoName(current);
     ref.read(cartProvider.notifier).startNewOrder(
-          id: 'order_${DateTime.now().millisecondsSinceEpoch}',
+          id: 'order_${TimeUtils.now().millisecondsSinceEpoch}',
           displayName: nextName,
         );
     return true;
@@ -162,10 +163,10 @@ class DraftCartsNotifier extends Notifier<List<CartDraft>> {
     final List<CartDraft> updated = List.from(state)..removeAt(idx);
 
     final parked = CartDraft(
-      id: current.id ?? 'order_${DateTime.now().millisecondsSinceEpoch}',
+      id: current.id ?? 'order_${TimeUtils.now().millisecondsSinceEpoch}',
       name: current.displayName ?? 'Order',
       cartState: current,
-      createdAt: current.createdAt ?? DateTime.now(),
+      createdAt: current.createdAt ?? TimeUtils.now(),
     );
     updated.add(parked);
 

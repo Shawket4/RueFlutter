@@ -25,6 +25,7 @@ import '../../../shared/widgets/label_value.dart';
 import '../../../shared/widgets/responsive_sheet.dart';
 import '../../../shared/widgets/sync_status_banner.dart';
 import '../helpers/payment_helpers.dart';
+import '../../../core/providers/payment_method_notifier.dart';
 import 'receipt_sheet.dart';
 import 'receipt_preview_sheet.dart';
 import 'shared_widgets.dart';
@@ -114,7 +115,10 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
     return (v * 100).round();
   }
 
-  bool get _tipIsCash => isCashMethod(_tipPaymentMethod);
+  bool get _tipIsCash {
+    final methods = ref.read(paymentMethodProvider).items;
+    return isCashMethod(methods, _tipPaymentMethod);
+  }
 
   void _syncCheckoutToCart({
     required String? customer,
@@ -564,6 +568,7 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
     final cart = ref.watch(cartProvider);
     final discountState = ref.watch(discountProvider);
     final isOnline = ref.watch(isOnlineProvider);
+    final methods = ref.watch(paymentMethodProvider).items;
     final mq = MediaQuery.of(context);
     final maxH = mq.size.height - mq.padding.top - 16;
 
@@ -703,6 +708,7 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
                       onAmountChanged: () => setState(() {}),
                       parsedTip: _parsedTip,
                       tipPaymentMethod: _tipPaymentMethod,
+                      methods: methods,
                     )
                   else ...[
                     _SinglePaymentGrid(
@@ -712,6 +718,7 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
                         setState(() =>
                             _showTendered = v == 'cash' || v == 'talabat_cash');
                       },
+                      methods: methods,
                     ),
 
                     if (_showTendered) ...[
@@ -733,6 +740,7 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
                     onMethodChanged: (m) =>
                         setState(() => _tipPaymentMethod = m),
                     onAmountChanged: () => setState(() {}),
+                    methods: methods,
                   ),
 
                   AnimatedSize(
@@ -913,7 +921,8 @@ class _DiscountPicker extends StatelessWidget {
 class _SinglePaymentGrid extends StatelessWidget {
   final String selected;
   final void Function(String) onSelect;
-  const _SinglePaymentGrid({required this.selected, required this.onSelect});
+  final List<PaymentMethod> methods;
+  const _SinglePaymentGrid({required this.selected, required this.onSelect, required this.methods});
 
   @override
   Widget build(BuildContext context) =>
@@ -923,7 +932,7 @@ class _SinglePaymentGrid extends StatelessWidget {
         return Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: PaymentMethod.values.where((m) => m != PaymentMethod.mixed).map((m) {
+          children: methods.where((m) => m.wireFormat != 'mixed').map((m) {
             final sel = selected == m.wireFormat;
             return GestureDetector(
               onTap: () => onSelect(m.wireFormat),
@@ -942,7 +951,7 @@ class _SinglePaymentGrid extends StatelessWidget {
                   Icon(m.icon, size: 20, color: sel ? Colors.white : m.color),
                   const SizedBox(width: 10),
                   Expanded(
-                      child: Text(m.label,
+                      child: Text(m.label('en'),
                           style: cairo(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
@@ -1054,6 +1063,7 @@ class _TipSection extends StatelessWidget {
   final int? parsedTip;
   final void Function(String) onMethodChanged;
   final VoidCallback onAmountChanged;
+  final List<PaymentMethod> methods;
 
   const _TipSection({
     required this.tipCtrl,
@@ -1061,6 +1071,7 @@ class _TipSection extends StatelessWidget {
     required this.parsedTip,
     required this.onMethodChanged,
     required this.onAmountChanged,
+    required this.methods,
   });
 
   @override
@@ -1105,7 +1116,7 @@ class _TipSection extends StatelessWidget {
           Wrap(
             spacing: 6,
             runSpacing: 6,
-            children: PaymentMethod.values.where((m) => m != PaymentMethod.mixed).map((method) {
+            children: methods.where((m) => m.wireFormat != 'mixed').map((method) {
               final sel = tipPaymentMethod == method.wireFormat;
               final color = method.color;
               return GestureDetector(
@@ -1127,7 +1138,7 @@ class _TipSection extends StatelessWidget {
                           size: 11, color: Colors.white),
                       const SizedBox(width: 4)
                     ],
-                    Text(method.label,
+                    Text(method.label('en'),
                         style: cairo(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -1173,6 +1184,7 @@ class _SplitPaymentSection extends StatelessWidget {
   final VoidCallback onAmountChanged;
   final int? parsedTip;
   final String tipPaymentMethod;
+  final List<PaymentMethod> methods;
 
   const _SplitPaymentSection({
     required this.activeMethods,
@@ -1182,6 +1194,7 @@ class _SplitPaymentSection extends StatelessWidget {
     required this.onAmountChanged,
     required this.parsedTip,
     required this.tipPaymentMethod,
+    required this.methods,
   });
 
   List<PaymentSplit> _buildSplits() {
@@ -1205,7 +1218,7 @@ class _SplitPaymentSection extends StatelessWidget {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: PaymentMethod.values.where((m) => m != PaymentMethod.mixed).map((method) {
+            children: methods.where((m) => m.wireFormat != 'mixed').map((method) {
               final color = method.color;
               final active = activeMethods.contains(method.wireFormat);
               return GestureDetector(
@@ -1229,7 +1242,7 @@ class _SplitPaymentSection extends StatelessWidget {
                         size: 14,
                         color: active ? Colors.white : color),
                     const SizedBox(width: 6),
-                    Text(method.label,
+                    Text(method.label('en'),
                         style: cairo(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
@@ -1245,7 +1258,7 @@ class _SplitPaymentSection extends StatelessWidget {
             const FieldLabel('ENTER AMOUNTS'),
             const SizedBox(height: 10),
             ...activeMethods.map((method) {
-              final pm = PaymentMethod.fromWire(method);
+              final pm = methods.firstWhere((x) => x.wireFormat == method, orElse: () => PaymentMethod.mixed());
               final color = pm.color;
               final ctrl = splitCtrs[method];
               return Padding(
@@ -1260,7 +1273,7 @@ class _SplitPaymentSection extends StatelessWidget {
                             decoration: BoxDecoration(
                                 color: color, shape: BoxShape.circle)),
                         const SizedBox(width: 6),
-                        Text(pm.label,
+                        Text(pm.label('en'),
                             style: cairo(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
@@ -1308,7 +1321,7 @@ class _SplitPaymentSection extends StatelessWidget {
             Builder(builder: (context) {
               final splits = _buildSplits();
               final entered = splits.fold(0, (s, p) => s + p.amount);
-              final isCashTip = PaymentMethod.fromWire(tipPaymentMethod).isCash;
+              final isCashTip = methods.firstWhere((x) => x.wireFormat == tipPaymentMethod, orElse: () => PaymentMethod.mixed()).isCash;
               final tipOffset =
                   (isCashTip && parsedTip != null) ? parsedTip! : 0;
               final diff = cartTotal - entered - tipOffset;

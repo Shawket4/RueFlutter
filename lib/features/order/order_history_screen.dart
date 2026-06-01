@@ -14,6 +14,7 @@ import 'void_order_sheet.dart';
 import 'widgets/receipt_preview_sheet.dart';
 import 'widgets/order_ingredients_sheet.dart';
 import 'helpers/payment_helpers.dart';
+import '../../core/providers/payment_method_notifier.dart';
 
 class OrderHistoryScreen extends ConsumerStatefulWidget {
   const OrderHistoryScreen({super.key});
@@ -332,15 +333,16 @@ class _OrderTileState extends ConsumerState<_OrderTile> {
   }
 }
 
-class _PaymentBadge extends StatelessWidget {
+class _PaymentBadge extends ConsumerWidget {
   final String method;
   final bool voided;
   const _PaymentBadge({required this.method, required this.voided});
 
   @override
-  Widget build(BuildContext context) {
-    final label = methodLabel(method);
-    final color = methodColor(method);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final methods = ref.watch(paymentMethodProvider).items;
+    final label = methodLabel(methods, 'en', method);
+    final color = methodColor(methods, method);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -418,6 +420,7 @@ class _OrderDetailSheetState extends ConsumerState<_OrderDetailSheet> {
     final order = _order;
     final isVoided = order.status == 'voided';
     final isPending = order.status == 'pending_sync';
+    final methods = ref.watch(paymentMethodProvider).items;
 
     return Container(
       constraints:
@@ -548,7 +551,7 @@ class _OrderDetailSheetState extends ConsumerState<_OrderDetailSheet> {
             _SectionCard(
               child: Column(children: [
                 _MetaRow(Icons.payments_outlined, 'Payment',
-                    methodLabel(order.paymentMethod)),
+                    methodLabel(methods, 'en', order.paymentMethod)),
                 if (order.customerName != null) ...[
                   const SizedBox(height: 10),
                   _MetaRow(Icons.person_outline_rounded, 'Customer',

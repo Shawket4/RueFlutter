@@ -5,6 +5,8 @@ import '../../core/providers/auth_notifier.dart';
 import '../../core/services/printer_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatting.dart';
+import '../../core/providers/payment_method_notifier.dart';
+import '../order/helpers/payment_helpers.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Public entry point
@@ -82,30 +84,11 @@ class _ShiftReportPreviewSheetState
     return '$d/$mo/${l.year}  $h:$mi';
   }
 
-  String _methodLabel(String m) => switch (m) {
-        'cash' => 'Cash',
-        'card' => 'Card',
-        'digital_wallet' => 'Digital Wallet',
-        'mixed' => 'Mixed',
-        'talabat_online' => 'Talabat Online',
-        'talabat_cash' => 'Talabat Cash',
-        _ => m[0].toUpperCase() + m.substring(1).replaceAll('_', ' '),
-      };
-
-  Color _methodColor(String m) => switch (m) {
-        'cash' => const Color(0xFF059669),
-        'card' => const Color(0xFF7C3AED),
-        'digital_wallet' => const Color(0xFF0EA5E9),
-        'mixed' => AppColors.primary,
-        'talabat_online' => const Color(0xFFFF6B00),
-        'talabat_cash' => const Color(0xFFFF6B00),
-        _ => AppColors.primary,
-      };
-
   // ── Build ─────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final mq = MediaQuery.of(context);
+    final methods = ref.watch(paymentMethodProvider).items;
     final r = report;
     final isOpen = r.isOpen;
     final openTs = _fmtDt(r.openedAt);
@@ -232,7 +215,7 @@ class _ShiftReportPreviewSheetState
                   ...r.paymentSummary.map((p) {
                     final pct =
                         r.totalPayments > 0 ? p.total / r.totalPayments : 0.0;
-                    final color = _methodColor(p.paymentMethod);
+                    final color = methodColor(methods, p.paymentMethod);
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 10),
                       child: Column(children: [
@@ -250,7 +233,7 @@ class _ShiftReportPreviewSheetState
                             child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(_methodLabel(p.paymentMethod),
+                                  Text(methodLabel(methods, 'en', p.paymentMethod),
                                       style: cairo(
                                           fontSize: 13,
                                           fontWeight: FontWeight.w600)),

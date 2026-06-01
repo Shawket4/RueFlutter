@@ -9,6 +9,7 @@ import '../../../core/services/printer_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatting.dart';
 import '../helpers/payment_helpers.dart';
+import '../../../core/providers/payment_method_notifier.dart';
 
 /// 1. MAIN SHEET: Handles modal state, printing logic, and action buttons.
 class ReceiptPreviewSheet extends ConsumerStatefulWidget {
@@ -77,6 +78,8 @@ class _ReceiptPreviewSheetState extends ConsumerState<ReceiptPreviewSheet> {
   @override
   Widget build(BuildContext context) {
     final mq = MediaQuery.of(context);
+    final isTablet = MediaQuery.of(context).size.shortestSide >= 600;
+    final methods = ref.watch(paymentMethodProvider).items;
     final branch = ref.watch(authProvider).branch;
     final hasPrinter = branch?.hasPrinter ?? false;
 
@@ -97,7 +100,7 @@ class _ReceiptPreviewSheetState extends ConsumerState<ReceiptPreviewSheet> {
               child: Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 420),
-                  child: ThermalReceiptCard(order: widget.order, branch: branch),
+                  child: ThermalReceiptCard(order: widget.order, branch: branch, methods: methods),
                 ),
               ),
             ),
@@ -231,11 +234,13 @@ class _ReceiptPreviewSheetState extends ConsumerState<ReceiptPreviewSheet> {
 class ThermalReceiptCard extends StatelessWidget {
   final Order order;
   final Branch? branch;
+  final List<PaymentMethod> methods;
 
   const ThermalReceiptCard({
     super.key,
     required this.order,
     this.branch,
+    required this.methods,
   });
 
   @override
@@ -337,7 +342,7 @@ class ThermalReceiptCard extends StatelessWidget {
             _ReceiptInfoRow(label: 'Customer', value: order.customerName!),
           ],
           const SizedBox(height: 4),
-          _ReceiptInfoRow(label: 'Payment', value: methodLabel(order.paymentMethod)),
+          _ReceiptInfoRow(label: 'Payment', value: methodLabel(methods, 'en', order.paymentMethod)),
         ],
       ),
     );

@@ -10,6 +10,7 @@ import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/label_value.dart';
 import '../../../shared/widgets/responsive_sheet.dart';
 import '../helpers/payment_helpers.dart';
+import '../../../core/providers/payment_method_notifier.dart';
 
 class ReceiptSheet extends ConsumerStatefulWidget {
   final Order order;
@@ -67,6 +68,7 @@ class _ReceiptSheetState extends ConsumerState<ReceiptSheet> {
   @override
   Widget build(BuildContext context) {
     final o = widget.order;
+    final methods = ref.watch(paymentMethodProvider).items;
     return Container(
       decoration: BoxDecoration(
           color: Colors.white, borderRadius: AppRadius.sheetRadius),
@@ -102,10 +104,10 @@ class _ReceiptSheetState extends ConsumerState<ReceiptSheet> {
                 borderRadius: BorderRadius.circular(AppRadius.sm),
                 border: Border.all(color: AppColors.border)),
             child: Column(children: [
-              LabelValue('Payment', methodLabel(o.paymentMethod)),
+              LabelValue('Payment', methodLabel(methods, 'en', o.paymentMethod)),
               if (o.tipAmount != null && o.tipAmount! > 0)
                 LabelValue('Tip',
-                    '${egp(o.tipAmount!)}${o.tipPaymentMethod != null ? " · ${methodLabel(o.tipPaymentMethod!)}" : ""}',
+                    '${egp(o.tipAmount!)}${o.tipPaymentMethod != null ? " · ${methodLabel(methods, 'en', o.tipPaymentMethod!)}" : ""}',
                     valueColor: AppColors.success),
               if (o.customerName != null && o.customerName!.isNotEmpty)
                 LabelValue('Customer', o.customerName!),

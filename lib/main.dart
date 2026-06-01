@@ -79,6 +79,13 @@ class _AppState extends ConsumerState<_App> {
       title: 'Sufrix POS',
       theme: AppTheme.light,
       routerConfig: router,
+      builder: (context, child) {
+        return GestureDetector(
+          onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+          behavior: HitTestBehavior.translucent,
+          child: child,
+        );
+      },
     );
   }
 }

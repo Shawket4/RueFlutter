@@ -8,6 +8,7 @@ import '../../core/providers/order_history_notifier.dart';
 import '../../core/providers/shift_notifier.dart';
 import '../../core/providers/menu_notifier.dart';
 import '../../core/providers/discount_notifier.dart';
+import '../../core/providers/payment_method_notifier.dart';
 import '../../core/repositories/shift_repository.dart';
 import '../../core/repositories/order_repository.dart';
 import '../../core/api/recipe_api.dart';
@@ -94,6 +95,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
             // Pre-fetch active discounts list
             await ref.read(discountProvider.notifier).load(orgId, force: true);
+
+            // Pre-fetch payment methods
+            await ref.read(paymentMethodProvider.notifier).load(orgId, force: true);
 
             // Pre-fetch recipe previews for all loaded items
             final menuItems = ref.read(menuProvider).items;

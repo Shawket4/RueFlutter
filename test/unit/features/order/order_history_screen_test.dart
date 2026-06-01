@@ -121,7 +121,7 @@ void main() {
         shiftId: 'shift1',
         tellerId: 't1',
         tellerName: 'Teller',
-        orderNumber: '1001',
+        orderNumber: 1001,
         paymentMethod: 'cash',
         status: 'completed',
         createdAt: DateTime.now(),
@@ -140,6 +140,6 @@ void main() {
     ));
 
     expect(find.text('#1001'), findsOneWidget);
-    expect(find.text('EGP 114.00'), findsWidgets);
+    expect(find.text('EGP 1.14'), findsWidgets);
   });
 }

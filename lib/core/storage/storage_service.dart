@@ -92,6 +92,17 @@ class StorageService {
     }
   }
 
+  Future<void> savePaymentMethods(String orgId, List<Map<String, dynamic>> methods) =>
+      _prefs.setString('payment_methods_$orgId', jsonEncode(methods));
+
+  List<Map<String, dynamic>> loadPaymentMethods(String orgId) {
+    final raw = _prefs.getString('payment_methods_$orgId');
+    if (raw == null) return [];
+    try { return (jsonDecode(raw) as List).cast<Map<String, dynamic>>(); } catch (_) { 
+      _prefs.remove('payment_methods_$orgId'); return []; 
+    }
+  }
+
   Future<void> saveOrders(String shiftId, List<Map<String, dynamic>> orders) =>
       _prefs.setString('orders_$shiftId', jsonEncode(orders));
 

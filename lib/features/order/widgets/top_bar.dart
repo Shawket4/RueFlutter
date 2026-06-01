@@ -5,6 +5,7 @@ import '../../../core/providers/auth_notifier.dart';
 import '../../../core/providers/cart_notifier.dart';
 import '../../../core/providers/menu_notifier.dart';
 import '../../../core/providers/discount_notifier.dart';
+import '../../../core/providers/payment_method_notifier.dart';
 import '../../../core/services/connectivity_service.dart';
 import '../../../core/services/offline_queue.dart';
 import '../../../core/theme/app_theme.dart';
@@ -227,6 +228,7 @@ class _SyncBtnState extends ConsumerState<SyncBtn>
         await Future.wait([
           ref.read(menuProvider.notifier).load(orgId, force: true),
           ref.read(discountProvider.notifier).load(orgId, force: true),
+          ref.read(paymentMethodProvider.notifier).load(orgId, force: true),
         ]);
       }
     } finally {

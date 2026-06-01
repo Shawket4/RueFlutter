@@ -5,6 +5,7 @@ import '../../core/providers/auth_notifier.dart';
 import '../../core/providers/draft_carts_notifier.dart';
 import '../../core/providers/menu_notifier.dart';
 import '../../core/providers/discount_notifier.dart';
+import '../../core/providers/payment_method_notifier.dart';
 import '../../core/providers/shift_notifier.dart';
 import '../../core/theme/app_theme.dart';
 import 'widgets/top_bar.dart';
@@ -33,6 +34,7 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
       if (orgId != null) {
         ref.read(menuProvider.notifier).load(orgId);
         ref.read(discountProvider.notifier).load(orgId);
+        ref.read(paymentMethodProvider.notifier).load(orgId);
       }
       if (branchId != null) {
         ref.read(shiftProvider.notifier).loadInventory(branchId);

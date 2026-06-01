@@ -4,10 +4,17 @@ import '../../../core/models/payment_method.dart';
 
 export '../../../core/models/payment_method.dart';
 
-// ── Payment method colour ────────────────────────────────────────────────────
-Color methodColor(String m) => PaymentMethod.fromWire(m).color;
-String methodLabel(String m) => PaymentMethod.fromWire(m).label;
-bool isCashMethod(String m) => PaymentMethod.fromWire(m).isCash;
+PaymentMethod _findMethod(List<PaymentMethod> methods, String m) {
+  if (m == 'mixed') return PaymentMethod.mixed();
+  return methods.firstWhere(
+    (x) => x.wireFormat == m,
+    orElse: () => PaymentMethod.mixed(),
+  );
+}
+
+Color methodColor(List<PaymentMethod> methods, String m) => _findMethod(methods, m).color;
+String methodLabel(List<PaymentMethod> methods, String locale, String m) => _findMethod(methods, m).label(locale);
+bool isCashMethod(List<PaymentMethod> methods, String m) => _findMethod(methods, m).isCash;
 
 // ── Addon-type accent colours ────────────────────────────────────────────────
 Color addonTypeColor(String addonType) => switch (addonType) {

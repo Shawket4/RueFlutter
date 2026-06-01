@@ -60,7 +60,7 @@ class PinPad extends StatelessWidget {
               children: row.map((k) {
                 if (k.isEmpty) {
                   return SizedBox(
-                      width: keySize,
+                      width: keySize + 14, // 14 to account for horizontal padding of keys
                       height: keySize,
                       child: const SizedBox.shrink());
                 }

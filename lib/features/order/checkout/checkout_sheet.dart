@@ -431,6 +431,19 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
       final total = syncedCart.total;
       ref.read(cartProvider.notifier).clear();
 
+      int cashAdded = 0;
+      if (splits != null && splits.isNotEmpty) {
+        cashAdded = splits
+            .where((s) => s.method == 'cash' || s.method == 'talabat_cash')
+            .fold(0, (sum, s) => sum + s.amount);
+      } else if (paymentMethod == 'cash' || paymentMethod == 'talabat_cash') {
+        cashAdded = total;
+      }
+      if (cashAdded > 0) {
+        ref.read(shiftProvider.notifier).addLocalCash(cashAdded);
+        ref.read(shiftProvider.notifier).loadSystemCash();
+      }
+
       if (mounted) {
         await _dismissCheckoutAndMaybeCartSheet(context);
         ReceiptSheet.show(context,
@@ -460,6 +473,19 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
       ref.read(orderHistoryProvider.notifier).addOrder(order);
       final total = syncedCart.total;
       ref.read(cartProvider.notifier).clear();
+
+      int cashAdded = 0;
+      if (splits != null && splits.isNotEmpty) {
+        cashAdded = splits
+            .where((s) => s.method == 'cash' || s.method == 'talabat_cash')
+            .fold(0, (sum, s) => sum + s.amount);
+      } else if (paymentMethod == 'cash' || paymentMethod == 'talabat_cash') {
+        cashAdded = total;
+      }
+      if (cashAdded > 0) {
+        ref.read(shiftProvider.notifier).addLocalCash(cashAdded);
+        ref.read(shiftProvider.notifier).loadSystemCash();
+      }
       if (mounted) {
         await _dismissCheckoutAndMaybeCartSheet(context);
         ReceiptSheet.show(context,
@@ -544,6 +570,19 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
 
         final total = syncedCart.total;
         ref.read(cartProvider.notifier).clear();
+
+        int cashAdded = 0;
+        if (splits != null && splits.isNotEmpty) {
+          cashAdded = splits
+              .where((s) => s.method == 'cash' || s.method == 'talabat_cash')
+              .fold(0, (sum, s) => sum + s.amount);
+        } else if (paymentMethod == 'cash' || paymentMethod == 'talabat_cash') {
+          cashAdded = total;
+        }
+        if (cashAdded > 0) {
+          ref.read(shiftProvider.notifier).addLocalCash(cashAdded);
+          ref.read(shiftProvider.notifier).loadSystemCash();
+        }
         if (mounted) {
           await _dismissCheckoutAndMaybeCartSheet(context);
           ReceiptSheet.show(context,

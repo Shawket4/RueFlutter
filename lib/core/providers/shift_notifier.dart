@@ -217,6 +217,10 @@ class ShiftNotifier extends Notifier<ShiftState> {
     }
   }
 
+  void addLocalCash(int amount) {
+    state = state.copyWith(systemCash: state.systemCash + amount);
+  }
+
   Future<void> loadSystemCash() async {
     final shift = state.shift;
     if (shift == null) return;

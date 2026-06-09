@@ -1,5 +1,4 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
@@ -26,9 +25,14 @@ import '../../../shared/widgets/responsive_sheet.dart';
 import '../../../shared/widgets/sync_status_banner.dart';
 import '../helpers/payment_helpers.dart';
 import '../../../core/providers/payment_method_notifier.dart';
-import 'receipt_sheet.dart';
-import 'receipt_preview_sheet.dart';
-import 'shared_widgets.dart';
+import '../widgets/receipt_sheet.dart';
+import '../widgets/receipt_preview_sheet.dart';
+import '../widgets/shared_widgets.dart';
+
+import 'sections/discount_section.dart';
+import 'sections/tip_section.dart';
+import 'sections/cash_tendered_section.dart';
+import 'sections/split_payment_section.dart';
 
 class CheckoutSheet extends ConsumerStatefulWidget {
   const CheckoutSheet({super.key});
@@ -359,6 +363,7 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
         shiftId: shift.id,
         paymentMethod: paymentMethod,
         customerName: customer,
+        notes: syncedCart.notes,
         discountType: discountTypeApi,
         discountValue: discountValue,
         discountId: discountId,
@@ -472,6 +477,7 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
           shiftId: shift.id,
           paymentMethod: paymentMethod,
           customerName: customer,
+          notes: syncedCart.notes,
           discountType: discountTypeApi,
           discountValue: discountValue,
           discountId: discountId,
@@ -658,7 +664,7 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
                   if (!discountState.isLoading && discountState.items.isNotEmpty) ...[
                     const FieldLabel('DISCOUNT (OPTIONAL)'),
                     const SizedBox(height: 8),
-                    _DiscountPicker(
+                    DiscountSection(
                       discounts: discountState.items,
                       selected: _selectedDiscount,
                       onSelect: (d) {
@@ -700,7 +706,7 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
                   const SizedBox(height: 10),
 
                   if (_isSplit)
-                    _SplitPaymentSection(
+                    SplitPaymentSection(
                       activeMethods: _activeSplitMethods,
                       splitCtrs: _splitCtrs,
                       cartTotal: cart.total,
@@ -723,7 +729,7 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
 
                     if (_showTendered) ...[
                       const SizedBox(height: 20),
-                      _CashTenderedSection(
+                      CashTenderedSection(
                         tenderedCtrl: _tenderedCtrl,
                         cartTotal: cart.total,
                         onChanged: () => setState(() {}),
@@ -733,7 +739,7 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
                   ],
 
                   const SizedBox(height: 20),
-                  _TipSection(
+                  TipSection(
                     tipCtrl: _tipCtrl,
                     tipPaymentMethod: _tipPaymentMethod,
                     parsedTip: _parsedTip,
@@ -877,47 +883,6 @@ class _SplitToggle extends StatelessWidget {
       );
 }
 
-class _DiscountPicker extends StatelessWidget {
-  final List<Discount> discounts;
-  final Discount? selected;
-  final void Function(Discount?) onSelect;
-  const _DiscountPicker(
-      {required this.discounts,
-      required this.selected,
-      required this.onSelect});
-
-  @override
-  Widget build(BuildContext context) => Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: [
-          _chip('None', null, selected == null, AppColors.primary),
-          ...discounts.map((d) =>
-              _chip(d.label, d, selected?.id == d.id, AppColors.success)),
-        ],
-      );
-
-  Widget _chip(String label, Discount? d, bool sel, Color color) =>
-      GestureDetector(
-        onTap: () => onSelect(sel ? null : d),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: sel ? color : AppColors.bg,
-            borderRadius: BorderRadius.circular(AppRadius.xs),
-            border: Border.all(
-                color: sel ? color : AppColors.border, width: sel ? 1.5 : 1),
-          ),
-          child: Text(label,
-              style: cairo(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: sel ? Colors.white : AppColors.textPrimary)),
-        ),
-      );
-}
-
 class _SinglePaymentGrid extends StatelessWidget {
   final String selected;
   final void Function(String) onSelect;
@@ -970,406 +935,4 @@ class _SinglePaymentGrid extends StatelessWidget {
           }).toList(),
         );
       });
-}
-
-class _CashTenderedSection extends StatelessWidget {
-  final TextEditingController tenderedCtrl;
-  final int cartTotal;
-  final VoidCallback onChanged;
-  final int? cashTip;
-  const _CashTenderedSection({
-    required this.tenderedCtrl,
-    required this.cartTotal,
-    required this.onChanged,
-    this.cashTip,
-  });
-
-  @override
-  Widget build(BuildContext context) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const FieldLabel('CASH TENDERED'),
-          const SizedBox(height: 8),
-          TextField(
-            controller: tenderedCtrl,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            onChanged: (_) => onChanged(),
-            style: cairo(fontSize: 22, fontWeight: FontWeight.w700),
-            decoration: InputDecoration(
-              prefixText: 'EGP  ',
-              prefixStyle: cairo(
-                  fontSize: 16,
-                  color: AppColors.textSecondary,
-                  fontWeight: FontWeight.w500),
-              hintText: '0',
-              hintStyle: cairo(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.border),
-              border: InputBorder.none,
-              enabledBorder: InputBorder.none,
-              focusedBorder: InputBorder.none,
-              isDense: true,
-            ),
-          ),
-          Builder(builder: (_) {
-            final tendered = double.tryParse(tenderedCtrl.text);
-            if (tendered == null || tendered == 0) {
-              return const SizedBox.shrink();
-            }
-            final tenderedP = (tendered * 100).round();
-            final change = tenderedP - cartTotal - (cashTip ?? 0);
-            return AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              margin: const EdgeInsets.only(top: 8),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: change >= 0
-                    ? AppColors.success.withOpacity(0.07)
-                    : AppColors.danger.withOpacity(0.07),
-                borderRadius: BorderRadius.circular(AppRadius.xs),
-                border: Border.all(
-                    color: change >= 0
-                        ? AppColors.success.withOpacity(0.25)
-                        : AppColors.danger.withOpacity(0.25)),
-              ),
-              child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(change >= 0 ? 'Change due:' : 'Insufficient:',
-                        style: cairo(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: change >= 0
-                                ? AppColors.success
-                                : AppColors.danger)),
-                    Text(egp(change.abs()),
-                        style: cairo(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                            color: change >= 0
-                                ? AppColors.success
-                                : AppColors.danger)),
-                  ]),
-            );
-          }),
-        ],
-      );
-}
-
-class _TipSection extends StatelessWidget {
-  final TextEditingController tipCtrl;
-  final String tipPaymentMethod;
-  final int? parsedTip;
-  final void Function(String) onMethodChanged;
-  final VoidCallback onAmountChanged;
-  final List<PaymentMethod> methods;
-
-  const _TipSection({
-    required this.tipCtrl,
-    required this.tipPaymentMethod,
-    required this.parsedTip,
-    required this.onMethodChanged,
-    required this.onAmountChanged,
-    required this.methods,
-  });
-
-  @override
-  Widget build(BuildContext context) => AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.bg,
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          border: Border.all(
-              color: parsedTip != null
-                  ? AppColors.primary.withOpacity(0.3)
-                  : AppColors.border),
-        ),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            const Icon(Icons.volunteer_activism_rounded,
-                size: 14, color: AppColors.textMuted),
-            const SizedBox(width: 6),
-            const FieldLabel('TIP (OPTIONAL)'),
-            const Spacer(),
-            if (parsedTip != null)
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 150),
-                child: Container(
-                  key: ValueKey(parsedTip),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                      color: AppColors.success.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(10)),
-                  child: Text(egp(parsedTip!),
-                      style: cairo(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.success)),
-                ),
-              ),
-          ]),
-          const SizedBox(height: 12),
-          // Task 4.1: Enum usage
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: methods.where((m) => m.wireFormat != 'mixed').map((method) {
-              final sel = tipPaymentMethod == method.wireFormat;
-              final color = method.color;
-              return GestureDetector(
-                onTap: () => onMethodChanged(method.wireFormat),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 140),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
-                  decoration: BoxDecoration(
-                    color: sel ? color : Colors.white,
-                    borderRadius: BorderRadius.circular(AppRadius.xs),
-                    border: Border.all(
-                        color: sel ? color : AppColors.border,
-                        width: sel ? 1.5 : 1),
-                  ),
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    if (sel) ...[
-                      const Icon(Icons.check_rounded,
-                          size: 11, color: Colors.white),
-                      const SizedBox(width: 4)
-                    ],
-                    Text(method.label('en'),
-                        style: cairo(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color:
-                                sel ? Colors.white : AppColors.textSecondary)),
-                  ]),
-                ),
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: tipCtrl,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            onChanged: (_) => onAmountChanged(),
-            style: cairo(fontSize: 22, fontWeight: FontWeight.w700),
-            decoration: InputDecoration(
-              prefixText: 'EGP  ',
-              prefixStyle: cairo(
-                  fontSize: 16,
-                  color: AppColors.textSecondary,
-                  fontWeight: FontWeight.w500),
-              hintText: '0',
-              hintStyle: cairo(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.border),
-              border: InputBorder.none,
-              enabledBorder: InputBorder.none,
-              focusedBorder: InputBorder.none,
-              isDense: true,
-            ),
-          ),
-        ]),
-      );
-}
-
-class _SplitPaymentSection extends StatelessWidget {
-  final Set<String> activeMethods;
-  final Map<String, TextEditingController> splitCtrs;
-  final int cartTotal;
-  final void Function(String) onToggleMethod;
-  final VoidCallback onAmountChanged;
-  final int? parsedTip;
-  final String tipPaymentMethod;
-  final List<PaymentMethod> methods;
-
-  const _SplitPaymentSection({
-    required this.activeMethods,
-    required this.splitCtrs,
-    required this.cartTotal,
-    required this.onToggleMethod,
-    required this.onAmountChanged,
-    required this.parsedTip,
-    required this.tipPaymentMethod,
-    required this.methods,
-  });
-
-  List<PaymentSplit> _buildSplits() {
-    final splits = <PaymentSplit>[];
-    for (final method in activeMethods) {
-      final raw = double.tryParse(splitCtrs[method]?.text ?? '');
-      if (raw != null && raw > 0) {
-        splits.add(PaymentSplit(method: method, amount: (raw * 100).round()));
-      }
-    }
-    return splits;
-  }
-
-  @override
-  Widget build(BuildContext context) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const FieldLabel('SELECT METHODS USED'),
-          const SizedBox(height: 10),
-          // Task 4.1: Enum usage
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: methods.where((m) => m.wireFormat != 'mixed').map((method) {
-              final color = method.color;
-              final active = activeMethods.contains(method.wireFormat);
-              return GestureDetector(
-                onTap: () => onToggleMethod(method.wireFormat),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-                  decoration: BoxDecoration(
-                    color: active ? color : AppColors.bg,
-                    borderRadius: BorderRadius.circular(AppRadius.sm),
-                    border: Border.all(
-                        color: active ? color : AppColors.border,
-                        width: active ? 1.5 : 1),
-                  ),
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    Icon(
-                        active
-                            ? Icons.check_circle_rounded
-                            : Icons.radio_button_unchecked_rounded,
-                        size: 14,
-                        color: active ? Colors.white : color),
-                    const SizedBox(width: 6),
-                    Text(method.label('en'),
-                        style: cairo(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color:
-                                active ? Colors.white : AppColors.textPrimary)),
-                  ]),
-                ),
-              );
-            }).toList(),
-          ),
-          if (activeMethods.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            const FieldLabel('ENTER AMOUNTS'),
-            const SizedBox(height: 10),
-            ...activeMethods.map((method) {
-              final pm = methods.firstWhere((x) => x.wireFormat == method, orElse: () => PaymentMethod.mixed());
-              final color = pm.color;
-              final ctrl = splitCtrs[method];
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(children: [
-                        Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                                color: color, shape: BoxShape.circle)),
-                        const SizedBox(width: 6),
-                        Text(pm.label('en'),
-                            style: cairo(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: color)),
-                      ]),
-                      const SizedBox(height: 6),
-                      TextField(
-                        controller: ctrl,
-                        keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true),
-                        onChanged: (_) => onAmountChanged(),
-                        style: cairo(fontSize: 20, fontWeight: FontWeight.w700),
-                        decoration: InputDecoration(
-                          hintText: '0',
-                          prefixText: 'EGP  ',
-                          prefixStyle: cairo(
-                              fontSize: 15,
-                              color: AppColors.textSecondary,
-                              fontWeight: FontWeight.w500),
-                          contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 14, vertical: 12),
-                          border: OutlineInputBorder(
-                              borderRadius:
-                                  BorderRadius.circular(AppRadius.sm),
-                              borderSide:
-                                  BorderSide(color: color.withOpacity(0.3))),
-                          enabledBorder: OutlineInputBorder(
-                              borderRadius:
-                                  BorderRadius.circular(AppRadius.sm),
-                              borderSide:
-                                  BorderSide(color: color.withOpacity(0.3))),
-                          focusedBorder: OutlineInputBorder(
-                              borderRadius:
-                                  BorderRadius.circular(AppRadius.sm),
-                              borderSide:
-                                  BorderSide(color: color, width: 2)),
-                          filled: true,
-                          fillColor: color.withOpacity(0.03),
-                        ),
-                      ),
-                    ]),
-              );
-            }),
-
-            Builder(builder: (context) {
-              final splits = _buildSplits();
-              final entered = splits.fold(0, (s, p) => s + p.amount);
-              final isCashTip = methods.firstWhere((x) => x.wireFormat == tipPaymentMethod, orElse: () => PaymentMethod.mixed()).isCash;
-              final tipOffset =
-                  (isCashTip && parsedTip != null) ? parsedTip! : 0;
-              final diff = cartTotal - entered - tipOffset;
-              final ok = diff == 0;
-              return Container(
-                width: double.infinity,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                decoration: BoxDecoration(
-                  color: ok
-                      ? AppColors.success.withOpacity(0.07)
-                      : AppColors.warning.withOpacity(0.07),
-                  borderRadius: BorderRadius.circular(AppRadius.sm),
-                  border: Border.all(
-                      color: ok
-                          ? AppColors.success.withOpacity(0.3)
-                          : AppColors.warning.withOpacity(0.3)),
-                ),
-                child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(children: [
-                        Icon(
-                            ok
-                                ? Icons.check_circle_outline_rounded
-                                : Icons.pending_outlined,
-                            size: 16,
-                            color:
-                                ok ? AppColors.success : AppColors.warning),
-                        const SizedBox(width: 8),
-                        Text(ok ? 'Balanced ✓' : 'Remaining',
-                            style: cairo(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: ok
-                                    ? AppColors.success
-                                    : AppColors.warning)),
-                      ]),
-                      if (!ok)
-                        Text(egp(diff.abs()),
-                            style: cairo(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w800,
-                                color: AppColors.warning)),
-                    ]),
-              );
-            }),
-          ],
-        ],
-      );
 }

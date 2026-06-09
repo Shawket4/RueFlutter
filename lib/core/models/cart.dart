@@ -106,7 +106,9 @@ class BundleComponentSnapshot {
       };
 
   Map<String, dynamic> toStorageJson() => {
-        ...toApiJson(),
+        'item_id': itemId,
+        'quantity': quantity,
+        if (sizeLabel != null) 'size_label': sizeLabel,
         'item_name': itemName,
         'addons': addons.map((a) => a.toStorageJson()).toList(),
         'optionals': optionals.map((o) => o.toStorageJson()).toList(),
@@ -255,7 +257,11 @@ class CartItem {
   }
 
   Map<String, dynamic> toStorageJson() => {
-        ...toApiJson(),
+        'menu_item_id': menuItemId,
+        'bundle_id': bundleId,
+        'size_label': sizeLabel,
+        'quantity': quantity,
+        if (notes != null) 'notes': notes,
         'item_name':  itemName,
         'unit_price': unitPrice,
         'addons':     addons.map((a) => a.toStorageJson()).toList(),

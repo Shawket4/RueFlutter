@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import '../../../core/providers/auth_notifier.dart';
 import '../../../core/providers/cart_notifier.dart';
 import '../../../core/providers/menu_notifier.dart';
 import '../../../core/providers/discount_notifier.dart';
 import '../../../core/providers/payment_method_notifier.dart';
-import '../../../core/services/connectivity_service.dart';
-import '../../../core/services/offline_queue.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatting.dart';
-import 'shared_widgets.dart';
+import '../../../core/utils/responsive.dart';
+import '../../../core/widgets/sufrix_logo.dart';
+import '../../../shared/widgets/sync_status_chip.dart';
+import 'action_drawer.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  TOP BAR
@@ -23,24 +23,28 @@ class TopBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cart = ref.watch(cartProvider);
-    final sync = ref.watch(offlineQueueProvider);
-    final isOnline = ref.watch(isOnlineProvider);
-    final isTablet = MediaQuery.of(context).size.width >= 768;
+    final user = ref.watch(authProvider).user;
     final cachedAt = ref.watch(menuProvider).cachedAt;
     final lastSynced = cachedAt != null ? timeShort(cachedAt) : '—';
 
-    final bar = Container(
+    return Container(
       color: Colors.white,
-      padding: const EdgeInsets.fromLTRB(12, 10, 16, 10),
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
       child: Row(children: [
-        SmallIconBtn(
-            icon: Icons.arrow_back_rounded, onTap: () => context.go('/home')),
-        const SizedBox(width: 6),
+        // Sufrix symbol (replaces the old back arrow to /home).
+        const SufrixLogo(size: 30, isRounded: true),
+        const SizedBox(width: 10),
+
+        // Sync button.
         const SyncBtn(),
         const SizedBox(width: 6),
         Text(lastSynced,
             style: cairo(fontSize: 11, color: AppColors.textMuted)),
-        const SizedBox(width: 12),
+        const SizedBox(width: 10),
+        const SyncStatusChip(),
+        const SizedBox(width: 10),
+
+        // Active order name pill.
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           decoration: BoxDecoration(
@@ -48,30 +52,30 @@ class TopBar extends ConsumerWidget {
             borderRadius: BorderRadius.circular(AppRadius.xs),
             border: Border.all(color: AppColors.primary.withOpacity(0.25)),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.shopping_bag_rounded, size: 12, color: AppColors.primary),
-              const SizedBox(width: 5),
-              Text(
-                cart.displayName ?? 'Order 1',
-                style: cairo(
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            const Icon(Icons.shopping_bag_rounded,
+                size: 12, color: AppColors.primary),
+            const SizedBox(width: 5),
+            Text(
+              cart.displayName ?? 'Order 1',
+              style: cairo(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.primary,
-                ),
-              ),
-            ],
-          ),
+                  color: AppColors.primary),
+            ),
+          ]),
         ),
         const SizedBox(width: 12),
+
+        // Search bar.
         Expanded(
           child: Container(
             height: 38,
             decoration: BoxDecoration(
-                color: AppColors.bg,
-                borderRadius: BorderRadius.circular(AppRadius.sm),
-                border: Border.all(color: AppColors.border)),
+              color: AppColors.bg,
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+              border: Border.all(color: AppColors.border),
+            ),
             child: TextField(
               controller: ctrl,
               style: cairo(fontSize: 14),
@@ -96,7 +100,9 @@ class TopBar extends ConsumerWidget {
             ),
           ),
         ),
-        if (isTablet) ...[
+
+        // Cart summary pill (tablet/desktop only).
+        if (context.isTablet || context.isDesktop) ...[
           const SizedBox(width: 12),
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 250),
@@ -107,8 +113,8 @@ class TopBar extends ConsumerWidget {
                 ? const SizedBox.shrink(key: ValueKey('empty'))
                 : Container(
                     key: const ValueKey('pill'),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 7),
                     decoration: BoxDecoration(
                       color: AppColors.primary,
                       borderRadius: BorderRadius.circular(20),
@@ -127,66 +133,52 @@ class TopBar extends ConsumerWidget {
                   ),
           ),
         ],
+
+        // User avatar (opens action drawer).
+        const SizedBox(width: 10),
+        AnimatedPressScale(
+          onTap: () => ActionDrawer.show(context),
+          child: _UserAvatar(name: user?.name ?? ''),
+        ),
       ]),
     );
-
-    if (!isOnline || sync.orderCount > 0) {
-      return Column(mainAxisSize: MainAxisSize.min, children: [
-        bar,
-        if (!isOnline)
-          const StatusBanner(
-              color: Color(0xFFFFF3CD),
-              icon: Icons.wifi_off_rounded,
-              text: 'Offline — cached menu. Orders will sync when connected.',
-              textColor: Color(0xFF856404)),
-        if (isOnline && sync.orderCount > 0)
-          StatusBanner(
-              color: const Color(0xFFCFE2FF),
-              icon: Icons.sync_rounded,
-              text:
-                  'Syncing ${sync.orderCount} offline order${sync.orderCount == 1 ? "" : "s"}…',
-              textColor: const Color(0xFF084298),
-              animate: true),
-      ]);
-    }
-    return bar;
   }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  STATUS BANNER
+//  USER AVATAR
 // ─────────────────────────────────────────────────────────────────────────────
-class StatusBanner extends StatelessWidget {
-  final Color color, textColor;
-  final IconData icon;
-  final String text;
-  final bool animate;
-  const StatusBanner({
-    super.key,
-    required this.color,
-    required this.icon,
-    required this.text,
-    required this.textColor,
-    this.animate = false,
-  });
+class _UserAvatar extends StatelessWidget {
+  final String name;
+  const _UserAvatar({required this.name});
+
+  String get _initials {
+    final parts = name.trim().split(' ');
+    if (parts.isEmpty || parts[0].isEmpty) return '?';
+    if (parts.length >= 2) {
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    }
+    return parts[0][0].toUpperCase();
+  }
 
   @override
   Widget build(BuildContext context) => Container(
-        width: double.infinity,
-        color: color,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        child: Row(children: [
-          animate
-              ? SizedBox(
-                  width: 11,
-                  height: 11,
-                  child: CircularProgressIndicator(
-                      strokeWidth: 1.5, color: textColor))
-              : Icon(icon, size: 12, color: textColor),
-          const SizedBox(width: 8),
-          Expanded(
-              child: Text(text, style: cairo(fontSize: 11, color: textColor))),
-        ]),
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF0A2540), Color(0xFF1A3A5C)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(9),
+        ),
+        alignment: Alignment.center,
+        child: Text(_initials,
+            style: cairo(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: Colors.white)),
       );
 }
 

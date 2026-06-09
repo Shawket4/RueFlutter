@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'core/db/app_database.dart';
+import 'core/db/kv_store.dart';
+import 'core/db/outbox_dao.dart';
 import 'core/providers/auth_notifier.dart';
 import 'core/providers/order_history_notifier.dart';
 import 'core/providers/shift_notifier.dart';
 import 'core/router/router.dart';
 import 'core/services/connectivity_service.dart';
 import 'core/services/offline_queue.dart';
+import 'core/providers/locale_notifier.dart';
 import 'core/storage/storage_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/widgets/sufrix_logo.dart';
@@ -26,12 +30,18 @@ void main() async {
     DeviceOrientation.portraitUp,
   ]);
 
+  // ── Database bootstrap (replaces SharedPreferences) ──────────────────────
+  await AppDatabase.instance.init();
+  final kv = KvStore(AppDatabase.instance);
+  await kv.init(); // hydrate in-memory cache from kv table
+  final outboxDao = OutboxDao(AppDatabase.instance);
+
   await ConnectivityService.instance.init();
-  final prefs = await SharedPreferences.getInstance();
 
   runApp(ProviderScope(
     overrides: [
-      storageServiceProvider.overrideWithValue(StorageService(prefs)),
+      storageServiceProvider.overrideWithValue(StorageService(kv)),
+      outboxDaoProvider.overrideWithValue(outboxDao),
     ],
     child: const _App(),
   ));
@@ -48,14 +58,14 @@ class _AppState extends ConsumerState<_App> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final queue        = ref.read(offlineQueueProvider.notifier);
-      final history      = ref.read(orderHistoryProvider.notifier);
-      final shiftNotif   = ref.read(shiftProvider.notifier);
+      final queue      = ref.read(offlineQueueProvider.notifier);
+      final history    = ref.read(orderHistoryProvider.notifier);
+      final shiftNotif = ref.read(shiftProvider.notifier);
 
-      // Task 1.5: Wire up optimistic replacement
-      queue.onOrderSynced      = (order, localId) => history.replaceOrder(localId, order);
-      queue.onVoidSynced       = history.updateOrder;
-      queue.onShiftOpenSynced  = (shift) {
+      // Wire up optimistic replacement callbacks.
+      queue.onOrderSynced     = (order, localId) => history.replaceOrder(localId, order);
+      queue.onVoidSynced      = history.updateOrder;
+      queue.onShiftOpenSynced = (shift) {
         final current = ref.read(shiftProvider).shift;
         if (current != null && current.id == shift.id) {
           shiftNotif.updateShiftSynced(shift);
@@ -71,6 +81,7 @@ class _AppState extends ConsumerState<_App> {
   Widget build(BuildContext context) {
     final auth   = ref.watch(authProvider);
     final router = ref.watch(routerProvider);
+    final locale = ref.watch(localeProvider);
 
     if (auth.isLoading) return const _SplashScreen();
 
@@ -78,7 +89,17 @@ class _AppState extends ConsumerState<_App> {
       debugShowCheckedModeBanner: false,
       title: 'Sufrix POS',
       theme: AppTheme.light,
+      locale: locale,
       routerConfig: router,
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('en'),
+        Locale('ar'),
+      ],
       builder: (context, child) {
         return GestureDetector(
           onTap: () => FocusManager.instance.primaryFocus?.unfocus(),

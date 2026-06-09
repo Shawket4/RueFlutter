@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:uuid/uuid.dart';
 import '../../core/api/shift_api.dart';
 import '../../core/api/client.dart';
-import '../../core/models/pending_action.dart';
 import '../../core/services/connectivity_service.dart';
-import '../../core/services/offline_queue.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/responsive_sheet.dart';
 
@@ -63,31 +60,24 @@ class _CashMovementSheetState extends ConsumerState<CashMovementSheet> {
       return;
     }
 
+    final isOnline = ref.read(isOnlineProvider);
+    if (!isOnline) {
+      setState(() =>
+          _error = 'Cash movements require an internet connection. Please try again when connected.');
+      return;
+    }
+
     setState(() { _loading = true; _error = null; });
 
-    final isOnline = ref.read(isOnlineProvider);
     final piastres = (raw * 100).round();
     final signed   = _isIn ? piastres : -piastres;
 
     try {
-      if (isOnline) {
-        await ref.read(shiftApiProvider).addCashMovement(
-          widget.shiftId,
-          signed,
-          _noteCtrl.text.trim(),
-        );
-      } else {
-        // Task 2.3: Offline Queueing
-        await ref.read(offlineQueueProvider.notifier).enqueueCashMovement(
-          PendingCashMovement(
-            localId: const Uuid().v4(),
-            createdAt: DateTime.now(),
-            shiftId: widget.shiftId,
-            amount: signed,
-            note: _noteCtrl.text.trim(),
-          )
-        );
-      }
+      await ref.read(shiftApiProvider).addCashMovement(
+        widget.shiftId,
+        signed,
+        _noteCtrl.text.trim(),
+      );
 
       if (mounted) {
         Navigator.pop(context);
@@ -95,7 +85,7 @@ class _CashMovementSheetState extends ConsumerState<CashMovementSheet> {
       }
     } catch (e) {
       setState(() {
-        _error   = friendlyError(e); // Task 4.2
+        _error   = friendlyError(e);
         _loading = false;
       });
     }
@@ -133,8 +123,8 @@ class _CashMovementSheetState extends ConsumerState<CashMovementSheet> {
                 style: cairo(fontSize: 20, fontWeight: FontWeight.w800)),
             const SizedBox(height: 4),
             if (!isOnline)
-              Text('Offline — will be queued and applied when connected',
-                  style: cairo(fontSize: 12, color: AppColors.warning)),
+              Text('Requires internet connection — cannot record cash movements offline',
+                  style: cairo(fontSize: 12, color: AppColors.danger)),
             const SizedBox(height: 18),
   
             // Direction toggle
@@ -243,7 +233,7 @@ class _CashMovementSheetState extends ConsumerState<CashMovementSheet> {
                             : Icons.remove_circle_outline_rounded,
                             size: 18, color: Colors.white),
                         const SizedBox(width: 8),
-                        Text(isOnline ? (_isIn ? 'Record Cash In' : 'Record Cash Out') : 'Queue Offline',
+                        Text(_isIn ? 'Record Cash In' : 'Record Cash Out',
                             style: cairo(fontSize: 15, fontWeight: FontWeight.w700,
                                 color: Colors.white)),
                       ]),

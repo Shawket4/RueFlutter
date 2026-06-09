@@ -11,7 +11,7 @@ import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/label_value.dart';
 import '../../../shared/widgets/responsive_sheet.dart';
 import 'cart_row.dart';
-import 'checkout_sheet.dart';
+import '../checkout/checkout_sheet.dart';
 import 'shared_widgets.dart';
 
 class CartPanel extends ConsumerWidget {
@@ -52,11 +52,10 @@ class CartPanel extends ConsumerWidget {
           duration: const Duration(milliseconds: 250),
           child: cart.isEmpty
               ? const _EmptyCart()
-              : ListView.separated(
+              : ListView.builder(
                   key: const ValueKey('items'),
-                  padding: const EdgeInsets.all(10),
+                  padding: EdgeInsets.zero,
                   itemCount: cart.items.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 6),
                   itemBuilder: (_, i) => CartRow(index: i)),
         )),
         AnimatedSwitcher(
@@ -98,7 +97,7 @@ class CartFooter extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final cart = ref.watch(cartProvider);
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 13, 16, 16),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
       decoration: const BoxDecoration(
           color: Colors.white,
           border: Border(top: BorderSide(color: AppColors.border))),
@@ -107,33 +106,35 @@ class CartFooter extends ConsumerWidget {
         if (cart.discountAmount > 0)
           LabelValue('Discount', '− ${egp(cart.discountAmount)}',
               valueColor: AppColors.success),
-        Padding(
-            padding: const EdgeInsets.symmetric(vertical: 10),
-            child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('Total',
-                      style: cairo(fontSize: 15, fontWeight: FontWeight.w800)),
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 200),
-                    transitionBuilder: (child, anim) => SlideTransition(
-                        position: Tween<Offset>(
-                                begin: const Offset(0, -0.3), end: Offset.zero)
-                            .animate(anim),
-                        child: FadeTransition(opacity: anim, child: child)),
-                    child: Text(egp(cart.total),
-                        key: ValueKey(cart.total),
-                        style: cairo(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.primary)),
-                  ),
-                ])),
-        const SizedBox(height: 2),
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 6),
+          child: Divider(height: 1, color: AppColors.borderLight),
+        ),
+        Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Total',
+                  style: cairo(fontSize: 15, fontWeight: FontWeight.w700)),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                transitionBuilder: (child, anim) => SlideTransition(
+                    position: Tween<Offset>(
+                            begin: const Offset(0, -0.3), end: Offset.zero)
+                        .animate(anim),
+                    child: FadeTransition(opacity: anim, child: child)),
+                child: Text(egp(cart.total),
+                    key: ValueKey(cart.total),
+                    style: cairo(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.primary)),
+              ),
+            ]),
+        const SizedBox(height: 10),
         AppButton(
             label: 'Checkout',
             width: double.infinity,
-            height: 50,
+            height: 48,
             icon: Icons.arrow_forward_rounded,
             onTap: () => CheckoutSheet.show(context)),
       ]),

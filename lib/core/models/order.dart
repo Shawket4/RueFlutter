@@ -176,7 +176,7 @@ class OrderItem {
     'bundle_id': bundleId,
     if (bundleComponents.isNotEmpty)
       'bundle_components':
-          bundleComponents.map((c) => c.toApiJson()).toList(),
+          bundleComponents.map((c) => c.toStorageJson()).toList(),
     'unit_price': unitPrice, 'quantity': quantity, 'line_total': lineTotal,
     'addons':    addons.map((a) => a.toJson()).toList(),
     'optionals': optionals.map((o) => o.toJson()).toList(),
@@ -283,4 +283,36 @@ class Order {
     'created_at': createdAt.toIso8601String(),
     'items': items.map((i) => i.toJson()).toList(),
   };
+
+  Order copyWith({
+    String? paymentMethod,
+    String? status,
+  }) {
+    return Order(
+      id: id,
+      branchId: branchId,
+      shiftId: shiftId,
+      tellerId: tellerId,
+      tellerName: tellerName,
+      orderNumber: orderNumber,
+      status: status ?? this.status,
+      paymentMethod: paymentMethod ?? this.paymentMethod,
+      subtotal: subtotal,
+      discountType: discountType,
+      discountValue: discountValue,
+      discountAmount: discountAmount,
+      taxAmount: taxAmount,
+      totalAmount: totalAmount,
+      amountTendered: amountTendered,
+      changeGiven: changeGiven,
+      tipAmount: tipAmount,
+      tipPaymentMethod: tipPaymentMethod,
+      discountId: discountId,
+      customerName: customerName,
+      notes: notes,
+      voidReason: voidReason,
+      createdAt: createdAt,
+      items: items,
+    );
+  }
 }

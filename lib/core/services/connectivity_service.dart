@@ -4,6 +4,12 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/api_config.dart';
 
+/// Singleton connectivity oracle.
+///
+/// Truth signal = HTTP `/health` pings (every 10 s + on interface change).
+/// Failure debounce = 2 consecutive Dio failures (from [reportNetworkFailure])
+/// before flipping to offline.  A single success from any Dio call restores
+/// the online state immediately.
 class ConnectivityService {
   ConnectivityService._();
   static final ConnectivityService instance = ConnectivityService._();
@@ -17,6 +23,27 @@ class ConnectivityService {
   StreamSubscription<List<ConnectivityResult>>? _sub;
   Timer? _pingTimer;
 
+  // ── Oracle debounce ──────────────────────────────────────────────────────
+
+  int _consecutiveFailures = 0;
+  static const _kFailuresBeforeOffline = 2;
+
+  /// Call from [DioClient.onResponse] for every successful API response.
+  void reportSuccess() {
+    _consecutiveFailures = 0;
+    if (!_isOnline) _emit(true);
+  }
+
+  /// Call from [DioClient.onError] for every network-level failure.
+  void reportNetworkFailure() {
+    _consecutiveFailures++;
+    if (_consecutiveFailures >= _kFailuresBeforeOffline) {
+      _emit(false);
+    }
+  }
+
+  // ── Init ─────────────────────────────────────────────────────────────────
+
   final _dio = Dio(BaseOptions(
     baseUrl: kApiBaseUrl,
     connectTimeout: const Duration(seconds: 5),
@@ -29,6 +56,8 @@ class ConnectivityService {
     _sub = Connectivity().onConnectivityChanged.listen((results) {
       final hasInterface = results.any((r) => r != ConnectivityResult.none);
       if (!hasInterface) {
+        // Hardware reports no interface — flip immediately.
+        _consecutiveFailures = _kFailuresBeforeOffline;
         _emit(false);
       } else {
         _checkReal();
@@ -48,9 +77,9 @@ class ConnectivityService {
             sendTimeout: const Duration(seconds: 4),
             receiveTimeout: const Duration(seconds: 4),
           ));
-      _emit(true);
+      reportSuccess();
     } catch (_) {
-      _emit(false);
+      reportNetworkFailure();
     }
   }
 

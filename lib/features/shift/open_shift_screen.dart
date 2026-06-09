@@ -58,7 +58,7 @@ class _OpenShiftScreenState extends ConsumerState<OpenShiftScreen> {
 
     if (mounted) {
       if (ok) {
-        context.go('/home');
+        context.go('/order');
       } else {
         setState(() {
           _error = ref.read(shiftProvider).error ?? 'Failed to open shift';

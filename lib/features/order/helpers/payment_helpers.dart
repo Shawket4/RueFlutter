@@ -6,10 +6,44 @@ export '../../../core/models/payment_method.dart';
 
 PaymentMethod _findMethod(List<PaymentMethod> methods, String m) {
   if (m == 'mixed') return PaymentMethod.mixed();
-  return methods.firstWhere(
-    (x) => x.wireFormat == m,
-    orElse: () => PaymentMethod.mixed(),
-  );
+  
+  try {
+    return methods.firstWhere((x) => x.wireFormat == m);
+  } catch (_) {}
+
+  if (m == 'card' || m == 'credit_card') {
+    try {
+      return methods.firstWhere((x) => x.wireFormat == 'card' || x.wireFormat == 'credit_card');
+    } catch (_) {}
+    
+    return const PaymentMethod(
+      id: 'card_stub',
+      orgId: '',
+      wireFormat: 'card',
+      labelTranslations: {'en': 'Card', 'ar': 'بطاقة'},
+      colorHex: '#7C3AED',
+      iconName: 'credit_card',
+      isCash: false,
+      isActive: true,
+      displayOrder: 99,
+    );
+  }
+
+  if (m == 'cash' || m == 'talabat_cash') {
+    return PaymentMethod(
+      id: 'cash_stub',
+      orgId: '',
+      wireFormat: m,
+      labelTranslations: {'en': 'Cash', 'ar': 'نقدي'},
+      colorHex: '#22C55E', // AppColors.success roughly
+      iconName: 'money',
+      isCash: true,
+      isActive: true,
+      displayOrder: 1,
+    );
+  }
+  
+  return PaymentMethod.mixed();
 }
 
 Color methodColor(List<PaymentMethod> methods, String m) => _findMethod(methods, m).color;

@@ -78,7 +78,6 @@ class _ReceiptPreviewSheetState extends ConsumerState<ReceiptPreviewSheet> {
   @override
   Widget build(BuildContext context) {
     final mq = MediaQuery.of(context);
-    final isTablet = MediaQuery.of(context).size.shortestSide >= 600;
     final methods = ref.watch(paymentMethodProvider).items;
     final branch = ref.watch(authProvider).branch;
     final hasPrinter = branch?.hasPrinter ?? false;
@@ -327,6 +326,22 @@ class ThermalReceiptCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (order.isVoided) ...[
+            Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.danger.withOpacity(0.1),
+                border: Border.all(color: AppColors.danger.withOpacity(0.3)),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                '*** VOIDED ***',
+                style: cairo(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.danger, letterSpacing: 1.5),
+              ),
+            ),
+          ],
           _ReceiptInfoRow(
             label: 'Order #',
             value: order.orderNumber == 0 ? 'DRAFT' : '#${order.orderNumber}',

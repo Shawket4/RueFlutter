@@ -5,9 +5,6 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatting.dart';
 import '../helpers/category_style.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  CATEGORY RAIL (left sidebar)
-// ─────────────────────────────────────────────────────────────────────────────
 class CategoryRail extends ConsumerWidget {
   const CategoryRail({super.key});
 
@@ -16,95 +13,82 @@ class CategoryRail extends ConsumerWidget {
     final menu = ref.watch(menuProvider);
     final showCombos = menu.hasActiveBundles;
     return Container(
-      width: 88,
+      width: 94,
       decoration: const BoxDecoration(
-          color: Colors.white,
-          border: Border(right: BorderSide(color: AppColors.borderLight))),
+        color: Colors.white,
+        border: Border(right: BorderSide(color: AppColors.borderLight)),
+      ),
       child: ListView.builder(
-        padding: const EdgeInsets.symmetric(vertical: 10),
+        padding: const EdgeInsets.symmetric(vertical: 8),
         itemCount: menu.categories.length + (showCombos ? 1 : 0),
         itemBuilder: (_, i) {
-          // ── Synthetic "Combos" entry at the end ─────────────────────────
           if (showCombos && i == menu.categories.length) {
             final sel = menu.selectedCategoryId == kComboCategoryId;
-            return GestureDetector(
-              onTap: () =>
-                  ref.read(menuProvider.notifier).selectCategory(kComboCategoryId),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                curve: Curves.easeOutCubic,
-                margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 4),
-                decoration: BoxDecoration(
-                  gradient: sel
-                      ? LinearGradient(
-                          colors: [
-                            AppColors.primary,
-                            AppColors.primary.withOpacity(0.85),
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        )
-                      : null,
-                  color: sel ? null : Colors.transparent,
-                  borderRadius: BorderRadius.circular(AppRadius.sm),
-                  border: sel
-                      ? null
-                      : Border.all(
-                          color: AppColors.primary.withOpacity(0.25),
-                          width: 1,
-                        ),
-                ),
-                child: Column(children: [
-                  Icon(Icons.layers_rounded,
-                      size: 20, color: sel ? Colors.white : AppColors.primary),
-                  const SizedBox(height: 5),
-                  Text('Combos',
-                      style: cairo(
-                          fontSize: 9,
-                          fontWeight: sel ? FontWeight.w700 : FontWeight.w600,
-                          color: sel ? Colors.white : AppColors.primary,
-                          height: 1.2),
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis),
-                ]),
-              ),
+            return _Tile(
+              icon: Icons.layers_rounded,
+              label: 'Combos',
+              selected: sel,
+              onTap: () => ref
+                  .read(menuProvider.notifier)
+                  .selectCategory(kComboCategoryId),
             );
           }
-
-          // ── Regular category entry ────────────────────────────────────────
           final cat = menu.categories[i];
           final sel = cat.id == menu.selectedCategoryId;
-          return GestureDetector(
-            onTap: () => ref.read(menuProvider.notifier).selectCategory(cat.id),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              curve: Curves.easeOutCubic,
-              margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 4),
-              decoration: BoxDecoration(
-                color: sel ? AppColors.primary : Colors.transparent,
-                borderRadius: BorderRadius.circular(AppRadius.sm),
-              ),
-              child: Column(children: [
-                Icon(CatStyle.of(cat.name).icon,
-                    size: 20, color: sel ? Colors.white : AppColors.textMuted),
-                const SizedBox(height: 5),
-                Text(normaliseName(cat.name),
-                    style: cairo(
-                        fontSize: 9,
-                        fontWeight: sel ? FontWeight.w700 : FontWeight.w500,
-                        color: sel ? Colors.white : AppColors.textSecondary,
-                        height: 1.2),
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis),
-              ]),
-            ),
+          return _Tile(
+            icon: CatStyle.of(cat.name).icon,
+            label: normaliseName(cat.name),
+            selected: sel,
+            onTap: () =>
+                ref.read(menuProvider.notifier).selectCategory(cat.id),
           );
         },
       ),
     );
   }
+}
+
+class _Tile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _Tile({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) => AnimatedPressScale(
+        onTap: onTap,
+        scaleDown: 0.95,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          curve: Curves.easeOutCubic,
+          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+          decoration: BoxDecoration(
+            color: selected ? AppColors.primary : Colors.transparent,
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+          ),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Icon(icon,
+                size: 18,
+                color: selected ? Colors.white : AppColors.textMuted),
+            const SizedBox(height: 5),
+            Text(label,
+                style: cairo(
+                    fontSize: 10,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                    color: selected ? Colors.white : AppColors.textSecondary,
+                    height: 1.2),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis),
+          ]),
+        ),
+      );
 }

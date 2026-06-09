@@ -1,51 +1,103 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sqflite/sqflite.dart';
 import '../api/order_api.dart';
 import '../api/shift_api.dart';
 import '../api/inventory_api.dart';
+import '../db/app_database.dart';
 import '../models/shift.dart';
 import '../models/inventory.dart';
 import '../models/shift_report.dart';
 import '../storage/storage_service.dart';
+
+/// TTL for inventory freshness: 5 minutes in ms.
+const _kInventoryTtlMs = 5 * 60 * 1000;
 
 class ShiftRepository {
   final ShiftApi       _shiftApi;
   final OrderApi       _orderApi;
   final InventoryApi   _inventoryApi;
   final StorageService _storage;
-  ShiftRepository(this._shiftApi, this._orderApi, this._inventoryApi, this._storage);
+  final AppDatabase    _db;
 
-  Future<ShiftPreFill> currentShift(String branchId) async {
+  ShiftRepository(this._shiftApi, this._orderApi, this._inventoryApi,
+      this._storage, this._db);
+
+  // ── Freshness / sync_meta ────────────────────────────────────────────────
+
+  Future<bool> isStale(String entity, {int ttlMs = _kInventoryTtlMs}) async {
+    final db = await _db.db;
+    final rows = await db.query(
+      'sync_meta',
+      columns: ['last_synced_at'],
+      where: 'entity = ?',
+      whereArgs: [entity],
+      limit: 1,
+    );
+    if (rows.isEmpty) return true;
+    final ts = rows.first['last_synced_at'] as int?;
+    if (ts == null) return true;
+    return DateTime.now().millisecondsSinceEpoch - ts > ttlMs;
+  }
+
+  Future<void> _bumpSyncMeta(String entity) async {
+    final db = await _db.db;
+    await db.insert(
+      'sync_meta',
+      {'entity': entity, 'last_synced_at': DateTime.now().millisecondsSinceEpoch},
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  // ── Current shift ────────────────────────────────────────────────────────
+
+  /// Returns local cached shift immediately (may be null).
+  ShiftPreFill? loadShiftLocal(String branchId) {
+    final cached = _storage.loadShift(branchId);
+    if (cached == null) return null;
     try {
-      final preFill = await _shiftApi.current(branchId);
-      if (preFill.openShift != null) {
-        await _storage.saveShift(branchId, preFill.openShift!.toJson());
-      } else {
-        await _storage.removeShift(branchId);
-      }
-      return preFill;
+      final shift = Shift.fromJson(cached);
+      return ShiftPreFill(
+        hasOpenShift: shift.isOpen,
+        openShift: shift,
+        suggestedOpeningCash: 0,
+      );
     } catch (_) {
-      final cached = _storage.loadShift(branchId);
-      if (cached != null) {
-        final shift = Shift.fromJson(cached);
-        return ShiftPreFill(
-            hasOpenShift: shift.isOpen, openShift: shift,
-            suggestedOpeningCash: 0);
-      }
-      rethrow;
+      return null;
     }
   }
 
-  Future<List<Shift>> listShifts(String branchId) async {
+  /// Fetches fresh shift state from the network. Persists and bumps sync_meta.
+  Future<ShiftPreFill> fetchShiftFresh(String branchId) async {
+    final preFill = await _shiftApi.current(branchId);
+    if (preFill.openShift != null) {
+      await _storage.saveShift(branchId, preFill.openShift!.toJson());
+    } else {
+      await _storage.removeShift(branchId);
+    }
+    await _bumpSyncMeta('shift:$branchId');
+    return preFill;
+  }
+
+  // ── Shifts list ──────────────────────────────────────────────────────────
+
+  List<Shift>? loadShiftsLocal(String branchId) {
+    final cached = _storage.loadShifts(branchId);
+    if (cached == null) return null;
     try {
-      final shifts = await _shiftApi.list(branchId);
-      await _storage.saveShifts(branchId, shifts.map((s) => s.toJson()).toList());
-      return shifts;
+      return cached.map(Shift.fromJson).toList();
     } catch (_) {
-      final cached = _storage.loadShifts(branchId);
-      if (cached != null) return cached.map(Shift.fromJson).toList();
-      rethrow;
+      return null;
     }
   }
+
+  Future<List<Shift>> fetchShiftsFresh(String branchId) async {
+    final shifts = await _shiftApi.list(branchId);
+    await _storage.saveShifts(branchId, shifts.map((s) => s.toJson()).toList());
+    await _bumpSyncMeta('shifts:$branchId');
+    return shifts;
+  }
+
+  // ── Shift open / close ───────────────────────────────────────────────────
 
   Future<Shift> openShift(String branchId, int openingCash) async {
     final shift = await _shiftApi.open(branchId, openingCash);
@@ -55,15 +107,19 @@ class ShiftRepository {
 
   Future<Shift> closeShift(String shiftId, {
     required String branchId,
-    required int    closingCash,
-    String?         note,
+    required int closingCash,
+    String? note,
     required List<Map<String, dynamic>> inventoryCounts,
   }) async {
     final shift = await _shiftApi.close(shiftId,
-        closingCash: closingCash, note: note, inventoryCounts: inventoryCounts);
+        closingCash: closingCash,
+        note: note,
+        inventoryCounts: inventoryCounts);
     await _storage.removeShift(branchId);
     return shift;
   }
+
+  // ── System cash ──────────────────────────────────────────────────────────
 
   Future<int> getSystemCash(String shiftId, int openingCash) async {
     final orders = await _orderApi.list(shiftId: shiftId);
@@ -77,17 +133,27 @@ class ShiftRepository {
     return openingCash + cashFromOrders + movements;
   }
 
-  Future<List<InventoryItem>> getInventory(String branchId) async {
+  // ── Inventory ────────────────────────────────────────────────────────────
+
+  List<InventoryItem>? loadInventoryLocal(String branchId) {
+    final cached = _storage.loadInventory(branchId);
+    if (cached == null) return null;
     try {
-      final items = await _inventoryApi.items(branchId);
-      await _storage.saveInventory(branchId, items.map((i) => i.toJson()).toList().cast<Map<String, dynamic>>());
-      return items;
+      return cached.map(InventoryItem.fromJson).toList();
     } catch (_) {
-      final cached = _storage.loadInventory(branchId);
-      if (cached != null) return cached.map(InventoryItem.fromJson).toList();
-      return [];
+      return null;
     }
   }
+
+  Future<List<InventoryItem>> fetchInventoryFresh(String branchId) async {
+    final items = await _inventoryApi.items(branchId);
+    await _storage.saveInventory(
+        branchId, items.map((i) => i.toJson()).toList().cast<Map<String, dynamic>>());
+    await _bumpSyncMeta('inventory:$branchId');
+    return items;
+  }
+
+  // ── Shift report ─────────────────────────────────────────────────────────
 
   Future<ShiftReport> getReport(String shiftId) async {
     try {
@@ -103,8 +169,9 @@ class ShiftRepository {
 }
 
 final shiftRepositoryProvider = Provider<ShiftRepository>((ref) => ShiftRepository(
-  ref.watch(shiftApiProvider),
-  ref.watch(orderApiProvider),
-  ref.watch(inventoryApiProvider),
-  ref.watch(storageServiceProvider),
-));
+      ref.watch(shiftApiProvider),
+      ref.watch(orderApiProvider),
+      ref.watch(inventoryApiProvider),
+      ref.watch(storageServiceProvider),
+      AppDatabase.instance,
+    ));

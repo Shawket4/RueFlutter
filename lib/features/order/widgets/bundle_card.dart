@@ -146,7 +146,7 @@ class _BundleCardState extends ConsumerState<BundleCard>
                           child: Text(comboLabel(),
                               style: cairo(
                                   fontSize: 9,
-                                  fontWeight: FontWeight.w700,
+                                  fontWeight: FontWeight.w800,
                                   color: Colors.white)),
                         ),
                       ),
@@ -165,7 +165,7 @@ class _BundleCardState extends ConsumerState<BundleCard>
                             child: Text(bundleSaveLabel(savings),
                                 style: cairo(
                                     fontSize: 9,
-                                    fontWeight: FontWeight.w700,
+                                    fontWeight: FontWeight.w800,
                                     color: Colors.white)),
                           ),
                         ),
@@ -188,7 +188,7 @@ class _BundleCardState extends ConsumerState<BundleCard>
                             Text(normaliseName(bundle.name),
                                 style: cairo(
                                     fontSize: 12,
-                                    fontWeight: FontWeight.w700,
+                                    fontWeight: FontWeight.w800,
                                     height: 1.25),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis),
@@ -203,7 +203,7 @@ class _BundleCardState extends ConsumerState<BundleCard>
                         Text(egp(bundle.price),
                             style: cairo(
                                 fontSize: 11,
-                                fontWeight: FontWeight.w800,
+                                fontWeight: FontWeight.w900,
                                 color: AppColors.primary)),
                       ]),
                 ),

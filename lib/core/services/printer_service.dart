@@ -304,6 +304,13 @@ class PrinterService {
         _divider(),
 
         // Order number + timestamp
+        if (order.isVoided)
+          pw.Center(
+            child: pw.Padding(
+              padding: const pw.EdgeInsets.only(bottom: 2),
+              child: pw.Text('*** VOIDED ***', style: ts(fontB, sz: 10)),
+            ),
+          ),
         _row('Order #${order.orderNumber}', dts,
             font: font, fontB: fontB, bold: true, sz: 8),
         _divider(),

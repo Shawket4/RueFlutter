@@ -8,7 +8,7 @@ enum PendingActionType { shiftOpen, order, shiftClose, voidOrder, cashMovement }
 // ---------------------------------------------------------------------------
 // Base class
 // ---------------------------------------------------------------------------
-abstract class PendingAction {
+sealed class PendingAction {
   final String localId; 
   final PendingActionType type;
   final DateTime createdAt;
@@ -99,6 +99,7 @@ class PendingOrder extends PendingAction {
   final String shiftId;
   final String paymentMethod;
   final String? customerName;
+  final String? notes;
   final String? discountType;
   final int? discountValue;
   final String? discountId; 
@@ -118,6 +119,7 @@ class PendingOrder extends PendingAction {
     required this.shiftId,
     required this.paymentMethod,
     this.customerName,
+    this.notes,
     this.discountType,
     this.discountValue,
     this.discountId,
@@ -132,7 +134,7 @@ class PendingOrder extends PendingAction {
   @override
   PendingOrder withIncrementedRetry(String error) => PendingOrder(
         localId: localId, createdAt: createdAt, branchId: branchId, shiftId: shiftId,
-        paymentMethod: paymentMethod, customerName: customerName, discountType: discountType,
+        paymentMethod: paymentMethod, customerName: customerName, notes: notes, discountType: discountType,
         discountValue: discountValue, discountId: discountId, amountTendered: amountTendered,
         tipAmount: tipAmount, tipPaymentMethod: tipPaymentMethod, paymentSplits: paymentSplits,
         items: items, orderedAt: orderedAt, retryCount: retryCount + 1, lastError: error,
@@ -141,7 +143,7 @@ class PendingOrder extends PendingAction {
   @override
   PendingOrder withResetRetry() => PendingOrder(
         localId: localId, createdAt: createdAt, branchId: branchId, shiftId: shiftId,
-        paymentMethod: paymentMethod, customerName: customerName, discountType: discountType,
+        paymentMethod: paymentMethod, customerName: customerName, notes: notes, discountType: discountType,
         discountValue: discountValue, discountId: discountId, amountTendered: amountTendered,
         tipAmount: tipAmount, tipPaymentMethod: tipPaymentMethod, paymentSplits: paymentSplits,
         items: items, orderedAt: orderedAt,
@@ -151,7 +153,7 @@ class PendingOrder extends PendingAction {
   Map<String, dynamic> toJson() => {
         'local_id': localId, 'type': type.name, 'created_at': createdAt.toUtc().toIso8601String(),
         'retry_count': retryCount, 'last_error': lastError, 'branch_id': branchId, 'shift_id': shiftId,
-        'payment_method': paymentMethod, 'customer_name': customerName, 'discount_type': discountType,
+        'payment_method': paymentMethod, 'customer_name': customerName, 'notes': notes, 'discount_type': discountType,
         'discount_value': discountValue, 'discount_id': discountId, 'amount_tendered': amountTendered,
         'tip_amount': tipAmount, 'tip_payment_method': tipPaymentMethod,
         if (paymentSplits != null) 'payment_splits': paymentSplits!.map((s) => s.toApiJson()).toList(),
@@ -168,6 +170,7 @@ class PendingOrder extends PendingAction {
         shiftId: j['shift_id'] as String,
         paymentMethod: j['payment_method'] as String,
         customerName: j['customer_name'] as String?,
+        notes: j['notes'] as String?,
         discountType: j['discount_type'] as String?,
         discountValue: j['discount_value'] as int?,
         discountId: j['discount_id'] as String?,

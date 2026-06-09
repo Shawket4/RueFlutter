@@ -1,6 +1,9 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/api_config.dart';
+import '../services/connectivity_service.dart';
 import '../utils/time_utils.dart';
 
 String? _currentToken;
@@ -31,11 +34,16 @@ class DioClient {
       },
       onResponse: (response, handler) {
         TimeUtils.updateFromHeaders(response.headers.map);
+        ConnectivityService.instance.reportSuccess();
         handler.next(response);
       },
       onError: (err, handler) {
         if (err.response?.statusCode == 401) {
           onUnauthorizedCallback?.call();
+        }
+        // Only count network-layer failures (not server 4xx/5xx) as offline signal.
+        if (_isNetworkLevelError(err)) {
+          ConnectivityService.instance.reportNetworkFailure();
         }
         handler.next(err);
       },
@@ -106,10 +114,19 @@ String? _extractServerMessage(dynamic body) {
 
 bool isNetworkError(Object e) {
   if (e is DioException) {
-    return e.type == DioExceptionType.connectionError    ||
-           e.type == DioExceptionType.connectionTimeout  ||
-           e.type == DioExceptionType.sendTimeout        ||
-           e.type == DioExceptionType.receiveTimeout;
+    if (e.type == DioExceptionType.connectionError    ||
+        e.type == DioExceptionType.connectionTimeout  ||
+        e.type == DioExceptionType.sendTimeout        ||
+        e.type == DioExceptionType.receiveTimeout) {
+      return true;
+    }
+    if (e.type == DioExceptionType.unknown && e.error is SocketException) {
+      return true;
+    }
   }
   return false;
 }
+
+/// Identical to [isNetworkError] but kept private for the interceptor so we
+/// don't count 4xx/5xx server responses as "no internet".
+bool _isNetworkLevelError(DioException e) => isNetworkError(e);

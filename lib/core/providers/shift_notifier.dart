@@ -11,6 +11,7 @@ import '../storage/storage_service.dart';
 import '../utils/time_utils.dart';
 import 'auth_notifier.dart';
 import 'cart_storage.dart';
+import 'menu_notifier.dart' show DataFreshness;
 
 class ShiftState {
   final bool               isLoading;
@@ -20,7 +21,7 @@ class ShiftState {
   final int                systemCash;
   final bool               systemCashLoading;
   final String?            error;
-  final bool               fromCache;
+  final DataFreshness      freshness;
   final bool               isLocalShift;
 
   const ShiftState({
@@ -31,35 +32,39 @@ class ShiftState {
     this.systemCash           = 0,
     this.systemCashLoading    = false,
     this.error,
-    this.fromCache            = false,
+    this.freshness            = DataFreshness.stale,
     this.isLocalShift         = false,
   });
 
   bool get hasOpenShift => shift?.isOpen ?? false;
 
+  // Backwards compat
+  bool get fromCache => freshness != DataFreshness.live;
+
   ShiftState copyWith({
-    bool?               isLoading,
-    Shift?              shift,
-    int?                suggestedOpeningCash,
+    bool?                isLoading,
+    Shift?               shift,
+    int?                 suggestedOpeningCash,
     List<InventoryItem>? inventory,
-    int?                systemCash,
-    bool?               systemCashLoading,
-    String?             error,
-    bool?               fromCache,
-    bool?               isLocalShift,
-    bool                clearShift = false,
-    bool                clearError = false,
-  }) => ShiftState(
-    isLoading:            isLoading            ?? this.isLoading,
-    shift:                clearShift ? null    : (shift ?? this.shift),
-    suggestedOpeningCash: suggestedOpeningCash ?? this.suggestedOpeningCash,
-    inventory:            inventory            ?? this.inventory,
-    systemCash:           systemCash           ?? this.systemCash,
-    systemCashLoading:    systemCashLoading    ?? this.systemCashLoading,
-    error:                clearError ? null    : (error ?? this.error),
-    fromCache:            fromCache            ?? this.fromCache,
-    isLocalShift:         isLocalShift         ?? this.isLocalShift,
-  );
+    int?                 systemCash,
+    bool?                systemCashLoading,
+    String?              error,
+    DataFreshness?       freshness,
+    bool?                isLocalShift,
+    bool                 clearShift = false,
+    bool                 clearError = false,
+  }) =>
+      ShiftState(
+        isLoading:            isLoading            ?? this.isLoading,
+        shift:                clearShift ? null    : (shift ?? this.shift),
+        suggestedOpeningCash: suggestedOpeningCash ?? this.suggestedOpeningCash,
+        inventory:            inventory            ?? this.inventory,
+        systemCash:           systemCash           ?? this.systemCash,
+        systemCashLoading:    systemCashLoading    ?? this.systemCashLoading,
+        error:                clearError ? null    : (error ?? this.error),
+        freshness:            freshness            ?? this.freshness,
+        isLocalShift:         isLocalShift         ?? this.isLocalShift,
+      );
 }
 
 class ShiftNotifier extends Notifier<ShiftState> {
@@ -67,38 +72,54 @@ class ShiftNotifier extends Notifier<ShiftState> {
   ShiftState build() => const ShiftState();
 
   void updateShiftSynced(Shift shift) {
-    state = state.copyWith(
-      shift: shift,
-      isLocalShift: false,
-    );
+    state = state.copyWith(shift: shift, isLocalShift: false);
   }
 
+  /// Two-phase load:
+  /// 1. Paint local cache instantly (offline-safe first frame).
+  /// 2. Background network refresh; on success emit fresh state.
   Future<void> load(String branchId) async {
-    state = state.copyWith(isLoading: true, clearError: true);
+    final repo     = ref.read(shiftRepositoryProvider);
+    final isOnline = ConnectivityService.instance.isOnline;
+
+    // ── Phase 1: serve local immediately ──────────────────────────────────
+    final local = repo.loadShiftLocal(branchId);
+    if (local != null) {
+      state = state.copyWith(
+        shift:                local.openShift,
+        suggestedOpeningCash: local.suggestedOpeningCash,
+        freshness:            isOnline ? DataFreshness.stale : DataFreshness.offline,
+        isLoading:            isOnline,
+        isLocalShift:         false,
+        clearShift:           local.openShift == null,
+        clearError:           true,
+      );
+    } else {
+      state = state.copyWith(isLoading: true, clearError: true);
+    }
+
+    if (!isOnline) return;
+
+    // ── Phase 2: background refresh ───────────────────────────────────────
     try {
-      final preFill = await ref.read(shiftRepositoryProvider)
-          .currentShift(branchId);
+      final preFill = await repo.fetchShiftFresh(branchId);
       state = state.copyWith(
         isLoading:            false,
         shift:                preFill.openShift,
         suggestedOpeningCash: preFill.suggestedOpeningCash,
-        fromCache:            false,
+        freshness:            DataFreshness.live,
         isLocalShift:         false,
         clearShift:           preFill.openShift == null,
+        clearError:           true,
       );
     } catch (_) {
-      final cached = ref.read(storageServiceProvider).loadShift(branchId);
-      if (cached != null) {
-        state = state.copyWith(
-          isLoading: false, fromCache: true,
-          shift: Shift.fromJson(cached),
-        );
-      } else {
-        state = state.copyWith(
-          isLoading: false,
-          error: 'Could not load shift — check connection',
-        );
-      }
+      state = state.copyWith(
+        isLoading: false,
+        freshness: DataFreshness.offline,
+        error:     state.shift == null
+            ? 'Could not load shift — check connection'
+            : null,
+      );
     }
   }
 
@@ -108,40 +129,38 @@ class ShiftNotifier extends Notifier<ShiftState> {
 
     if (isOnline) {
       try {
-        final shift = await ref.read(shiftRepositoryProvider)
-            .openShift(branchId, openingCash);
+        final shift =
+            await ref.read(shiftRepositoryProvider).openShift(branchId, openingCash);
         state = state.copyWith(
-            isLoading: false, shift: shift, isLocalShift: false);
+            isLoading: false, shift: shift, isLocalShift: false,
+            freshness: DataFreshness.live);
         return true;
       } catch (e) {
-        state = state.copyWith(isLoading: false, error: friendlyError(e)); // Task 4.2
+        state = state.copyWith(isLoading: false, error: friendlyError(e));
         return false;
       }
     }
 
-    // ── OFFLINE ──────────────────────────────────────────────
-    // Task 1.3: Stamp offline shifts
+    // ── Offline: create a local optimistic shift ──────────────────────────
     final user = ref.read(authProvider).user;
     if (user == null) {
       state = state.copyWith(isLoading: false, error: 'User not authenticated');
       return false;
     }
 
-    final shiftId  = const Uuid().v4();
-    final now      = TimeUtils.now();
+    final shiftId    = const Uuid().v4();
+    final now        = TimeUtils.now();
     final localShift = Shift(
-      id:           shiftId,
-      branchId:     branchId,
-      tellerId:     user.id,
-      tellerName:   user.name,
-      status:       'open',
-      openingCash:  openingCash,
-      openedAt:     now,
+      id:          shiftId,
+      branchId:    branchId,
+      tellerId:    user.id,
+      tellerName:  user.name,
+      status:      'open',
+      openingCash: openingCash,
+      openedAt:    now,
     );
 
-    await ref.read(storageServiceProvider)
-        .saveShift(branchId, localShift.toJson());
-
+    await ref.read(storageServiceProvider).saveShift(branchId, localShift.toJson());
     await ref.read(offlineQueueProvider.notifier).enqueueShiftOpen(
       PendingShiftOpen(
         localId:     const Uuid().v4(),
@@ -154,7 +173,8 @@ class ShiftNotifier extends Notifier<ShiftState> {
     );
 
     state = state.copyWith(
-        isLoading: false, shift: localShift, isLocalShift: true);
+        isLoading: false, shift: localShift, isLocalShift: true,
+        freshness: DataFreshness.stale);
     return true;
   }
 
@@ -166,15 +186,15 @@ class ShiftNotifier extends Notifier<ShiftState> {
   }) async {
     if (state.shift == null) return false;
     state = state.copyWith(isLoading: true, clearError: true);
-    
-    // Task 2.1: strictly online action
+
     final isOnline = ConnectivityService.instance.isOnline;
     if (!isOnline) {
-      state = state.copyWith(isLoading: false, error: 'Internet required to close shift');
+      state = state.copyWith(
+          isLoading: false, error: 'Internet required to close shift');
       return false;
     }
 
-    final shiftId  = state.shift!.id;
+    final shiftId   = state.shift!.id;
     final cartScope = cartStorageScope(state.shift);
 
     try {
@@ -189,11 +209,10 @@ class ShiftNotifier extends Notifier<ShiftState> {
         await ref.read(storageServiceProvider).clearCartDataForScope(cartScope);
       }
       await ref.read(storageServiceProvider).removeShift(branchId);
-      state = state.copyWith(
-          isLoading: false, clearShift: true, systemCash: 0);
+      state = state.copyWith(isLoading: false, clearShift: true, systemCash: 0);
       return true;
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: friendlyError(e)); // Task 4.2
+      state = state.copyWith(isLoading: false, error: friendlyError(e));
       return false;
     }
   }
@@ -203,7 +222,8 @@ class ShiftNotifier extends Notifier<ShiftState> {
     if (shift == null) return;
     state = state.copyWith(systemCashLoading: true);
     try {
-      final cash = await ref.read(shiftRepositoryProvider)
+      final cash = await ref
+          .read(shiftRepositoryProvider)
           .getSystemCash(shift.id, shift.openingCash);
       state = state.copyWith(systemCash: cash, systemCashLoading: false);
     } catch (_) {
@@ -212,9 +232,22 @@ class ShiftNotifier extends Notifier<ShiftState> {
   }
 
   Future<void> loadInventory(String branchId) async {
-    final items = await ref.read(shiftRepositoryProvider)
-        .getInventory(branchId);
-    state = state.copyWith(inventory: items);
+    final repo     = ref.read(shiftRepositoryProvider);
+    final isOnline = ConnectivityService.instance.isOnline;
+
+    // Phase 1: local
+    final local = repo.loadInventoryLocal(branchId);
+    if (local != null) state = state.copyWith(inventory: local);
+
+    if (!isOnline) return;
+
+    // Phase 2: refresh
+    try {
+      final items = await repo.fetchInventoryFresh(branchId);
+      state = state.copyWith(inventory: items);
+    } catch (_) {
+      // keep local
+    }
   }
 }
 

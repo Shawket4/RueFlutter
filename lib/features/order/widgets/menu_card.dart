@@ -8,124 +8,79 @@ import '../helpers/category_style.dart';
 import 'item_detail_sheet.dart';
 import 'shared_widgets.dart';
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  MENU CARD
-// ─────────────────────────────────────────────────────────────────────────────
-class MenuCard extends ConsumerStatefulWidget {
+class MenuCard extends ConsumerWidget {
   final MenuItem item;
   const MenuCard({super.key, required this.item});
-  @override
-  ConsumerState<MenuCard> createState() => _MenuCardState();
-}
-
-class _MenuCardState extends ConsumerState<MenuCard>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _pressCtrl;
-  late final Animation<double> _pressAnim;
 
   @override
-  void initState() {
-    super.initState();
-    _pressCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 100));
-    _pressAnim = Tween<double>(begin: 1, end: 0.96)
-        .animate(CurvedAnimation(parent: _pressCtrl, curve: Curves.easeOut));
-  }
-
-  @override
-  void dispose() {
-    _pressCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final item = widget.item;
+  Widget build(BuildContext context, WidgetRef ref) {
     final style = CatStyle.of(item.name);
     final hasImage = item.imageUrl != null && item.imageUrl!.isNotEmpty;
 
-    return GestureDetector(
-      onTapDown: (_) => _pressCtrl.forward(),
-      onTapUp: (_) async {
-        await _pressCtrl.reverse();
-        if (mounted) ItemDetailSheet.show(context, item);
-      },
-      onTapCancel: () => _pressCtrl.reverse(),
-      child: ScaleTransition(
-        scale: _pressAnim,
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(AppRadius.md),
-            boxShadow: [
-              BoxShadow(
-                  color: style.accent.withOpacity(0.1),
-                  blurRadius: 14,
-                  offset: const Offset(0, 4)),
-              BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
-                  blurRadius: 3,
-                  offset: const Offset(0, 1)),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(AppRadius.md),
-            child: Column(children: [
-              Expanded(
-                child: hasImage
-                    ? MenuImage(
-                        url: item.imageUrl!,
-                        fit: BoxFit.cover,
-                        placeholder: const ImageSkeleton(),
-                        errorWidget: MissingItemCard(item: item, style: style),
-                      )
-                    : MissingItemCard(item: item, style: style),
-              ),
-              Container(
-                color: Colors.white,
-                padding: const EdgeInsets.fromLTRB(10, 8, 10, 9),
-                child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Container(
-                          width: 3,
-                          height: 26,
-                          margin: const EdgeInsets.only(right: 8),
-                          decoration: BoxDecoration(
-                              color: style.accent,
-                              borderRadius: BorderRadius.circular(2))),
-                      Expanded(
-                          child: Text(normaliseName(item.name),
-                              style: cairo(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  height: 1.25),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis)),
-                      const SizedBox(width: 6),
-                      Text(egp(item.basePrice),
-                          style: cairo(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w800,
-                              color: style.accent)),
-                    ]),
-              ),
-            ]),
-          ),
+    return AnimatedPressScale(
+      onTap: () => ItemDetailSheet.show(context, item),
+      scaleDown: 0.97,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          border: Border.all(color: AppColors.borderLight),
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 6,
+                offset: const Offset(0, 2)),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          child: Column(children: [
+            Expanded(
+              child: hasImage
+                  ? MenuImage(
+                      url: item.imageUrl!,
+                      fit: BoxFit.cover,
+                      placeholder: const ImageSkeleton(),
+                      errorWidget: MissingItemCard(item: item, style: style),
+                    )
+                  : MissingItemCard(item: item, style: style),
+            ),
+            Container(
+              color: Colors.white,
+              padding: const EdgeInsets.fromLTRB(10, 7, 10, 8),
+              child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Container(
+                        width: 3,
+                        height: 22,
+                        margin: const EdgeInsets.only(right: 8),
+                        decoration: BoxDecoration(
+                            color: style.accent,
+                            borderRadius: BorderRadius.circular(2))),
+                    Expanded(
+                        child: Text(normaliseName(item.name),
+                            style: cairo(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                height: 1.25),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis)),
+                    const SizedBox(width: 6),
+                    Text(egp(item.basePrice),
+                        style: cairo(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.textSecondary)),
+                  ]),
+            ),
+          ]),
         ),
       ),
     );
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  MISSING-IMAGE PLACEHOLDER
-//
-//  Designed to sit next to real product photography without clashing:
-//  neutral cream background matching the real photos' backdrops, a
-//  large thin monogram as the hero, plus a small category pill in the
-//  top-left so category is still readable at a glance.
-// ─────────────────────────────────────────────────────────────────────────────
 class MissingItemCard extends StatelessWidget {
   final MenuItem item;
   final CatStyle style;
@@ -160,9 +115,6 @@ class MissingItemCard extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // Decorative outline circle, hinting at the product shape without
-          // committing to one. Uses the category accent very softly so
-          // coffee cards have a warm ring, matcha cards a green ring, etc.
           Positioned(
             right: -36,
             bottom: -36,
@@ -172,43 +124,37 @@ class MissingItemCard extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: style.accent.withOpacity(0.14),
-                  width: 3,
+                  color: style.accent.withOpacity(0.12),
+                  width: 2,
                 ),
               ),
             ),
           ),
-
-          // Monogram (item initials). Thin weight + generous size reads as
-          // elegant typography rather than a UI placeholder badge.
           Center(
             child: Text(
               _monogram,
               style: cairo(
-                fontSize: 52,
+                fontSize: 48,
                 fontWeight: FontWeight.w200,
-                color: style.accent.withOpacity(0.55),
+                color: style.accent.withOpacity(0.5),
                 letterSpacing: 1.5,
                 height: 1,
               ),
             ),
           ),
-
-          // Tiny category indicator, top-left. Subtle enough to disappear
-          // behind the monogram visually but still gives an at-a-glance hint.
           Positioned(
             top: 10,
             left: 10,
             child: Container(
-              padding: const EdgeInsets.all(6),
+              padding: const EdgeInsets.all(5),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.75),
+                color: Colors.white.withOpacity(0.7),
               ),
               child: Icon(
                 style.icon,
-                size: 12,
-                color: style.accent.withOpacity(0.7),
+                size: 11,
+                color: style.accent.withOpacity(0.6),
               ),
             ),
           ),
@@ -218,9 +164,6 @@ class MissingItemCard extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  SKELETONS
-// ─────────────────────────────────────────────────────────────────────────────
 class MenuCardSkeleton extends StatefulWidget {
   const MenuCardSkeleton({super.key});
   @override
@@ -255,13 +198,13 @@ class _MenuCardSkeletonState extends State<MenuCardSkeleton>
           return Container(
             decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(AppRadius.md),
-                boxShadow: AppShadows.card),
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+                border: Border.all(color: AppColors.borderLight)),
             child: Column(children: [
               Expanded(
                   child: ClipRRect(
                       borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(AppRadius.md)),
+                          top: Radius.circular(AppRadius.sm)),
                       child: Container(color: c))),
               Padding(
                 padding:

@@ -1,0 +1,109 @@
+{
+  "@@locale": "en",
+  "@@last_modified": "2026-06-09",
+
+  "appTitle": "Sufrix POS",
+  "@appTitle": { "description": "Application title" },
+
+  "loginTitle": "Sign in to your account",
+  "@loginTitle": { "description": "Login screen heading" },
+
+  "loginButton": "Sign In",
+  "@loginButton": {},
+
+  "loginEmailHint": "Email address",
+  "@loginEmailHint": {},
+
+  "loginPasswordHint": "Password",
+  "@loginPasswordHint": {},
+
+  "errorSessionExpired": "Session expired — please sign in again",
+  "@errorSessionExpired": {},
+
+  "errorNoConnection": "No internet connection",
+  "@errorNoConnection": {},
+
+  "errorGeneric": "Something went wrong — please try again",
+  "@errorGeneric": {},
+
+  "shiftOpen": "Open Shift",
+  "@shiftOpen": {},
+
+  "shiftClose": "Close Shift",
+  "@shiftClose": {},
+
+  "shiftOpeningCash": "Opening Cash",
+  "@shiftOpeningCash": {},
+
+  "shiftClosingCash": "Closing Cash",
+  "@shiftClosingCash": {},
+
+  "orderCheckout": "Checkout",
+  "@orderCheckout": {},
+
+  "orderPlaceOrder": "Place Order",
+  "@orderPlaceOrder": {},
+
+  "orderCartEmpty": "Cart is empty",
+  "@orderCartEmpty": {},
+
+  "orderCustomerName": "Customer Name (optional)",
+  "@orderCustomerName": {},
+
+  "orderPaymentMethod": "Payment",
+  "@orderPaymentMethod": {},
+
+  "orderDiscount": "Discount",
+  "@orderDiscount": {},
+
+  "orderTotal": "Total",
+  "@orderTotal": {},
+
+  "orderSubtotal": "Subtotal",
+  "@orderSubtotal": {},
+
+  "orderTax": "Tax",
+  "@orderTax": {},
+
+  "offlineBannerText": "Offline — order will sync when reconnected",
+  "@offlineBannerText": {},
+
+  "pendingSyncTitle": "Pending Sync",
+  "@pendingSyncTitle": {},
+
+  "syncNow": "Sync Now",
+  "@syncNow": {},
+
+  "allSynced": "All synced",
+  "@allSynced": {},
+
+  "discardAction": "Discard",
+  "@discardAction": {},
+
+  "retryAction": "Retry",
+  "@retryAction": {},
+
+  "cancelAction": "Cancel",
+  "@cancelAction": {},
+
+  "cashIn": "Cash In",
+  "@cashIn": {},
+
+  "cashOut": "Cash Out",
+  "@cashOut": {},
+
+  "cashMovementOfflineError": "Cash movements require an internet connection",
+  "@cashMovementOfflineError": {},
+
+  "printReceipt": "Print Receipt",
+  "@printReceipt": {},
+
+  "noPrinterConfigured": "No Printer Configured",
+  "@noPrinterConfigured": {},
+
+  "home": "Home",
+  "@home": {},
+
+  "settings": "Settings",
+  "@settings": {}
+}

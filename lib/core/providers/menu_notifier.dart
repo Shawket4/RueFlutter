@@ -4,11 +4,29 @@ import '../models/bundle.dart';
 import '../models/inventory.dart';
 import '../models/menu.dart';
 import '../repositories/menu_repository.dart';
+import '../services/connectivity_service.dart';
 import '../services/menu_image_cache.dart';
 import '../storage/storage_service.dart';
 
 /// Sentinel category ID for the synthetic "Combos" rail entry.
 const String kComboCategoryId = '__combos__';
+
+// ── DataFreshness ────────────────────────────────────────────────────────────
+
+/// Replaces scattered `fromCache` boolean flags.
+/// Drives a single freshness indicator chip in the UI.
+enum DataFreshness {
+  /// Data was loaded from the server in this session.
+  live,
+
+  /// Data came from local cache; a refresh is in progress or pending.
+  stale,
+
+  /// Device is offline; local cache is the only source.
+  offline,
+}
+
+// ── MenuState ────────────────────────────────────────────────────────────────
 
 class MenuState {
   final List<Category>  categories;
@@ -17,7 +35,7 @@ class MenuState {
   final List<AddonItem> allAddons;
   final String?         selectedCategoryId;
   final bool            isLoading;
-  final bool            fromCache;
+  final DataFreshness   freshness;
   final String?         error;
   final String?         loadedOrgId;
   final DateTime?       cachedAt;
@@ -29,60 +47,52 @@ class MenuState {
     this.allAddons          = const [],
     this.selectedCategoryId,
     this.isLoading          = false,
-    this.fromCache          = false,
+    this.freshness          = DataFreshness.stale,
     this.error,
     this.loadedOrgId,
     this.cachedAt,
   });
 
-  // Alias for backwards compatibility with any code referencing .addons
+  // ── Backwards compat ──────────────────────────────────────────────────────
+  bool get fromCache => freshness != DataFreshness.live;
   List<AddonItem> get addons => allAddons;
+
+  // ── Derived views ─────────────────────────────────────────────────────────
 
   List<MenuItem> get filtered => selectedCategoryId == null
       ? items
       : items.where((i) => i.categoryId == selectedCategoryId).toList();
 
-  /// Merged menu items + bundles for the current category, sorted by display order.
-  /// When [kComboCategoryId] is selected, only bundles are shown.
-  /// Availability and stock are evaluated once per call (not per tile).
   List<MenuGridEntry> gridEntriesForCategory({
     required String branchId,
     required List<InventoryItem> inventory,
     DateTime? now,
   }) {
-    final n = now ?? DateTime.now();
+    final n     = now ?? DateTime.now();
     final catId = selectedCategoryId;
-
     final entries = <MenuGridEntry>[];
 
-    // ── Combos-only view ────────────────────────────────────────────────────
     if (catId == kComboCategoryId) {
       for (final b in bundles) {
         if (b.status != BundleStatus.active) continue;
         final available = isBundleAvailableNow(b, branchId, n);
         final oos = bundleOutOfStockReason(b, items, inventory);
-        entries.add(MenuGridEntry.bundle(
-          b,
-          enabled: available && oos == null,
-          disabledReason: oos,
-        ));
+        entries.add(MenuGridEntry.bundle(b,
+            enabled: available && oos == null, disabledReason: oos));
       }
       entries.sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
       return entries;
     }
 
-    // ── Regular category view (items only — bundles live in Combos) ─────────
     for (final i in items) {
       if (!i.isActive) continue;
       if (catId != null && i.categoryId != catId) continue;
       entries.add(MenuGridEntry.item(i));
     }
-
     entries.sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
     return entries;
   }
 
-  /// Bundles matching search query (availability + stock checked once).
   List<Bundle> searchBundles(
     String query, {
     required String branchId,
@@ -99,8 +109,6 @@ class MenuState {
     }).toList();
   }
 
-  /// Active addon items grouped by type, sorted by display_order.
-  /// Used by ItemDetailSheet to populate each slot's chip list.
   Map<String, List<AddonItem>> get addonsByType {
     final map = <String, List<AddonItem>>{};
     for (final a in allAddons) {
@@ -113,8 +121,6 @@ class MenuState {
     return map;
   }
 
-  /// True when there is at least one active bundle that should show
-  /// in the Combos rail entry.
   bool get hasActiveBundles => bundles.any((b) => b.status == BundleStatus.active);
 
   MenuState copyWith({
@@ -124,98 +130,134 @@ class MenuState {
     List<AddonItem>? allAddons,
     String?          selectedCategoryId,
     bool?            isLoading,
-    bool?            fromCache,
+    DataFreshness?   freshness,
     String?          error,
     String?          loadedOrgId,
     DateTime?        cachedAt,
     bool             clearError = false,
+    bool             clearSelectedCategory = false,
   }) =>
       MenuState(
         categories:         categories         ?? this.categories,
         items:              items              ?? this.items,
         bundles:            bundles            ?? this.bundles,
         allAddons:          allAddons          ?? this.allAddons,
-        selectedCategoryId: selectedCategoryId ?? this.selectedCategoryId,
+        selectedCategoryId: clearSelectedCategory
+            ? null
+            : (selectedCategoryId ?? this.selectedCategoryId),
         isLoading:          isLoading          ?? this.isLoading,
-        fromCache:          fromCache          ?? this.fromCache,
+        freshness:          freshness          ?? this.freshness,
         error:              clearError ? null  : (error ?? this.error),
         loadedOrgId:        loadedOrgId        ?? this.loadedOrgId,
         cachedAt:           cachedAt           ?? this.cachedAt,
       );
 }
 
+// ── MenuNotifier ─────────────────────────────────────────────────────────────
+
 class MenuNotifier extends Notifier<MenuState> {
   @override
   MenuState build() => const MenuState();
 
+  /// Two-phase load:
+  /// 1. Paint local cache instantly (offline-safe first frame).
+  /// 2. Kick background network refresh; on success emit fresh state.
   Future<void> load(String orgId, {bool force = false}) async {
+    // Guard: already live for this org and not forced.
     if (!force &&
         state.loadedOrgId == orgId &&
         state.items.isNotEmpty &&
-        !state.fromCache) {
+        state.freshness == DataFreshness.live) {
       return;
     }
 
-    state = state.copyWith(isLoading: true, clearError: true);
-    try {
-      final repo = ref.read(menuRepositoryProvider);
+    final repo      = ref.read(menuRepositoryProvider);
+    final isOnline  = ConnectivityService.instance.isOnline;
+    final cachedAt  = ref.read(storageServiceProvider).menuCachedAt(orgId);
 
-      // Fetch menu (categories + items), bundles, and addon items concurrently.
-      final menuResult = await repo.fetchMenu(orgId);
-      final bundleResult = await repo.fetchBundles(orgId);
-      final addonItems = await repo.fetchAddonItems(orgId);
-      final cachedAt   = ref.read(storageServiceProvider).menuCachedAt(orgId);
+    // ── Phase 1: serve local immediately ──────────────────────────────────
+    final localMenu    = repo.loadMenuLocal(orgId);
+    final localBundles = repo.loadBundlesLocal(orgId);
+    final localAddons  = repo.loadAddonsLocal(orgId);
+
+    if (localMenu != null) {
+      state = state.copyWith(
+        categories:         localMenu.categories,
+        items:              localMenu.items,
+        bundles:            localBundles ?? state.bundles,
+        allAddons:          localAddons  ?? state.allAddons,
+        freshness:          isOnline ? DataFreshness.stale : DataFreshness.offline,
+        isLoading:          isOnline, // still loading if we'll refresh
+        loadedOrgId:        orgId,
+        cachedAt:           cachedAt,
+        selectedCategoryId: localMenu.categories.isNotEmpty
+            ? localMenu.categories.first.id
+            : null,
+        clearError: true,
+      );
+    } else {
+      // No local data: show loading spinner.
+      state = state.copyWith(isLoading: true, clearError: true);
+    }
+
+    if (!isOnline) return; // offline — local is the best we have
+
+    // ── Phase 2: background refresh ───────────────────────────────────────
+    try {
+      final staleMenu = await repo.isStale('menu:$orgId');
+      final results = await Future.wait([
+        if (staleMenu || force || localMenu == null)
+          repo.fetchMenuFresh(orgId)
+        else
+          Future.value(localMenu),
+        repo.fetchBundlesFresh(orgId),
+        repo.fetchAddonsFresh(orgId),
+      ]);
+
+      final freshMenu    = results[0] as ({List<Category> categories, List<MenuItem> items});
+      final freshBundles = results[1] as List<Bundle>;
+      final freshAddons  = results[2] as List<AddonItem>;
+      final freshCachedAt = ref.read(storageServiceProvider).menuCachedAt(orgId);
 
       state = state.copyWith(
         isLoading:          false,
-        categories:         menuResult.categories,
-        items:              menuResult.items,
-        bundles:            bundleResult.bundles,
-        allAddons:          addonItems,
-        fromCache:          menuResult.fromCache,
+        categories:         freshMenu.categories,
+        items:              freshMenu.items,
+        bundles:            freshBundles,
+        allAddons:          freshAddons,
+        freshness:          DataFreshness.live,
         loadedOrgId:        orgId,
-        cachedAt:           cachedAt,
-        selectedCategoryId: menuResult.categories.isNotEmpty
-            ? menuResult.categories.first.id
+        cachedAt:           freshCachedAt,
+        selectedCategoryId: freshMenu.categories.isNotEmpty
+            ? freshMenu.categories.first.id
             : null,
+        clearError: true,
       );
 
-      // Image cache handling (only on successful FRESH fetches — offline
-      // fallbacks leave the existing disk cache alone so the order screen
-      // keeps working without network).
-      if (!menuResult.fromCache) {
-        final imageCache = ref.read(menuImageCacheProvider);
-
-        // On forced refresh (user-initiated sync) wipe the disk cache so
-        // fresh images are fetched from the server. On a first-time /
-        // background fresh load we keep the disk cache — warmUp just
-        // fills in anything missing.
-        if (force) {
-          await imageCache.invalidate();
-        }
-
-        final urls = <String>{
-          for (final i in menuResult.items)
-            if (i.imageUrl != null && i.imageUrl!.isNotEmpty) i.imageUrl!,
-          for (final c in menuResult.categories)
-            if (c.imageUrl != null && c.imageUrl!.isNotEmpty) c.imageUrl!,
-          for (final b in bundleResult.bundles) ...{
-            if (b.imageUrl != null && b.imageUrl!.isNotEmpty) b.imageUrl!,
-            if (b.previewImageUrl(menuResult.items) != null)
-              b.previewImageUrl(menuResult.items)!,
-          },
-        };
-        if (urls.isNotEmpty) {
-          // Fire-and-forget so the UI isn't blocked on image downloads.
-          // MenuImage widgets render skeletons until each image lands on
-          // disk, then fade in.
-          unawaited(imageCache.warmUp(urls));
-        }
-      }
+      // Warm image cache (fire-and-forget).
+      final imageCache = ref.read(menuImageCacheProvider);
+      if (force) await imageCache.invalidate();
+      final urls = <String>{
+        for (final i in freshMenu.items)
+          if (i.imageUrl != null && i.imageUrl!.isNotEmpty) i.imageUrl!,
+        for (final c in freshMenu.categories)
+          if (c.imageUrl != null && c.imageUrl!.isNotEmpty) c.imageUrl!,
+        for (final b in freshBundles) ...{
+          if (b.imageUrl != null && b.imageUrl!.isNotEmpty) b.imageUrl!,
+          if (b.previewImageUrl(freshMenu.items) != null)
+            b.previewImageUrl(freshMenu.items)!,
+        },
+      };
+      if (urls.isNotEmpty) unawaited(imageCache.warmUp(urls));
     } catch (_) {
+      // Network failed — demote to stale/offline; keep showing local data.
       state = state.copyWith(
         isLoading: false,
-        error:     'No connection and no cached menu available',
+        freshness: DataFreshness.offline,
+        // Only set error when there's nothing to show at all.
+        error: state.items.isEmpty
+            ? 'No connection and no cached menu available'
+            : null,
       );
     }
   }

@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import '../theme/app_theme.dart';
 
 class SufrixSymbolPainter extends CustomPainter {
   final Color crossColor;
@@ -149,7 +149,7 @@ class SufrixLongLogo extends StatelessWidget {
           // Native premium text rendering using Google Fonts Cairo to avoid SVG text-rendering fallback issues
           Text(
             'Sufrix',
-            style: GoogleFonts.cairo(
+            style: cairo(
               fontSize: height * 0.68,
               fontWeight: FontWeight.w700,
               color: tc,

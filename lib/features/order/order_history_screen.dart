@@ -226,37 +226,56 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
       ),
       Container(height: 1, color: AppColors.border),
 
-      // ── Sort header ───────────────────────────────────────────────────
-      Container(
-        color: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
-        child: Row(children: [
-          _sortHeader('#', _Col.number, width: 52),
-          _sortHeader('Payment', _Col.payment, flex: 3),
-          _sortHeader('Time', _Col.time, flex: 2),
-          _sortHeader('Amount', _Col.amount, width: 90, alignRight: true),
-          const SizedBox(width: 28),
-        ]),
-      ),
-      Container(height: 1, color: AppColors.border),
-
-      // ── Rows ──────────────────────────────────────────────────────────
+      // ── Table Card ────────────────────────────────────────────────────
       Expanded(
-        child: ListView.builder(
-            padding: EdgeInsets.zero,
-            itemCount: sorted.length,
-            itemBuilder: (_, i) {
-              final o = sorted[i];
-              final isExpanded = _expandedId == o.id;
-              return _OrderRow(
-                order: o,
-                expandedOrder: isExpanded ? _expandedOrder : null,
-                isExpanded: isExpanded,
-                isLoadingDetail: isExpanded && _loadingDetail,
-                onTap: () => _toggleExpand(o),
-                onVoided: _onVoided,
-              );
-            }),
+        child: Container(
+          margin: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            border: Border.all(color: AppColors.borderLight),
+            boxShadow: AppShadows.card,
+          ),
+          child: Column(children: [
+            // ── Sort header ───────────────────────────────────────────────
+            Container(
+              decoration: const BoxDecoration(
+                color: AppColors.bg,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+              child: Row(children: [
+                _sortHeader('#', _Col.number, width: 52),
+                _sortHeader('Payment', _Col.payment, flex: 3),
+                _sortHeader('Time', _Col.time, flex: 2),
+                _sortHeader('Amount', _Col.amount, width: 90, alignRight: true),
+                const SizedBox(width: 28),
+              ]),
+            ),
+            const Divider(height: 1, color: AppColors.borderLight),
+
+            // ── Rows ──────────────────────────────────────────────────────
+            Expanded(
+              child: ListView.separated(
+                padding: EdgeInsets.zero,
+                itemCount: sorted.length,
+                separatorBuilder: (_, __) => const Divider(height: 1, color: AppColors.borderLight),
+                itemBuilder: (_, i) {
+                  final o = sorted[i];
+                  final isExpanded = _expandedId == o.id;
+                  return _OrderRow(
+                    order: o,
+                    expandedOrder: isExpanded ? _expandedOrder : null,
+                    isExpanded: isExpanded,
+                    isLoadingDetail: isExpanded && _loadingDetail,
+                    onTap: () => _toggleExpand(o),
+                    onVoided: _onVoided,
+                  );
+                },
+              ),
+            ),
+          ]),
+        ),
       ),
     ]);
   }
@@ -440,17 +459,14 @@ class _OrderRow extends ConsumerWidget {
 
       // ── Expanded section ────────────────────────────────────────────
       if (isExpanded && expandedOrder != null)
-        _ExpandedSection(
-          order: expandedOrder!,
-          isLoading: isLoadingDetail,
-          onVoided: onVoided,
+        Container(
+          color: AppColors.bg.withOpacity(0.5),
+          child: _ExpandedSection(
+            order: expandedOrder!,
+            isLoading: isLoadingDetail,
+            onVoided: onVoided,
+          ),
         ),
-
-      // Divider
-      Container(
-        height: 1,
-        color: isExpanded ? AppColors.border : AppColors.borderLight,
-      ),
     ]);
   }
 }

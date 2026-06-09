@@ -99,30 +99,43 @@ class _ShiftHistoryScreenState extends ConsumerState<ShiftHistoryScreen> {
                   : _shifts.isEmpty
                       ? Center(child: Text('No shifts found',
                           style: cairo(fontSize: 15, color: AppColors.textSecondary)))
-                      : Column(children: [
-                          // Headers
-                          Container(
-                            color: AppColors.bg,
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            child: Row(children: [
-                              SizedBox(width: 48, child: Text('Status', style: cairo(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.textSecondary))),
-                              Expanded(flex: 2, child: Text('Teller', style: cairo(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.textSecondary))),
-                              Expanded(flex: 2, child: Text('Time', style: cairo(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.textSecondary))),
-                              SizedBox(width: 80, child: Text('Declared', textAlign: TextAlign.right, style: cairo(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.textSecondary))),
-                              const SizedBox(width: 36),
-                            ]),
+                      : Container(
+                          margin: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(AppRadius.lg),
+                            border: Border.all(color: AppColors.borderLight),
+                            boxShadow: AppShadows.card,
                           ),
-                          Container(height: 1, color: AppColors.border),
-
-                          // List
-                          Expanded(
-                            child: ListView.builder(
-                              padding: EdgeInsets.zero,
-                              itemCount: _shifts.length,
-                              itemBuilder: (_, i) => _ShiftRow(shift: _shifts[i]),
+                          child: Column(children: [
+                            // Headers
+                            Container(
+                              decoration: const BoxDecoration(
+                                color: AppColors.bg,
+                                borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
+                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              child: Row(children: [
+                                SizedBox(width: 48, child: Text('Status', style: cairo(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.textSecondary))),
+                                Expanded(flex: 2, child: Text('Teller', style: cairo(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.textSecondary))),
+                                Expanded(flex: 2, child: Text('Time', style: cairo(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.textSecondary))),
+                                SizedBox(width: 80, child: Text('Declared', textAlign: TextAlign.right, style: cairo(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.textSecondary))),
+                                const SizedBox(width: 36),
+                              ]),
                             ),
-                          ),
-                        ]),
+                            const Divider(height: 1, color: AppColors.borderLight),
+
+                            // List
+                            Expanded(
+                              child: ListView.separated(
+                                padding: EdgeInsets.zero,
+                                itemCount: _shifts.length,
+                                separatorBuilder: (_, __) => const Divider(height: 1, color: AppColors.borderLight),
+                                itemBuilder: (_, i) => _ShiftRow(shift: _shifts[i]),
+                              ),
+                            ),
+                          ]),
+                        ),
         ),
       ]),
     );
@@ -189,9 +202,8 @@ class _ShiftRowState extends ConsumerState<_ShiftRow> {
             : AppColors.textSecondary;
 
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(bottom: BorderSide(color: AppColors.borderLight)),
+      decoration: BoxDecoration(
+        color: _expanded ? AppColors.primary.withOpacity(0.04) : Colors.white,
       ),
       child: Column(children: [
         // ── Main Row ───────────────────────────────────────────────────────
@@ -220,7 +232,7 @@ class _ShiftRowState extends ConsumerState<_ShiftRow> {
         if (_expanded) ...[
           Container(
             width: double.infinity,
-            color: AppColors.bg,
+            color: AppColors.bg.withOpacity(0.5),
             padding: const EdgeInsets.all(16),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               // Meta info

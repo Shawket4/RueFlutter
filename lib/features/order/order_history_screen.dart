@@ -9,7 +9,6 @@ import '../../core/providers/shift_notifier.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatting.dart';
 import '../../shared/widgets/error_banner.dart';
-import '../../shared/widgets/label_value.dart';
 import 'void_order_sheet.dart';
 import 'widgets/receipt_preview_sheet.dart';
 import 'widgets/order_ingredients_sheet.dart';
@@ -19,7 +18,7 @@ import '../../core/providers/payment_method_notifier.dart';
 // ─────────────────────────────────────────────────────────────────────────────
 //  SORT
 // ─────────────────────────────────────────────────────────────────────────────
-enum _Col { number, payment, time, amount }
+enum _Col { number, payment, time, teller, amount }
 
 class OrderHistoryScreen extends ConsumerStatefulWidget {
   const OrderHistoryScreen({super.key});
@@ -28,8 +27,8 @@ class OrderHistoryScreen extends ConsumerStatefulWidget {
 }
 
 class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
-  _Col _sortCol = _Col.time;
-  bool _sortAsc = false; // newest first
+  _Col _sortCol = _Col.number;
+  bool _sortAsc = false;
 
   String? _expandedId;
   Order? _expandedOrder;
@@ -60,6 +59,8 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
           cmp = a.paymentMethod.compareTo(b.paymentMethod);
         case _Col.time:
           cmp = a.createdAt.compareTo(b.createdAt);
+        case _Col.teller:
+          cmp = a.tellerName.compareTo(b.tellerName);
         case _Col.amount:
           cmp = a.totalAmount.compareTo(b.totalAmount);
       }
@@ -68,16 +69,14 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
     return list;
   }
 
-  void _onSort(_Col col) {
-    setState(() {
-      if (_sortCol == col) {
-        _sortAsc = !_sortAsc;
-      } else {
-        _sortCol = col;
-        _sortAsc = col == _Col.number; // number defaults asc, rest desc
-      }
-    });
-  }
+  void _onSort(_Col col) => setState(() {
+        if (_sortCol == col) {
+          _sortAsc = !_sortAsc;
+        } else {
+          _sortCol = col;
+          _sortAsc = col == _Col.number;
+        }
+      });
 
   Future<void> _toggleExpand(Order order) async {
     if (_expandedId == order.id) {
@@ -87,14 +86,12 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
       });
       return;
     }
-
     setState(() {
       _expandedId = order.id;
       _expandedOrder = order;
       _loadingDetail = false;
     });
 
-    // Fetch full order if items are empty
     if (order.items.isEmpty) {
       setState(() => _loadingDetail = true);
       try {
@@ -122,58 +119,25 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
     final history = ref.watch(orderHistoryProvider);
     final shift = ref.watch(shiftProvider).shift;
     final methods = ref.watch(paymentMethodProvider).items;
+    final top = MediaQuery.of(context).padding.top;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.bg,
       body: Column(children: [
-        // ── Top bar ──────────────────────────────────────────────────────
-        Container(
-          color: Colors.white,
-          padding: EdgeInsets.fromLTRB(
-              14, MediaQuery.of(context).padding.top + 8, 14, 10),
-          child: Row(children: [
-            GestureDetector(
-              onTap: () => context.pop(),
-              child: Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                    color: AppColors.bg,
-                    borderRadius: BorderRadius.circular(AppRadius.xs),
-                    border: Border.all(color: AppColors.border)),
-                alignment: Alignment.center,
-                child: const Icon(Icons.arrow_back_rounded,
-                    size: 18, color: AppColors.textPrimary),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Text('Past Orders',
-                style: cairo(fontSize: 17, fontWeight: FontWeight.w700)),
-            const Spacer(),
-            if (shift != null)
-              GestureDetector(
-                onTap: () =>
-                    ref.read(orderHistoryProvider.notifier).refresh(shift.id),
-                child: Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                      color: AppColors.bg,
-                      borderRadius: BorderRadius.circular(AppRadius.xs),
-                      border: Border.all(color: AppColors.border)),
-                  alignment: Alignment.center,
-                  child: const Icon(Icons.refresh_rounded,
-                      size: 18, color: AppColors.textSecondary),
-                ),
-              ),
-          ]),
+        // ── Top bar ────────────────────────────────────────────────────
+        _TopBar(
+          paddingTop: top,
+          onBack: () => context.pop(),
+          onRefresh: shift == null
+              ? null
+              : () => ref.read(orderHistoryProvider.notifier).refresh(shift.id),
         ),
-        Container(height: 1, color: AppColors.border),
 
-        // ── Body ─────────────────────────────────────────────────────────
+        // ── Body ───────────────────────────────────────────────────────
         Expanded(
           child: shift == null
-              ? _empty(Icons.lock_outline_rounded, 'No open shift')
+              ? _EmptyState(
+                  icon: Icons.lock_outline_rounded, message: 'No open shift')
               : history.isLoading
                   ? const Center(
                       child:
@@ -182,132 +146,345 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
                       ? Padding(
                           padding: const EdgeInsets.all(24),
                           child: ErrorBanner(
-                              message: history.error!, onRetry: _load))
+                              message: history.error!, onRetry: _load),
+                        )
                       : history.orders.isEmpty
-                          ? _emptyLottie()
-                          : _buildTable(history.orders, methods),
+                          ? _EmptyLottie()
+                          : _Body(
+                              orders: history.orders,
+                              methods: methods,
+                              sortCol: _sortCol,
+                              sortAsc: _sortAsc,
+                              onSort: _onSort,
+                              expandedId: _expandedId,
+                              expandedOrder: _expandedOrder,
+                              loadingDetail: _loadingDetail,
+                              onToggle: _toggleExpand,
+                              onVoided: _onVoided,
+                              sorted: _sorted,
+                            ),
         ),
       ]),
     );
   }
+}
 
-  Widget _buildTable(List<Order> orders, List<PaymentMethod> methods) {
+// ─────────────────────────────────────────────────────────────────────────────
+//  TOP BAR
+// ─────────────────────────────────────────────────────────────────────────────
+class _TopBar extends StatelessWidget {
+  final double paddingTop;
+  final VoidCallback onBack;
+  final VoidCallback? onRefresh;
+  const _TopBar(
+      {required this.paddingTop, required this.onBack, this.onRefresh});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.white,
+      padding: EdgeInsets.fromLTRB(16, paddingTop + 10, 16, 12),
+      child: Row(children: [
+        _IconBtn(icon: Icons.arrow_back_rounded, onTap: onBack),
+        const SizedBox(width: 14),
+        Text('Past Orders',
+            style: cairo(fontSize: 18, fontWeight: FontWeight.w700)),
+        const Spacer(),
+        if (onRefresh != null)
+          _IconBtn(icon: Icons.refresh_rounded, onTap: onRefresh!),
+      ]),
+    );
+  }
+}
+
+class _IconBtn extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  const _IconBtn({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(
+            color: AppColors.bg,
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+            border: Border.all(color: AppColors.border),
+          ),
+          alignment: Alignment.center,
+          child: Icon(icon, size: 18, color: AppColors.textPrimary),
+        ),
+      );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  BODY (stats + table)
+// ─────────────────────────────────────────────────────────────────────────────
+class _Body extends ConsumerWidget {
+  final List<Order> orders;
+  final List<PaymentMethod> methods;
+  final _Col sortCol;
+  final bool sortAsc;
+  final void Function(_Col) onSort;
+  final String? expandedId;
+  final Order? expandedOrder;
+  final bool loadingDetail;
+  final Future<void> Function(Order) onToggle;
+  final void Function(Order) onVoided;
+  final List<Order> Function(List<Order>) sorted;
+
+  const _Body({
+    required this.orders,
+    required this.methods,
+    required this.sortCol,
+    required this.sortAsc,
+    required this.onSort,
+    required this.expandedId,
+    required this.expandedOrder,
+    required this.loadingDetail,
+    required this.onToggle,
+    required this.onVoided,
+    required this.sorted,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
     final active = orders.where((o) => o.status != 'voided').toList();
     final total = active.fold<int>(0, (s, o) => s + o.totalAmount);
-    final cash = active
-        .where((o) => isCashMethod(methods, o.paymentMethod))
-        .fold(0, (s, o) => s + o.totalAmount);
-    final card = active
-        .where((o) =>
-            !isCashMethod(methods, o.paymentMethod) &&
-            o.paymentMethod != 'mixed')
-        .fold(0, (s, o) => s + o.totalAmount);
 
-    final sorted = _sorted(orders);
+    // Build one stat entry per payment method that actually appears in orders,
+    // plus a catch-all "Mixed" bucket. Order matches the methods list ordering.
+    final methodStats =
+        <({String id, String label, Color color, int amount})>[];
 
-    return Column(children: [
-      // ── Stats bar ─────────────────────────────────────────────────────
-      Container(
-        color: AppColors.bg,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        child: Row(children: [
-          _Chip('Orders', '${active.length}', AppColors.primary),
-          const SizedBox(width: 8),
-          _Chip('Total', egp(total), AppColors.success),
-          if (cash > 0) ...[
-            const SizedBox(width: 8),
-            _Chip('Cash', egp(cash), AppColors.textSecondary),
-          ],
-          if (card > 0) ...[
-            const SizedBox(width: 8),
-            _Chip('Card', egp(card), const Color(0xFF7C3AED)),
-          ],
-        ]),
-      ),
-      Container(height: 1, color: AppColors.border),
+    for (final m in methods) {
+      final sum = active
+          .where((o) => o.paymentMethod == m.wireFormat)
+          .fold<int>(0, (s, o) => s + o.totalAmount);
+      if (sum > 0) {
+        methodStats.add((
+          id: m.id,
+          label: m.label('en'),
+          color: m.color,
+          amount: sum,
+        ));
+      }
+    }
 
-      // ── Table Card ────────────────────────────────────────────────────
-      Expanded(
-        child: Container(
-          margin: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(AppRadius.lg),
-            border: Border.all(color: AppColors.borderLight),
-            boxShadow: AppShadows.card,
+    // Mixed orders (split payment) tracked separately
+    final mixedSum = active
+        .where((o) => o.paymentMethod == 'mixed')
+        .fold<int>(0, (s, o) => s + o.totalAmount);
+    if (mixedSum > 0) {
+      methodStats.add((
+        id: 'mixed',
+        label: 'Mixed',
+        color: AppColors.warning,
+        amount: mixedSum,
+      ));
+    }
+
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        // ── Stats row ────────────────────────────────────────────────
+        // Always show Orders + Total, then one card per active method.
+        // Scrollable horizontally if there are many methods.
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: IntrinsicHeight(
+            child:
+                Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              _StatCard(
+                label: 'Orders',
+                value: '${active.length}',
+                sub: 'this shift',
+              ),
+              const SizedBox(width: 10),
+              _StatCard(
+                label: 'Total',
+                value: egp(total),
+                valueColor: AppColors.success,
+                sub: 'active only',
+              ),
+              ...methodStats.map((m) {
+                final pct = total > 0 ? (m.amount / total * 100).round() : 0;
+                return Row(mainAxisSize: MainAxisSize.min, children: [
+                  const SizedBox(width: 10),
+                  _StatCard(
+                    label: m.label,
+                    value: egp(m.amount),
+                    valueColor: m.color,
+                    sub: '$pct%',
+                  ),
+                ]);
+              }),
+            ]),
           ),
-          child: Column(children: [
-            // ── Sort header ───────────────────────────────────────────────
-            Container(
-              decoration: const BoxDecoration(
-                color: AppColors.bg,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-              child: Row(children: [
-                _sortHeader('#', _Col.number, width: 52),
-                _sortHeader('Payment', _Col.payment, flex: 3),
-                _sortHeader('Time', _Col.time, flex: 2),
-                _sortHeader('Amount', _Col.amount, width: 90, alignRight: true),
-                const SizedBox(width: 28),
-              ]),
-            ),
-            const Divider(height: 1, color: AppColors.borderLight),
-
-            // ── Rows ──────────────────────────────────────────────────────
-            Expanded(
-              child: ListView.separated(
-                padding: EdgeInsets.zero,
-                itemCount: sorted.length,
-                separatorBuilder: (_, __) => const Divider(height: 1, color: AppColors.borderLight),
-                itemBuilder: (_, i) {
-                  final o = sorted[i];
-                  final isExpanded = _expandedId == o.id;
-                  return _OrderRow(
-                    order: o,
-                    expandedOrder: isExpanded ? _expandedOrder : null,
-                    isExpanded: isExpanded,
-                    isLoadingDetail: isExpanded && _loadingDetail,
-                    onTap: () => _toggleExpand(o),
-                    onVoided: _onVoided,
-                  );
-                },
-              ),
-            ),
-          ]),
         ),
+        const SizedBox(height: 14),
+
+        // ── Table card ───────────────────────────────────────────────
+        Expanded(
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              border: Border.all(color: AppColors.borderLight),
+              boxShadow: AppShadows.card,
+            ),
+            child: Column(children: [
+              // Header
+              _TableHeader(sortCol: sortCol, sortAsc: sortAsc, onSort: onSort),
+              const Divider(height: 1, color: AppColors.borderLight),
+              // Rows
+              Expanded(
+                child: ListView.separated(
+                  padding: EdgeInsets.zero,
+                  itemCount: sorted(orders).length,
+                  separatorBuilder: (_, __) =>
+                      const Divider(height: 1, color: AppColors.borderLight),
+                  itemBuilder: (_, i) {
+                    final o = sorted(orders)[i];
+                    final isExp = expandedId == o.id;
+                    return _OrderRow(
+                      order: o,
+                      methods: methods,
+                      expandedOrder: isExp ? expandedOrder : null,
+                      isExpanded: isExp,
+                      isLoadingDetail: isExp && loadingDetail,
+                      onTap: () => onToggle(o),
+                      onVoided: onVoided,
+                    );
+                  },
+                ),
+              ),
+            ]),
+          ),
+        ),
+      ]),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  STAT CARD
+// ─────────────────────────────────────────────────────────────────────────────
+class _StatCard extends StatelessWidget {
+  final String label;
+  final String value;
+  final String sub;
+  final Color? valueColor;
+  const _StatCard({
+    required this.label,
+    required this.value,
+    required this.sub,
+    this.valueColor,
+  });
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: 150,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(color: AppColors.borderLight),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label,
+                style: cairo(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.textMuted)),
+            const SizedBox(height: 5),
+            Text(value,
+                style: cairo(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: valueColor ?? AppColors.textPrimary)),
+            const SizedBox(height: 2),
+            Text(sub, style: cairo(fontSize: 11, color: AppColors.textMuted)),
+          ],
+        ),
+      );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  TABLE HEADER
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Column flex/width spec shared between header and rows.
+// Layout: [#56] [payment flex3] [time flex2] [teller flex2] [amount 110] [chevron 44]
+class _ColSpec {
+  static const double numW = 56;
+  static const int payFlex = 3;
+  static const int timeFlex = 2;
+  static const int tellerFlex = 2;
+  static const double amtW = 110;
+  static const double chevW = 44;
+}
+
+class _TableHeader extends StatelessWidget {
+  final _Col sortCol;
+  final bool sortAsc;
+  final void Function(_Col) onSort;
+  const _TableHeader(
+      {required this.sortCol, required this.sortAsc, required this.onSort});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 42,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: AppColors.bg,
+        borderRadius:
+            const BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
       ),
-    ]);
+      child: Row(children: [
+        _SortCell('#', _Col.number, width: _ColSpec.numW),
+        _SortCell('Payment', _Col.payment, flex: _ColSpec.payFlex),
+        _SortCell('Time', _Col.time, flex: _ColSpec.timeFlex),
+        _SortCell('Teller', _Col.teller, flex: _ColSpec.tellerFlex),
+        _SortCell('Amount', _Col.amount,
+            width: _ColSpec.amtW, alignRight: true),
+        const SizedBox(width: _ColSpec.chevW),
+      ]),
+    );
   }
 
-  Widget _sortHeader(String label, _Col col,
+  Widget _SortCell(String label, _Col col,
       {double? width, int? flex, bool alignRight = false}) {
-    final active = _sortCol == col;
+    final active = sortCol == col;
     final child = GestureDetector(
-      onTap: () => _onSort(col),
+      onTap: () => onSort(col),
       behavior: HitTestBehavior.opaque,
-      child: Container(
+      child: SizedBox(
         height: 42,
-        alignment: alignRight ? Alignment.centerRight : Alignment.centerLeft,
         child: Row(
-          mainAxisSize: alignRight ? MainAxisSize.min : MainAxisSize.max,
           mainAxisAlignment:
               alignRight ? MainAxisAlignment.end : MainAxisAlignment.start,
           children: [
             Text(label,
                 style: cairo(
                     fontSize: 11,
-                    fontWeight: active ? FontWeight.w800 : FontWeight.w600,
+                    fontWeight: active ? FontWeight.w700 : FontWeight.w600,
                     color: active ? AppColors.primary : AppColors.textMuted,
-                    letterSpacing: 0.5)),
+                    letterSpacing: 0.4)),
             if (active) ...[
               const SizedBox(width: 3),
               Icon(
-                  _sortAsc
-                      ? Icons.arrow_upward_rounded
-                      : Icons.arrow_downward_rounded,
-                  size: 12,
-                  color: AppColors.primary),
+                sortAsc
+                    ? Icons.arrow_upward_rounded
+                    : Icons.arrow_downward_rounded,
+                size: 11,
+                color: AppColors.primary,
+              ),
             ],
           ],
         ),
@@ -317,34 +494,14 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
     if (width != null) return SizedBox(width: width, child: child);
     return Expanded(flex: flex ?? 1, child: child);
   }
-
-  Widget _empty(IconData icon, String msg) => Center(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Icon(icon, size: 40, color: AppColors.border),
-          const SizedBox(height: 12),
-          Text(msg, style: cairo(fontSize: 15, color: AppColors.textSecondary)),
-        ]),
-      );
-
-  Widget _emptyLottie() => Center(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          SizedBox(
-              width: 160,
-              height: 160,
-              child: Lottie.asset('assets/lottie/no_orders.json',
-                  fit: BoxFit.contain, repeat: true)),
-          Text('No orders yet',
-              style: cairo(fontSize: 15, color: AppColors.textSecondary)),
-        ]),
-      );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// ─────────────────────────────────────────────────────────────────────────────
 //  ORDER ROW (expandable)
-// ═══════════════════════════════════════════════════════════════════════════════
-
+// ─────────────────────────────────────────────────────────────────────────────
 class _OrderRow extends ConsumerWidget {
   final Order order;
+  final List<PaymentMethod> methods;
   final Order? expandedOrder;
   final bool isExpanded;
   final bool isLoadingDetail;
@@ -353,6 +510,7 @@ class _OrderRow extends ConsumerWidget {
 
   const _OrderRow({
     required this.order,
+    required this.methods,
     this.expandedOrder,
     required this.isExpanded,
     required this.isLoadingDetail,
@@ -367,246 +525,298 @@ class _OrderRow extends ConsumerWidget {
     final isPending = o.status == 'pending_sync';
 
     return Column(mainAxisSize: MainAxisSize.min, children: [
-      // ── Main row ────────────────────────────────────────────────────
+      // ── Main row ──────────────────────────────────────────────────
       GestureDetector(
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
-        child: Container(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          height: 56,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           color: isExpanded
               ? AppColors.primary.withOpacity(0.04)
               : isVoided
                   ? AppColors.bg.withOpacity(0.4)
                   : Colors.white,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(children: [
-            // #
-            SizedBox(
-              width: 52,
-              child: isPending
-                  ? const Icon(Icons.sync_rounded,
-                      color: AppColors.warning, size: 16)
-                  : Text('#${o.orderNumber}',
-                      style: cairo(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: isVoided
-                              ? AppColors.textMuted
-                              : AppColors.primary)),
-            ),
-            // Payment
-            Expanded(
-                flex: 3,
+          child: Opacity(
+            opacity: isVoided ? 0.55 : 1.0,
+            child: Row(children: [
+              // # column
+              SizedBox(
+                width: _ColSpec.numW,
+                child: isPending
+                    ? const Icon(Icons.cloud_upload_outlined,
+                        size: 16, color: AppColors.warning)
+                    : Text('#${o.orderNumber}',
+                        style: cairo(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: isVoided
+                                ? AppColors.textMuted
+                                : AppColors.primary)),
+              ),
+              // Payment column
+              Expanded(
+                flex: _ColSpec.payFlex,
                 child: Row(children: [
-                  _PaymentBadge(method: o.paymentMethod, voided: isVoided),
+                  _PaymentBadge(
+                      method: o.paymentMethod,
+                      voided: isVoided,
+                      methods: methods),
                   if (isVoided) ...[
-                    const SizedBox(width: 5),
-                    const _Badge('VOIDED', AppColors.danger),
+                    const SizedBox(width: 6),
+                    _StatusPill('Voided', AppColors.danger),
                   ],
                   if (isPending) ...[
-                    const SizedBox(width: 5),
-                    const _Badge('PENDING', AppColors.warning),
+                    const SizedBox(width: 6),
+                    _StatusPill('Pending sync', AppColors.warning),
                   ],
                   if (o.customerName != null) ...[
                     const SizedBox(width: 8),
                     Flexible(
-                        child: Text(o.customerName!,
-                            overflow: TextOverflow.ellipsis,
-                            style: cairo(
-                                fontSize: 12, color: AppColors.textMuted))),
+                      child: Text(o.customerName!,
+                          overflow: TextOverflow.ellipsis,
+                          style:
+                              cairo(fontSize: 12, color: AppColors.textMuted)),
+                    ),
                   ],
-                ])),
-            // Time
-            Expanded(
-                flex: 2,
+                ]),
+              ),
+              // Time column
+              Expanded(
+                flex: _ColSpec.timeFlex,
                 child: Text(timeShort(o.createdAt),
-                    style:
-                        cairo(fontSize: 13, color: AppColors.textSecondary))),
-            // Amount
-            SizedBox(
-              width: 90,
-              child: Text(egp(o.totalAmount),
-                  textAlign: TextAlign.right,
-                  style: cairo(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: isVoided
-                          ? AppColors.textMuted
-                          : AppColors.textPrimary,
-                      decoration:
-                          isVoided ? TextDecoration.lineThrough : null)),
-            ),
-            // Chevron
-            SizedBox(
-              width: 28,
-              child: isLoadingDetail
-                  ? const Padding(
-                      padding: EdgeInsets.only(left: 6),
-                      child: SizedBox(
+                    style: cairo(fontSize: 13, color: AppColors.textSecondary)),
+              ),
+              // Teller column
+              Expanded(
+                flex: _ColSpec.tellerFlex,
+                child: Row(children: [
+                  const Icon(Icons.person_outline_rounded,
+                      size: 13, color: AppColors.textMuted),
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: Text(o.tellerName,
+                        overflow: TextOverflow.ellipsis,
+                        style: cairo(
+                            fontSize: 12, color: AppColors.textSecondary)),
+                  ),
+                ]),
+              ),
+              // Amount column
+              SizedBox(
+                width: _ColSpec.amtW,
+                child: Text(egp(o.totalAmount),
+                    textAlign: TextAlign.right,
+                    style: cairo(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: isVoided
+                            ? AppColors.textMuted
+                            : AppColors.textPrimary,
+                        decoration:
+                            isVoided ? TextDecoration.lineThrough : null)),
+              ),
+              // Chevron
+              SizedBox(
+                width: _ColSpec.chevW,
+                child: isLoadingDetail
+                    ? const Center(
+                        child: SizedBox(
                           width: 14,
                           height: 14,
                           child: CircularProgressIndicator(
-                              strokeWidth: 1.5, color: AppColors.primary)))
-                  : Icon(
-                      isExpanded
-                          ? Icons.keyboard_arrow_up_rounded
-                          : Icons.keyboard_arrow_down_rounded,
-                      size: 18,
-                      color: AppColors.textMuted),
-            ),
-          ]),
+                              strokeWidth: 1.5, color: AppColors.primary),
+                        ),
+                      )
+                    : Center(
+                        child: AnimatedRotation(
+                          duration: const Duration(milliseconds: 180),
+                          turns: isExpanded ? 0.5 : 0,
+                          child: const Icon(Icons.keyboard_arrow_down_rounded,
+                              size: 20, color: AppColors.textMuted),
+                        ),
+                      ),
+              ),
+            ]),
+          ),
         ),
       ),
 
-      // ── Expanded section ────────────────────────────────────────────
+      // ── Expanded panel ─────────────────────────────────────────────
       if (isExpanded && expandedOrder != null)
-        Container(
-          color: AppColors.bg.withOpacity(0.5),
-          child: _ExpandedSection(
-            order: expandedOrder!,
-            isLoading: isLoadingDetail,
-            onVoided: onVoided,
-          ),
+        _ExpandedPanel(
+          order: expandedOrder!,
+          methods: methods,
+          isLoading: isLoadingDetail,
+          onVoided: onVoided,
         ),
     ]);
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-//  EXPANDED SECTION
-// ═══════════════════════════════════════════════════════════════════════════════
-
-class _ExpandedSection extends ConsumerWidget {
+// ─────────────────────────────────────────────────────────────────────────────
+//  EXPANDED PANEL
+// ─────────────────────────────────────────────────────────────────────────────
+class _ExpandedPanel extends ConsumerWidget {
   final Order order;
+  final List<PaymentMethod> methods;
   final bool isLoading;
   final void Function(Order) onVoided;
 
-  const _ExpandedSection({
+  const _ExpandedPanel({
     required this.order,
+    required this.methods,
     required this.isLoading,
     required this.onVoided,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final methods = ref.watch(paymentMethodProvider).items;
     final isVoided = order.status == 'voided';
     final isPending = order.status == 'pending_sync';
 
     return Container(
       color: AppColors.bg,
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(AppRadius.sm),
+          borderRadius: BorderRadius.circular(AppRadius.md),
           border: Border.all(color: AppColors.border),
         ),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          // ── Line items ──────────────────────────────────────────────
-          if (isLoading)
-            const Padding(
-              padding: EdgeInsets.all(24),
-              child: Center(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Line items ─────────────────────────────────────────
+            if (isLoading)
+              const Padding(
+                padding: EdgeInsets.all(24),
+                child: Center(
                   child: SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: AppColors.primary))),
-            )
-          else if (order.items.isEmpty)
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text('No item details available',
-                  style: cairo(fontSize: 13, color: AppColors.textMuted)),
-            )
-          else
-            ...order.items.map((item) {
-              final i = order.items.indexOf(item);
-              return Column(children: [
-                _ItemRow(item: item, isPending: isPending),
-                if (i < order.items.length - 1)
-                  const Divider(
-                      height: 1,
-                      color: AppColors.borderLight,
-                      indent: 14,
-                      endIndent: 14),
-              ]);
-            }),
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: AppColors.primary),
+                  ),
+                ),
+              )
+            else if (order.items.isEmpty)
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text('No item details available',
+                    style: cairo(fontSize: 13, color: AppColors.textMuted)),
+              )
+            else
+              ...List.generate(order.items.length, (i) {
+                final item = order.items[i];
+                return Column(mainAxisSize: MainAxisSize.min, children: [
+                  _ItemRow(item: item, isPending: isPending),
+                  if (i < order.items.length - 1)
+                    const Divider(
+                        height: 1,
+                        color: AppColors.borderLight,
+                        indent: 14,
+                        endIndent: 14),
+                ]);
+              }),
 
-          // ── Totals ──────────────────────────────────────────────────
-          Container(
-            padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-            decoration: const BoxDecoration(
-              border: Border(top: BorderSide(color: AppColors.borderLight)),
-            ),
-            child: Column(children: [
-              LabelValue('Subtotal', egp(order.subtotal)),
-              if (order.discountAmount > 0)
-                LabelValue('Discount', '− ${egp(order.discountAmount)}',
-                    valueColor: AppColors.success),
-              if (order.taxAmount > 0)
-                LabelValue('Tax (14%)', egp(order.taxAmount)),
-              const SizedBox(height: 6),
-              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                Text('Total',
-                    style: cairo(fontSize: 15, fontWeight: FontWeight.w700)),
-                Text(egp(order.totalAmount),
-                    style: cairo(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w800,
-                        color:
-                            isVoided ? AppColors.textMuted : AppColors.primary,
-                        decoration:
-                            isVoided ? TextDecoration.lineThrough : null)),
+            // ── Totals ────────────────────────────────────────────
+            Container(
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+              decoration: const BoxDecoration(
+                border: Border(top: BorderSide(color: AppColors.borderLight)),
+              ),
+              child: Column(children: [
+                _TotalRow('Subtotal', egp(order.subtotal)),
+                if (order.discountAmount > 0)
+                  _TotalRow('Discount', '− ${egp(order.discountAmount)}',
+                      valueColor: AppColors.success),
+                if (order.taxAmount > 0)
+                  _TotalRow('Tax (14%)', egp(order.taxAmount)),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.only(top: 8),
+                  decoration: const BoxDecoration(
+                      border: Border(
+                          top: BorderSide(color: AppColors.borderLight))),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      Text('Total',
+                          style:
+                              cairo(fontSize: 15, fontWeight: FontWeight.w700)),
+                      Text(egp(order.totalAmount),
+                          style: cairo(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                              color: isVoided
+                                  ? AppColors.textMuted
+                                  : AppColors.primary,
+                              decoration: isVoided
+                                  ? TextDecoration.lineThrough
+                                  : null)),
+                    ],
+                  ),
+                ),
               ]),
-            ]),
-          ),
-
-          // ── Meta + actions ──────────────────────────────────────────
-          Container(
-            padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
-            decoration: const BoxDecoration(
-              border: Border(top: BorderSide(color: AppColors.borderLight)),
             ),
-            child: Row(children: [
-              const Icon(Icons.payments_outlined,
-                  size: 14, color: AppColors.textMuted),
-              const SizedBox(width: 6),
-              Text(methodLabel(methods, 'en', order.paymentMethod),
-                  style: cairo(fontSize: 12, color: AppColors.textSecondary)),
-              if (order.tellerName.isNotEmpty) ...[
-                const SizedBox(width: 14),
-                const Icon(Icons.person_outline_rounded,
-                    size: 14, color: AppColors.textMuted),
-                const SizedBox(width: 4),
-                Text(order.tellerName,
+
+            // ── Meta + actions ────────────────────────────────────
+            Container(
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+              decoration: const BoxDecoration(
+                border: Border(top: BorderSide(color: AppColors.borderLight)),
+              ),
+              child: Row(children: [
+                // Payment method
+                const Icon(Icons.payments_outlined,
+                    size: 13, color: AppColors.textMuted),
+                const SizedBox(width: 5),
+                Text(methodLabel(methods, 'en', order.paymentMethod),
                     style: cairo(fontSize: 12, color: AppColors.textSecondary)),
-              ],
-              if (isVoided && order.voidReason != null) ...[
-                const SizedBox(width: 14),
-                const Icon(Icons.cancel_outlined,
-                    size: 14, color: AppColors.danger),
-                const SizedBox(width: 4),
-                Text(_voidLabel(order.voidReason!),
-                    style: cairo(fontSize: 12, color: AppColors.danger)),
-              ],
-              const Spacer(),
+                // Teller
+                if (order.tellerName.isNotEmpty) ...[
+                  _MetaSep(),
+                  const Icon(Icons.person_outline_rounded,
+                      size: 13, color: AppColors.textMuted),
+                  const SizedBox(width: 4),
+                  Text(order.tellerName,
+                      style:
+                          cairo(fontSize: 12, color: AppColors.textSecondary)),
+                ],
+                // Void reason
+                if (isVoided && order.voidReason != null) ...[
+                  _MetaSep(),
+                  const Icon(Icons.cancel_outlined,
+                      size: 13, color: AppColors.danger),
+                  const SizedBox(width: 4),
+                  Text(_voidLabel(order.voidReason!),
+                      style: cairo(fontSize: 12, color: AppColors.danger)),
+                ],
+                const Spacer(),
+                // Actions
                 _ActionBtn(
-                    icon: Icons.print_rounded,
-                    label: 'Print',
-                    color: AppColors.primary,
-                    onTap: () => ReceiptPreviewSheet.show(context, order)),
-              if (!isVoided) ...[
-                const SizedBox(width: 8),
-                _ActionBtn(
+                  icon: Icons.print_rounded,
+                  label: 'Print',
+                  color: AppColors.primary,
+                  onTap: () => ReceiptPreviewSheet.show(context, order),
+                ),
+                if (!isVoided) ...[
+                  const SizedBox(width: 8),
+                  _ActionBtn(
                     icon: Icons.cancel_outlined,
                     label: 'Void',
                     color: AppColors.danger,
-                    onTap: () => VoidOrderSheet.show(context, order, onVoided)),
-              ],
-            ]),
-          ),
-        ]),
+                    onTap: () => VoidOrderSheet.show(context, order, onVoided),
+                  ),
+                ],
+              ]),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -623,279 +833,301 @@ class _ExpandedSection extends ConsumerWidget {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// ─────────────────────────────────────────────────────────────────────────────
 //  ITEM ROW
-// ═══════════════════════════════════════════════════════════════════════════════
-
+// ─────────────────────────────────────────────────────────────────────────────
 class _ItemRow extends StatelessWidget {
   final OrderItem item;
   final bool isPending;
   const _ItemRow({required this.item, this.isPending = false});
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Container(
-            width: 26,
-            height: 26,
-            decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.07),
-                borderRadius: BorderRadius.circular(6)),
-            alignment: Alignment.center,
-            child: Text('${item.quantity}',
-                style: cairo(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.primary)),
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        // Qty bubble
+        Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            color: AppColors.primary.withOpacity(0.07),
+            borderRadius: BorderRadius.circular(7),
           ),
-          const SizedBox(width: 10),
-          Expanded(
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                Row(children: [
-                  Expanded(
-                    child: Text(
-                        item.itemName +
-                            (item.sizeLabel != null
-                                ? ' · ${normaliseName(item.sizeLabel!)}'
-                                : ''),
-                        style:
-                            cairo(fontSize: 13, fontWeight: FontWeight.w600)),
-                  ),
-                  if (item.isBundleLine) ...[
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 5, vertical: 1),
-                      decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.08),
-                          borderRadius: BorderRadius.circular(4)),
-                      child: Text('Combo',
+          alignment: Alignment.center,
+          child: Text('${item.quantity}',
+              style: cairo(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primary)),
+        ),
+        const SizedBox(width: 10),
+
+        // Name + modifiers
+        Expanded(
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Expanded(
+                child: Text(
+                  item.itemName +
+                      (item.sizeLabel != null
+                          ? ' · ${normaliseName(item.sizeLabel!)}'
+                          : ''),
+                  style: cairo(fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+              ),
+              if (item.isBundleLine) ...[
+                const SizedBox(width: 6),
+                _MiniChip('Combo', AppColors.primary),
+              ],
+            ]),
+
+            // Bundle components
+            if (item.isBundleLine && item.bundleComponents.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              ...item.bundleComponents.map((c) {
+                final qty = c.quantity * item.quantity;
+                return Padding(
+                  padding: const EdgeInsets.only(left: 8, bottom: 3),
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '– ${normaliseName(c.itemName)}'
+                          '${c.sizeLabel != null ? ' · ${normaliseName(c.sizeLabel!)}' : ''}'
+                          ' × $qty',
                           style: cairo(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.primary)),
-                    ),
-                  ],
-                ]),
-                // Bundle components
-                if (item.isBundleLine && item.bundleComponents.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  ...item.bundleComponents.map((c) {
-                    final qty = c.quantity * item.quantity;
-                    return Padding(
-                      padding: const EdgeInsets.only(left: 8, bottom: 3),
-                      child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '– ${normaliseName(c.itemName)}${c.sizeLabel != null ? ' · ${normaliseName(c.sizeLabel!)}' : ''} × $qty',
-                              style: cairo(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                  color: AppColors.textSecondary),
+                              fontSize: 12, color: AppColors.textSecondary),
+                        ),
+                        if (c.addons.isNotEmpty) ...[
+                          const SizedBox(height: 3),
+                          Padding(
+                            padding: const EdgeInsets.only(left: 10),
+                            child: Wrap(
+                              spacing: 4,
+                              runSpacing: 3,
+                              children: c.addons.map((a) {
+                                final lt = a.priceModifier * a.quantity;
+                                return _AddonChip(
+                                  a.priceModifier > 0
+                                      ? '+ ${normaliseName(a.name)}${a.quantity > 1 ? " ×${a.quantity}" : ""}  ${egp(lt)}'
+                                      : '+ ${normaliseName(a.name)}${a.quantity > 1 ? " ×${a.quantity}" : ""}',
+                                  AppColors.primary,
+                                );
+                              }).toList(),
                             ),
-                            if (c.addons.isNotEmpty)
-                              Padding(
-                                padding:
-                                    const EdgeInsets.only(left: 10, top: 2),
-                                child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: c.addons.map((a) {
-                                      final lt = a.priceModifier * a.quantity;
-                                      return Text(
-                                        a.priceModifier > 0
-                                            ? '+ ${normaliseName(a.name)}${a.quantity > 1 ? " ×${a.quantity}" : ""}  ${egp(lt)}'
-                                            : '+ ${normaliseName(a.name)}${a.quantity > 1 ? " ×${a.quantity}" : ""}',
-                                        style: cairo(
-                                            fontSize: 11,
-                                            color: AppColors.primary),
-                                      );
-                                    }).toList()),
-                              ),
-                            if (c.optionals.isNotEmpty)
-                              Padding(
-                                padding:
-                                    const EdgeInsets.only(left: 10, top: 2),
-                                child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: c.optionals.map((o) {
-                                      return Text(
+                          ),
+                        ],
+                        if (c.optionals.isNotEmpty) ...[
+                          const SizedBox(height: 3),
+                          Padding(
+                            padding: const EdgeInsets.only(left: 10),
+                            child: Wrap(
+                              spacing: 4,
+                              runSpacing: 3,
+                              children: c.optionals
+                                  .map((o) => _AddonChip(
                                         o.price > 0
                                             ? '+ ${normaliseName(o.name)}  ${egp(o.price)}'
                                             : '+ ${normaliseName(o.name)}',
-                                        style: cairo(
-                                            fontSize: 11,
-                                            color: AppColors.warning),
-                                      );
-                                    }).toList()),
-                              ),
-                          ]),
-                    );
-                  }),
-                ] else ...[
-                  // Addons
-                  if (item.addons.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Wrap(
-                        spacing: 4,
-                        runSpacing: 3,
-                        children: item.addons.map((a) {
-                          final hasPrice = a.unitPrice > 0;
-                          return Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                                color: AppColors.primary.withOpacity(0.06),
-                                borderRadius: BorderRadius.circular(4)),
-                            child: Text(
-                                hasPrice
-                                    ? '${normaliseName(a.addonName)}  +${egp(a.lineTotal)}'
-                                    : normaliseName(a.addonName),
-                                style: cairo(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.primary)),
-                          );
-                        }).toList()),
-                  ],
-                  // Optionals
-                  if (item.optionals.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Wrap(
-                        spacing: 4,
-                        runSpacing: 3,
-                        children: item.optionals.map((o) {
-                          final hasPrice = o.price > 0;
-                          return Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                                color: AppColors.warning.withOpacity(0.07),
-                                borderRadius: BorderRadius.circular(4)),
-                            child: Text(
-                                hasPrice
-                                    ? '${normaliseName(o.fieldName)}  +${egp(o.price)}'
-                                    : normaliseName(o.fieldName),
-                                style: cairo(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.warning)),
-                          );
-                        }).toList()),
-                  ],
-                ],
-                // Ingredients
-                if (item.deductions.isNotEmpty || isPending) ...[
-                  const SizedBox(height: 6),
-                  GestureDetector(
-                    onTap: () => showModalBottomSheet(
-                      context: context,
-                      isScrollControlled: true,
-                      backgroundColor: Colors.transparent,
-                      builder: (_) => OrderIngredientsSheet(item: item),
-                    ),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 7, vertical: 3),
-                      decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.05),
-                          borderRadius: BorderRadius.circular(4)),
-                      child: Row(mainAxisSize: MainAxisSize.min, children: [
-                        const Icon(Icons.science_rounded,
-                            size: 10, color: AppColors.primary),
-                        const SizedBox(width: 4),
-                        Text('Ingredients',
-                            style: cairo(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.primary)),
+                                        AppColors.warning,
+                                      ))
+                                  .toList(),
+                            ),
+                          ),
+                        ],
                       ]),
-                    ),
-                  ),
-                ],
-              ])),
-          const SizedBox(width: 10),
-          Text(egp(item.lineTotal),
-              style: cairo(fontSize: 13, fontWeight: FontWeight.w700)),
-        ]),
-      );
+                );
+              }),
+            ] else ...[
+              // Addons
+              if (item.addons.isNotEmpty) ...[
+                const SizedBox(height: 5),
+                Wrap(
+                  spacing: 4,
+                  runSpacing: 3,
+                  children: item.addons.map((a) {
+                    final hasPrice = a.unitPrice > 0;
+                    return _AddonChip(
+                      hasPrice
+                          ? '${normaliseName(a.addonName)}  +${egp(a.lineTotal)}'
+                          : normaliseName(a.addonName),
+                      AppColors.primary,
+                    );
+                  }).toList(),
+                ),
+              ],
+              // Optionals
+              if (item.optionals.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Wrap(
+                  spacing: 4,
+                  runSpacing: 3,
+                  children: item.optionals.map((o) {
+                    final hasPrice = o.price > 0;
+                    return _AddonChip(
+                      hasPrice
+                          ? '${normaliseName(o.fieldName)}  +${egp(o.price)}'
+                          : normaliseName(o.fieldName),
+                      AppColors.warning,
+                    );
+                  }).toList(),
+                ),
+              ],
+            ],
+
+            // Ingredients button
+            if (item.deductions.isNotEmpty || isPending) ...[
+              const SizedBox(height: 6),
+              GestureDetector(
+                onTap: () => showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (_) => OrderIngredientsSheet(item: item),
+                ),
+                child: _MiniChip('Ingredients', AppColors.primary,
+                    icon: Icons.science_rounded),
+              ),
+            ],
+          ]),
+        ),
+
+        const SizedBox(width: 10),
+        // Line total
+        Padding(
+          padding: const EdgeInsets.only(top: 2),
+          child: Text(egp(item.lineTotal),
+              style: cairo(fontSize: 13, fontWeight: FontWeight.w600)),
+        ),
+      ]),
+    );
+  }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-//  SMALL WIDGETS
-// ═══════════════════════════════════════════════════════════════════════════════
-
-class _Chip extends StatelessWidget {
-  final String label, value;
-  final Color color;
-  const _Chip(this.label, this.value, this.color);
-
-  @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-            color: color.withOpacity(0.08),
-            borderRadius: BorderRadius.circular(6)),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Text(label,
-              style: cairo(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: color.withOpacity(0.8))),
-          const SizedBox(width: 6),
-          Text(value,
-              style: cairo(
-                  fontSize: 14, fontWeight: FontWeight.w800, color: color)),
-        ]),
-      );
-}
+// ─────────────────────────────────────────────────────────────────────────────
+//  SMALL REUSABLE WIDGETS
+// ─────────────────────────────────────────────────────────────────────────────
 
 class _PaymentBadge extends ConsumerWidget {
   final String method;
   final bool voided;
-  const _PaymentBadge({required this.method, required this.voided});
+  final List<PaymentMethod> methods;
+  const _PaymentBadge(
+      {required this.method, required this.voided, required this.methods});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final methods = ref.watch(paymentMethodProvider).items;
     final label = methodLabel(methods, 'en', method);
     final color = methodColor(methods, method);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-          color: voided ? AppColors.borderLight : color.withOpacity(0.09),
-          borderRadius: BorderRadius.circular(4)),
+        color: voided ? AppColors.borderLight : color.withOpacity(0.09),
+        borderRadius: BorderRadius.circular(5),
+      ),
       child: Text(label,
           style: cairo(
               fontSize: 11,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
               color: voided ? AppColors.textMuted : color)),
     );
   }
 }
 
-class _Badge extends StatelessWidget {
+class _StatusPill extends StatelessWidget {
   final String label;
   final Color color;
-  const _Badge(this.label, this.color);
+  const _StatusPill(this.label, this.color);
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-      decoration: BoxDecoration(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+        decoration: BoxDecoration(
           color: color.withOpacity(0.09),
-          borderRadius: BorderRadius.circular(4)),
-      child: Text(label,
-          style: cairo(
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              color: color,
-              letterSpacing: 0.3)));
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Text(label,
+            style: cairo(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: color,
+                letterSpacing: 0.2)),
+      );
+}
+
+class _AddonChip extends StatelessWidget {
+  final String label;
+  final Color color;
+  const _AddonChip(this.label, this.color);
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.07),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Text(label,
+            style:
+                cairo(fontSize: 11, fontWeight: FontWeight.w500, color: color)),
+      );
+}
+
+class _MiniChip extends StatelessWidget {
+  final String label;
+  final Color color;
+  final IconData? icon;
+  const _MiniChip(this.label, this.color, {this.icon});
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          if (icon != null) ...[
+            Icon(icon, size: 10, color: color),
+            const SizedBox(width: 3),
+          ],
+          Text(label,
+              style: cairo(
+                  fontSize: 10, fontWeight: FontWeight.w700, color: color)),
+        ]),
+      );
+}
+
+class _TotalRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color? valueColor;
+  const _TotalRow(this.label, this.value, {this.valueColor});
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 3),
+        child:
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          Text(label,
+              style: cairo(fontSize: 13, color: AppColors.textSecondary)),
+          Text(value,
+              style: cairo(
+                  fontSize: 13, color: valueColor ?? AppColors.textPrimary)),
+        ]),
+      );
+}
+
+class _MetaSep extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) => Container(
+        width: 1,
+        height: 12,
+        margin: const EdgeInsets.symmetric(horizontal: 10),
+        color: AppColors.border,
+      );
 }
 
 class _ActionBtn extends StatelessWidget {
@@ -903,20 +1135,22 @@ class _ActionBtn extends StatelessWidget {
   final String label;
   final Color color;
   final VoidCallback onTap;
-  const _ActionBtn(
-      {required this.icon,
-      required this.label,
-      required this.color,
-      required this.onTap});
+  const _ActionBtn({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) => GestureDetector(
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
           decoration: BoxDecoration(
-              color: color.withOpacity(0.07),
-              borderRadius: BorderRadius.circular(6)),
+            color: color.withOpacity(0.07),
+            borderRadius: BorderRadius.circular(7),
+          ),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             Icon(icon, size: 13, color: color),
             const SizedBox(width: 5),
@@ -925,5 +1159,41 @@ class _ActionBtn extends StatelessWidget {
                     fontSize: 12, fontWeight: FontWeight.w600, color: color)),
           ]),
         ),
+      );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  EMPTY STATES
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _EmptyState extends StatelessWidget {
+  final IconData icon;
+  final String message;
+  const _EmptyState({required this.icon, required this.message});
+
+  @override
+  Widget build(BuildContext context) => Center(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Icon(icon, size: 40, color: AppColors.border),
+          const SizedBox(height: 12),
+          Text(message,
+              style: cairo(fontSize: 15, color: AppColors.textSecondary)),
+        ]),
+      );
+}
+
+class _EmptyLottie extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) => Center(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          SizedBox(
+            width: 160,
+            height: 160,
+            child: Lottie.asset('assets/lottie/no_orders.json',
+                fit: BoxFit.contain, repeat: true),
+          ),
+          Text('No orders yet',
+              style: cairo(fontSize: 15, color: AppColors.textSecondary)),
+        ]),
       );
 }

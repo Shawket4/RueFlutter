@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/api/shift_api.dart';
 import '../../core/api/client.dart';
 import '../../core/services/connectivity_service.dart';
+import '../../core/providers/shift_notifier.dart';
 import '../../core/theme/app_theme.dart';
 import '../../shared/widgets/responsive_sheet.dart';
 
@@ -78,6 +79,9 @@ class _CashMovementSheetState extends ConsumerState<CashMovementSheet> {
         signed,
         _noteCtrl.text.trim(),
       );
+
+      // Refresh system cash to reflect the new movement immediately
+      await ref.read(shiftProvider.notifier).loadSystemCash();
 
       if (mounted) {
         Navigator.pop(context);

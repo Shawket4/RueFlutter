@@ -151,11 +151,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
               ),
               const SizedBox(height: 32),
             ] else ...[
-              Image.asset(
-                'assets/Icon.png',
-                height: 56,
-                fit: BoxFit.contain,
-                filterQuality: FilterQuality.high,
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.asset(
+                  'assets/Icon.png',
+                  height: 56,
+                  fit: BoxFit.contain,
+                  filterQuality: FilterQuality.high,
+                ),
               ),
               const SizedBox(height: 40),
               Text(

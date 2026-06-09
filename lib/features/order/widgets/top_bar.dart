@@ -30,117 +30,138 @@ class TopBar extends ConsumerWidget {
     return Container(
       color: Colors.white,
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-      child: Row(children: [
-        // Sufrix symbol (replaces the old back arrow to /home).
-        const SufrixLogo(size: 30, isRounded: true),
-        const SizedBox(width: 10),
+      child: LayoutBuilder(builder: (context, constraints) {
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minWidth: constraints.maxWidth),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Sufrix symbol
+                    const SufrixLogo(size: 30, isRounded: true),
+                    const SizedBox(width: 10),
 
-        // Sync button.
-        const SyncBtn(),
-        const SizedBox(width: 6),
-        Text(lastSynced,
-            style: cairo(fontSize: 11, color: AppColors.textMuted)),
-        const SizedBox(width: 10),
-        const SyncStatusChip(),
-        const SizedBox(width: 10),
+                    // Sync button
+                    const SyncBtn(),
+                    const SizedBox(width: 6),
+                    Text(lastSynced,
+                        style: cairo(fontSize: 11, color: AppColors.textMuted)),
+                    const SizedBox(width: 10),
+                    const SyncStatusChip(),
+                    const SizedBox(width: 10),
 
-        // Active order name pill.
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          decoration: BoxDecoration(
-            color: AppColors.primary.withOpacity(0.08),
-            borderRadius: BorderRadius.circular(AppRadius.xs),
-            border: Border.all(color: AppColors.primary.withOpacity(0.25)),
-          ),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(Icons.shopping_bag_rounded,
-                size: 12, color: AppColors.primary),
-            const SizedBox(width: 5),
-            Text(
-              cart.displayName ?? 'Order 1',
-              style: cairo(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.primary),
-            ),
-          ]),
-        ),
-        const SizedBox(width: 12),
-
-        // Search bar.
-        Expanded(
-          child: Container(
-            height: 38,
-            decoration: BoxDecoration(
-              color: AppColors.bg,
-              borderRadius: BorderRadius.circular(AppRadius.sm),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: TextField(
-              controller: ctrl,
-              style: cairo(fontSize: 14),
-              decoration: InputDecoration(
-                hintText: 'Search menu…',
-                hintStyle: cairo(fontSize: 14, color: AppColors.textMuted),
-                prefixIcon: const Icon(Icons.search_rounded,
-                    size: 17, color: AppColors.textMuted),
-                suffixIcon: query.isNotEmpty
-                    ? GestureDetector(
-                        onTap: ctrl.clear,
-                        child: const Icon(Icons.close_rounded,
-                            size: 16, color: AppColors.textMuted))
-                    : null,
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(vertical: 10),
-                isDense: true,
-                filled: false,
-              ),
-            ),
-          ),
-        ),
-
-        // Cart summary pill (tablet/desktop only).
-        if (context.isTablet || context.isDesktop) ...[
-          const SizedBox(width: 12),
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 250),
-            transitionBuilder: (child, anim) => ScaleTransition(
-                scale: anim,
-                child: FadeTransition(opacity: anim, child: child)),
-            child: cart.isEmpty
-                ? const SizedBox.shrink(key: ValueKey('empty'))
-                : Container(
-                    key: const ValueKey('pill'),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 7),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: AppShadows.primaryGlow(),
-                    ),
-                    child: Row(children: [
-                      const Icon(Icons.shopping_bag_outlined,
-                          size: 14, color: Colors.white),
-                      const SizedBox(width: 6),
-                      Text('${cart.count} · ${egp(cart.total)}',
+                    // Active order name pill
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(AppRadius.xs),
+                        border: Border.all(color: AppColors.primary.withOpacity(0.25)),
+                      ),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        const Icon(Icons.shopping_bag_rounded,
+                            size: 12, color: AppColors.primary),
+                        const SizedBox(width: 5),
+                        Text(
+                          cart.displayName ?? 'Order 1',
                           style: cairo(
-                              fontSize: 12,
+                              fontSize: 11,
                               fontWeight: FontWeight.w700,
-                              color: Colors.white)),
-                    ]),
-                  ),
-          ),
-        ],
+                              color: AppColors.primary),
+                        ),
+                      ]),
+                    ),
+                    const SizedBox(width: 12),
 
-        // User avatar (opens action drawer).
-        const SizedBox(width: 10),
-        AnimatedPressScale(
-          onTap: () => ActionDrawer.show(context),
-          child: _UserAvatar(name: user?.name ?? ''),
-        ),
-      ]),
+                    // Search bar
+                    SizedBox(
+                      width: context.isPhone ? 180 : 260,
+                      child: Container(
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: AppColors.bg,
+                          borderRadius: BorderRadius.circular(AppRadius.sm),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: TextField(
+                          controller: ctrl,
+                          style: cairo(fontSize: 14),
+                          decoration: InputDecoration(
+                            hintText: 'Search menu…',
+                            hintStyle: cairo(fontSize: 14, color: AppColors.textMuted),
+                            prefixIcon: const Icon(Icons.search_rounded,
+                                size: 17, color: AppColors.textMuted),
+                            suffixIcon: query.isNotEmpty
+                                ? GestureDetector(
+                                    onTap: ctrl.clear,
+                                    child: const Icon(Icons.close_rounded,
+                                        size: 16, color: AppColors.textMuted))
+                                : null,
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                            isDense: true,
+                            filled: false,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Cart summary pill (tablet/desktop only).
+                    if (context.isTablet || context.isDesktop) ...[
+                      const SizedBox(width: 12),
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 250),
+                        transitionBuilder: (child, anim) => ScaleTransition(
+                            scale: anim,
+                            child: FadeTransition(opacity: anim, child: child)),
+                        child: cart.isEmpty
+                            ? const SizedBox.shrink(key: ValueKey('empty'))
+                            : Container(
+                                key: const ValueKey('pill'),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 14, vertical: 7),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary,
+                                  borderRadius: BorderRadius.circular(20),
+                                  boxShadow: AppShadows.primaryGlow(),
+                                ),
+                                child: Row(children: [
+                                  const Icon(Icons.shopping_bag_outlined,
+                                      size: 14, color: Colors.white),
+                                  const SizedBox(width: 6),
+                                  Text('${cart.count} · ${egp(cart.total)}',
+                                      style: cairo(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.white)),
+                                ]),
+                              ),
+                      ),
+                    ],
+
+                    // User avatar
+                    const SizedBox(width: 10),
+                    AnimatedPressScale(
+                      onTap: () => ActionDrawer.show(context),
+                      child: _UserAvatar(name: user?.name ?? ''),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      }),
     );
   }
 }

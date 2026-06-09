@@ -1,3 +1,5 @@
+import 'payment_method.dart';
+
 class PaymentSummaryItem {
   final String paymentMethod;
   final int total;
@@ -161,13 +163,15 @@ class ShiftReport {
         'printed_at': printedAt.toIso8601String(),
       };
 
-  int get expectedCash {
+  int expectedCash(List<PaymentMethod> methods) {
     if (closingCashSystem != null) {
       return closingCashSystem!; // closed shift — use server value
     }
     final cashPayments = paymentSummary
-        .where((p) =>
-            p.paymentMethod == 'cash' || p.paymentMethod == 'talabat_cash')
+        .where((p) {
+          final isCash = methods.where((m) => m.wireFormat == p.paymentMethod).firstOrNull?.isCash ?? (p.paymentMethod == 'cash');
+          return isCash;
+        })
         .fold(0, (s, p) => s + p.total);
     return openingCash + cashPayments + cashMovementsIn - cashMovementsOut;
   }

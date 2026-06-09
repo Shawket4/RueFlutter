@@ -7,6 +7,7 @@ import '../db/app_database.dart';
 import '../models/shift.dart';
 import '../models/inventory.dart';
 import '../models/shift_report.dart';
+import '../models/payment_method.dart';
 import '../storage/storage_service.dart';
 
 /// TTL for inventory freshness: 5 minutes in ms.
@@ -121,13 +122,13 @@ class ShiftRepository {
 
   // ── System cash ──────────────────────────────────────────────────────────
 
-  Future<int> getSystemCash(String shiftId, int openingCash) async {
+  Future<int> getSystemCash(String shiftId, int openingCash, List<PaymentMethod> methods) async {
     final orders = await _orderApi.list(shiftId: shiftId);
     final cashFromOrders = orders
-        .where((o) =>
-            o.paymentMethod == 'cash' &&
-            o.status != 'voided' &&
-            o.status != 'refunded')
+        .where((o) {
+          final isCash = methods.where((m) => m.wireFormat == o.paymentMethod).firstOrNull?.isCash ?? (o.paymentMethod == 'cash');
+          return isCash && o.status != 'voided' && o.status != 'refunded';
+        })
         .fold<int>(0, (s, o) => s + o.totalAmount);
     final movements = await _shiftApi.cashMovementsTotal(shiftId);
     return openingCash + cashFromOrders + movements;

@@ -45,6 +45,7 @@ class _ReceiptSheetState extends ConsumerState<ReceiptSheet> {
 
   Future<void> _print() async {
     final branch = ref.read(authProvider).branch;
+    final methods = ref.read(paymentMethodProvider).items;
     if (branch == null || !branch.hasPrinter) return;
     setState(() {
       _printing = true;
@@ -55,8 +56,9 @@ class _ReceiptSheetState extends ConsumerState<ReceiptSheet> {
         port: branch.printerPort,
         brand: branch.printerBrand!,
         order: widget.order,
+        paymentMethods: methods,
         branchName: branch.name,
-        kickDrawer: widget.order.paymentMethod == 'cash' || widget.order.paymentMethod == 'talabat_cash');
+        kickDrawer: isCashMethod(methods, widget.order.paymentMethod));
     if (mounted) {
       setState(() {
         _printing = false;

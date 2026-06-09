@@ -57,7 +57,7 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
   bool _showTendered = false;
 
   final _tipCtrl = TextEditingController();
-  String _tipPaymentMethod = 'cash';
+  String _tipPaymentMethod = '';
 
   bool _isSplit = false;
   final Map<String, TextEditingController> _splitCtrs = {};
@@ -67,7 +67,9 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
   void initState() {
     super.initState();
     final cart = ref.read(cartProvider);
-    _showTendered = cart.payment == 'cash' || cart.payment == 'talabat_cash';
+    final methods = ref.read(paymentMethodProvider).items;
+    _showTendered = isCashMethod(methods, cart.payment);
+    _tipPaymentMethod = cart.payment;
     if (cart.customerName != null && cart.customerName!.isNotEmpty) {
       _customerCtrl.text = cart.customerName!;
     }
@@ -256,6 +258,7 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
     final shift = ref.read(shiftProvider).shift;
     final queue = ref.read(offlineQueueProvider.notifier);
     final isOnline = ref.read(isOnlineProvider);
+    final methods = ref.read(paymentMethodProvider).items;
     final customer =
         _customerCtrl.text.trim().isEmpty ? null : _customerCtrl.text.trim();
 
@@ -434,9 +437,9 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
       int cashAdded = 0;
       if (splits != null && splits.isNotEmpty) {
         cashAdded = splits
-            .where((s) => s.method == 'cash' || s.method == 'talabat_cash')
+            .where((s) => isCashMethod(methods, s.method))
             .fold(0, (sum, s) => sum + s.amount);
-      } else if (paymentMethod == 'cash' || paymentMethod == 'talabat_cash') {
+      } else if (isCashMethod(methods, paymentMethod)) {
         cashAdded = total;
       }
       if (cashAdded > 0) {
@@ -477,9 +480,9 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
       int cashAdded = 0;
       if (splits != null && splits.isNotEmpty) {
         cashAdded = splits
-            .where((s) => s.method == 'cash' || s.method == 'talabat_cash')
+            .where((s) => isCashMethod(methods, s.method))
             .fold(0, (sum, s) => sum + s.amount);
-      } else if (paymentMethod == 'cash' || paymentMethod == 'talabat_cash') {
+      } else if (isCashMethod(methods, paymentMethod)) {
         cashAdded = total;
       }
       if (cashAdded > 0) {
@@ -574,9 +577,9 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
         int cashAdded = 0;
         if (splits != null && splits.isNotEmpty) {
           cashAdded = splits
-              .where((s) => s.method == 'cash' || s.method == 'talabat_cash')
+              .where((s) => isCashMethod(methods, s.method))
               .fold(0, (sum, s) => sum + s.amount);
-        } else if (paymentMethod == 'cash' || paymentMethod == 'talabat_cash') {
+        } else if (isCashMethod(methods, paymentMethod)) {
           cashAdded = total;
         }
         if (cashAdded > 0) {
@@ -734,8 +737,7 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
                           }
                           _activeSplitMethods.clear();
                           final pay = ref.read(cartProvider).payment;
-                          _showTendered =
-                              pay == 'cash' || pay == 'talabat_cash';
+                          _showTendered = isCashMethod(methods, pay);
                         } else {
                           _showTendered = false;
                         }
@@ -761,7 +763,7 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
                       onSelect: (v) {
                         ref.read(cartProvider.notifier).setPayment(v);
                         setState(() =>
-                            _showTendered = v == 'cash' || v == 'talabat_cash');
+                            _showTendered = isCashMethod(methods, v));
                       },
                       methods: methods,
                     ),

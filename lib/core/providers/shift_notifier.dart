@@ -12,6 +12,7 @@ import '../utils/time_utils.dart';
 import 'auth_notifier.dart';
 import 'cart_storage.dart';
 import 'menu_notifier.dart' show DataFreshness;
+import 'payment_method_notifier.dart';
 
 class ShiftState {
   final bool               isLoading;
@@ -226,9 +227,10 @@ class ShiftNotifier extends Notifier<ShiftState> {
     if (shift == null) return;
     state = state.copyWith(systemCashLoading: true);
     try {
+      final methods = ref.read(paymentMethodProvider).items;
       final cash = await ref
           .read(shiftRepositoryProvider)
-          .getSystemCash(shift.id, shift.openingCash);
+          .getSystemCash(shift.id, shift.openingCash, methods);
       state = state.copyWith(systemCash: cash, systemCashLoading: false);
     } catch (_) {
       state = state.copyWith(systemCashLoading: false);

@@ -9,6 +9,7 @@ import 'package:starxpand_sdk_wrapper/starxpand_sdk_wrapper.dart';
 import '../models/branch.dart';
 import '../models/order.dart';
 import '../models/shift_report.dart';
+import '../models/payment_method.dart';
 import '../utils/formatting.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 
@@ -23,12 +24,13 @@ class PrinterService {
     required int port,
     required PrinterBrand brand,
     required Order order,
+    required List<PaymentMethod> paymentMethods,
     required String branchName,
     String? logoUrl,
     bool kickDrawer = false,
   }) async {
     final pdfBytes = await _buildReceiptPdf(
-        order: order, branchName: branchName, logoUrl: logoUrl);
+        order: order, branchName: branchName, logoUrl: logoUrl, paymentMethods: paymentMethods);
     return _send(
       ip: ip,
       port: port,
@@ -43,11 +45,12 @@ class PrinterService {
     required int port,
     required PrinterBrand brand,
     required ShiftReport report,
+    required List<PaymentMethod> paymentMethods,
     required String branchName,
     String? logoUrl,
   }) async {
     final pdfBytes = await _buildShiftReportPdf(
-        report: report, branchName: branchName, logoUrl: logoUrl);
+        report: report, branchName: branchName, logoUrl: logoUrl, paymentMethods: paymentMethods);
     return _send(ip: ip, port: port, brand: brand, pdfBytes: pdfBytes);
   }
 
@@ -243,21 +246,20 @@ class PrinterService {
 
   /// Formats a payment method string for the order receipt footer.
   /// Handles all known Talabat variants and underscore-separated names.
-  static String _fmtPayment(String raw) => switch (raw) {
-        'cash' => 'Cash',
-        'card' => 'Card',
-        'digital_wallet' => 'Digital Wallet',
-        'mixed' => 'Mixed',
-        'talabat_online' => 'Talabat Online',
-        'talabat_cash' => 'Talabat Cash',
-        _ => raw[0].toUpperCase() + raw.substring(1).replaceAll('_', ' '),
-      };
+  static String _fmtPayment(String raw, List<PaymentMethod> methods) {
+    final method = methods.where((m) => m.wireFormat == raw).firstOrNull;
+    if (method != null) {
+      return method.labelTranslations['en'] ?? raw[0].toUpperCase() + raw.substring(1).replaceAll('_', ' ');
+    }
+    return raw[0].toUpperCase() + raw.substring(1).replaceAll('_', ' ');
+  }
 
   // ── Order receipt PDF ──────────────────────────────────────────────────────
 
   static Future<Uint8List> _buildReceiptPdf({
     required Order order,
     required String branchName,
+    required List<PaymentMethod> paymentMethods,
     String? logoUrl,
   }) async {
     final pdf = pw.Document();
@@ -403,7 +405,7 @@ class PrinterService {
         _divider(),
 
         // Footer metadata
-        _row('Payment', _fmtPayment(order.paymentMethod),
+        _row('Payment', _fmtPayment(order.paymentMethod, paymentMethods),
             font: font, fontB: fontB, sz: 7.5),
         if (order.customerName != null && order.customerName!.isNotEmpty)
           _row('Customer', order.customerName!,
@@ -427,6 +429,7 @@ class PrinterService {
   static Future<Uint8List> _buildShiftReportPdf({
     required ShiftReport report,
     required String branchName,
+    required List<PaymentMethod> paymentMethods,
     String? logoUrl,
   }) async {
     final pdf = pw.Document();
@@ -548,7 +551,7 @@ class PrinterService {
                     child: pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    pw.Text(p.displayLabel, style: ts(fontB, sz: 8)),
+                    pw.Text(_fmtPayment(p.paymentMethod, paymentMethods), style: ts(fontB, sz: 8)),
                     pw.Text(
                         '${p.orderCount} order${p.orderCount == 1 ? '' : 's'}',
                         style: ts(font, sz: 7, color: PdfColors.grey600)),

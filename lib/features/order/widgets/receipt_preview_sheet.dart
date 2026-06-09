@@ -5,6 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/models/order.dart';
 import '../../../core/models/branch.dart';
 import '../../../core/providers/auth_notifier.dart';
+import '../../../core/providers/payment_method_notifier.dart';
 import '../../../core/services/printer_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatting.dart';
@@ -49,11 +50,14 @@ class _ReceiptPreviewSheetState extends ConsumerState<ReceiptPreviewSheet> {
       _printError = null;
     });
 
+    final methods = ref.read(paymentMethodProvider).items;
+
     final err = await PrinterService.print(
       ip: branch.printerIp!,
       port: branch.printerPort,
       brand: branch.printerBrand!,
       order: widget.order,
+      paymentMethods: methods,
       branchName: branch.name,
       logoUrl: branch.orgLogoUrl,
     );

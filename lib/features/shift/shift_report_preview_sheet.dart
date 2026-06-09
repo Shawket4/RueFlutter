@@ -50,12 +50,16 @@ class _ShiftReportPreviewSheetState
       _printing = true;
       _printError = null;
     });
+    final methods = ref.read(paymentMethodProvider).items;
+
     final err = await PrinterService.printShiftReport(
       ip: branch.printerIp!,
       port: branch.printerPort,
       brand: branch.printerBrand!,
-      report: report,
+      report: widget.report,
+      paymentMethods: methods,
       branchName: branch.name,
+      logoUrl: branch.orgLogoUrl,
     );
     if (mounted) {
       setState(() {
@@ -96,7 +100,7 @@ class _ShiftReportPreviewSheetState
 
     // Cash discrepancy: system − declared (positive = short)
     final int? discrepancy = r.closingCashDeclared != null
-        ? r.expectedCash - r.closingCashDeclared!
+        ? r.expectedCash(methods) - r.closingCashDeclared!
         : null;
 
     final branch = ref.watch(authProvider).branch;
@@ -185,7 +189,7 @@ class _ShiftReportPreviewSheetState
                 _Row('Opened', openTs),
                 if (closeTs != null) _Row('Closed', closeTs),
                 _Row('Opening Cash', egp(r.openingCash)),
-                _Row('Expected Cash', egp(r.expectedCash)),
+                _Row('Expected Cash', egp(r.expectedCash(methods))),
                 if (r.closingCashDeclared != null) ...[
                   _Row('Declared Cash', egp(r.closingCashDeclared!),
                       bold: true),

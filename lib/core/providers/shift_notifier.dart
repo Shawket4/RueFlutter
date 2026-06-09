@@ -227,10 +227,9 @@ class ShiftNotifier extends Notifier<ShiftState> {
     if (shift == null) return;
     state = state.copyWith(systemCashLoading: true);
     try {
-      final methods = ref.read(paymentMethodProvider).items;
       final cash = await ref
           .read(shiftRepositoryProvider)
-          .getSystemCash(shift.id, shift.openingCash, methods);
+          .getSystemCash(shift.id, shift.openingCash);
       state = state.copyWith(systemCash: cash, systemCashLoading: false);
     } catch (_) {
       state = state.copyWith(systemCashLoading: false);

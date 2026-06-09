@@ -442,6 +442,9 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
       } else if (isCashMethod(methods, paymentMethod)) {
         cashAdded = total;
       }
+      if (tip != null && isCashMethod(methods, tipMethod ?? '')) {
+        cashAdded += tip;
+      }
       if (cashAdded > 0) {
         ref.read(shiftProvider.notifier).addLocalCash(cashAdded);
         ref.read(shiftProvider.notifier).loadSystemCash();
@@ -484,6 +487,9 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
             .fold(0, (sum, s) => sum + s.amount);
       } else if (isCashMethod(methods, paymentMethod)) {
         cashAdded = total;
+      }
+      if (tip != null && isCashMethod(methods, tipMethod ?? '')) {
+        cashAdded += tip;
       }
       if (cashAdded > 0) {
         ref.read(shiftProvider.notifier).addLocalCash(cashAdded);
@@ -581,6 +587,9 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
               .fold(0, (sum, s) => sum + s.amount);
         } else if (isCashMethod(methods, paymentMethod)) {
           cashAdded = total;
+        }
+        if (tip != null && isCashMethod(methods, tipMethod ?? '')) {
+          cashAdded += tip;
         }
         if (cashAdded > 0) {
           ref.read(shiftProvider.notifier).addLocalCash(cashAdded);

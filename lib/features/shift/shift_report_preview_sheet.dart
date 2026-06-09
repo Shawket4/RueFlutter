@@ -100,7 +100,7 @@ class _ShiftReportPreviewSheetState
 
     // Cash discrepancy: system − declared (positive = short)
     final int? discrepancy = r.closingCashDeclared != null
-        ? r.expectedCash(methods) - r.closingCashDeclared!
+        ? r.expectedCash() - r.closingCashDeclared!
         : null;
 
     final branch = ref.watch(authProvider).branch;
@@ -189,7 +189,7 @@ class _ShiftReportPreviewSheetState
                 _Row('Opened', openTs),
                 if (closeTs != null) _Row('Closed', closeTs),
                 _Row('Opening Cash', egp(r.openingCash)),
-                _Row('Expected Cash', egp(r.expectedCash(methods))),
+                _Row('Expected Cash', egp(r.expectedCash())),
                 if (r.closingCashDeclared != null) ...[
                   _Row('Declared Cash', egp(r.closingCashDeclared!),
                       bold: true),

@@ -122,16 +122,12 @@ class ShiftRepository {
 
   // ── System cash ──────────────────────────────────────────────────────────
 
-  Future<int> getSystemCash(String shiftId, int openingCash, List<PaymentMethod> methods) async {
-    final orders = await _orderApi.list(shiftId: shiftId);
-    final cashFromOrders = orders
-        .where((o) {
-          final isCash = methods.where((m) => m.wireFormat == o.paymentMethod).firstOrNull?.isCash ?? (o.paymentMethod == 'cash');
-          return isCash && o.status != 'voided' && o.status != 'refunded';
-        })
-        .fold<int>(0, (s, o) => s + o.totalAmount);
-    final movements = await _shiftApi.cashMovementsTotal(shiftId);
-    return openingCash + cashFromOrders + movements;
+  Future<int> getSystemCash(String shiftId, int openingCash) async {
+    try {
+      final shiftReport = await _shiftApi.getReport(shiftId);
+      return shiftReport.expectedCash();
+    } catch (_) {}
+    return openingCash;
   }
 
   // ── Inventory ────────────────────────────────────────────────────────────

@@ -8,6 +8,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatting.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/card_container.dart';
+import '../../shared/widgets/top_bar.dart';
 
 class OpenShiftScreen extends ConsumerStatefulWidget {
   const OpenShiftScreen({super.key});
@@ -77,17 +78,16 @@ class _OpenShiftScreenState extends ConsumerState<OpenShiftScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.bg,
-      appBar: AppBar(
-        leading: IconButton(
-            icon: const Icon(Icons.arrow_back_rounded),
-            onPressed: () => context.go('/home')),
-        title: const Text('Open Shift'),
-        elevation: 0,
-        backgroundColor: AppColors.bg,
-        surfaceTintColor: Colors.transparent,
-      ),
-      body: SingleChildScrollView(
-        child: Center(
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TopBar(
+            title: 'Open Shift',
+            onBack: () => context.go('/home'),
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Center(
           child: ConstrainedBox(
             constraints: BoxConstraints(maxWidth: isTablet ? 500 : 480),
             child: Padding(
@@ -225,6 +225,9 @@ class _OpenShiftScreenState extends ConsumerState<OpenShiftScreen> {
           ),
         ),
       ),
-    );
+    ), // Ends Expanded
+    ], // Ends Column children
+    ), // Ends Column
+    ); // Ends Scaffold
   }
 }

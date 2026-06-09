@@ -2,24 +2,29 @@ import 'payment_method.dart';
 
 class PaymentSummaryItem {
   final String paymentMethod;
+  final bool isCash;
   final int total;
   final int orderCount;
 
   const PaymentSummaryItem({
     required this.paymentMethod,
+    required this.isCash,
     required this.total,
     required this.orderCount,
   });
 
-  factory PaymentSummaryItem.fromJson(Map<String, dynamic> j) =>
-      PaymentSummaryItem(
-        paymentMethod: j['payment_method'] as String,
-        total: (j['total'] as num).toInt(),
-        orderCount: (j['order_count'] as num).toInt(),
-      );
+  factory PaymentSummaryItem.fromJson(Map<String, dynamic> json) {
+    return PaymentSummaryItem(
+      paymentMethod: json['payment_method'] ?? '',
+      isCash: json['is_cash'] ?? (json['payment_method'] == 'cash'),
+      total: (json['total'] as num?)?.toInt() ?? 0,
+      orderCount: (json['order_count'] as num?)?.toInt() ?? 0,
+    );
+  }
 
   Map<String, dynamic> toJson() => {
         'payment_method': paymentMethod,
+        'is_cash': isCash,
         'total': total,
         'order_count': orderCount,
       };
@@ -163,15 +168,12 @@ class ShiftReport {
         'printed_at': printedAt.toIso8601String(),
       };
 
-  int expectedCash(List<PaymentMethod> methods) {
+  int expectedCash() {
     if (closingCashSystem != null) {
       return closingCashSystem!; // closed shift — use server value
     }
     final cashPayments = paymentSummary
-        .where((p) {
-          final isCash = methods.where((m) => m.wireFormat == p.paymentMethod).firstOrNull?.isCash ?? (p.paymentMethod == 'cash');
-          return isCash;
-        })
+        .where((p) => p.isCash)
         .fold(0, (s, p) => s + p.total);
     return openingCash + cashPayments + cashMovementsIn - cashMovementsOut;
   }

@@ -95,8 +95,8 @@ class ActionDrawer extends ConsumerWidget {
                 }),
               ),
               _ActionTile(
-                icon: Icons.calendar_month_outlined,
-                label: 'Shift History',
+                icon: Icons.history_rounded,
+                label: 'Past Shifts',
                 onTap: () =>
                     _popThen(() => parentContext.push('/shift-history')),
               ),

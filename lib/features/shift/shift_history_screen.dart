@@ -11,6 +11,7 @@ import '../../core/providers/auth_notifier.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatting.dart';
 import '../../shared/widgets/error_banner.dart';
+import '../../core/providers/payment_method_notifier.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  SCREEN
@@ -115,13 +116,11 @@ class _ShiftHistoryScreenState extends ConsumerState<ShiftHistoryScreen> {
                               const Divider(
                                   height: 1, color: AppColors.borderLight),
                               Expanded(
-                                child: ListView.separated(
+                                child: ListView.builder(
                                   padding: EdgeInsets.zero,
                                   itemCount: _shifts.length,
-                                  separatorBuilder: (_, __) => const Divider(
-                                      height: 1, color: AppColors.borderLight),
                                   itemBuilder: (_, i) =>
-                                      _ShiftRow(shift: _shifts[i]),
+                                      _ShiftRow(shift: _shifts[i], isEven: i.isEven),
                                 ),
                               ),
                             ]),
@@ -241,7 +240,8 @@ class _TableHeader extends StatelessWidget {
 
 class _ShiftRow extends ConsumerStatefulWidget {
   final Shift shift;
-  const _ShiftRow({required this.shift});
+  final bool isEven;
+  const _ShiftRow({required this.shift, required this.isEven});
   @override
   ConsumerState<_ShiftRow> createState() => _ShiftRowState();
 }
@@ -333,7 +333,7 @@ class _ShiftRowState extends ConsumerState<_ShiftRow> {
           duration: const Duration(milliseconds: 120),
           height: 56,
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          color: _expanded ? AppColors.primary.withOpacity(0.04) : Colors.white,
+          color: _expanded ? AppColors.primary.withOpacity(0.04) : widget.isEven ? Colors.white : AppColors.bg,
           child: Row(children: [
             // Status dot
             SizedBox(
@@ -530,13 +530,11 @@ class _PastOrderRowState extends ConsumerState<_PastOrderRow> {
     setState(() => _printing = true);
     try {
       Order full = widget.order;
-      try {
-        final freshList = await ref
-            .read(orderRepositoryProvider)
-            .fetchOrdersFresh(widget.order.shiftId);
-        final match = freshList.where((o) => o.id == widget.order.id);
-        if (match.isNotEmpty) full = match.first;
-      } catch (_) {}
+      if (full.items.isEmpty) {
+        try {
+          full = await ref.read(orderRepositoryProvider).getOrder(widget.order.id);
+        } catch (_) {}
+      }
       if (mounted) await ReceiptPreviewSheet.show(context, full);
     } finally {
       if (mounted) setState(() => _printing = false);
@@ -597,6 +595,18 @@ class _PastOrderRowState extends ConsumerState<_PastOrderRow> {
               Text(o.customerName!,
                   style: cairo(fontSize: 12, color: AppColors.textMuted)),
             ],
+            const SizedBox(height: 2),
+            Text(
+              (() {
+                final methods = ref.watch(paymentMethodProvider).items;
+                final pm = methods.where((m) => m.wireFormat == o.paymentMethod).firstOrNull;
+                return pm != null ? pm.label('en') : o.paymentMethod;
+              })(),
+              style: cairo(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.primary),
+            ),
           ]),
         ),
 

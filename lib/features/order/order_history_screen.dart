@@ -14,6 +14,8 @@ import 'widgets/receipt_preview_sheet.dart';
 import 'widgets/order_ingredients_sheet.dart';
 import 'helpers/payment_helpers.dart';
 import '../../core/providers/payment_method_notifier.dart';
+import '../../core/api/shift_api.dart';
+import '../../core/models/shift_report.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  SORT
@@ -33,6 +35,7 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
   String? _expandedId;
   Order? _expandedOrder;
   bool _loadingDetail = false;
+  ShiftReport? _report;
 
   @override
   void initState() {
@@ -43,6 +46,12 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
   Future<void> _load() async {
     final shiftId = ref.read(shiftProvider).shift?.id;
     if (shiftId == null) return;
+    
+    try {
+      final report = await ref.read(shiftApiProvider).getReport(shiftId);
+      if (mounted) setState(() => _report = report);
+    } catch (_) {}
+
     await ref
         .read(orderHistoryProvider.notifier)
         .loadForShift(shiftId, force: true);
@@ -159,6 +168,7 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
                               expandedId: _expandedId,
                               expandedOrder: _expandedOrder,
                               loadingDetail: _loadingDetail,
+                              report: _report,
                               onToggle: _toggleExpand,
                               onVoided: _onVoided,
                               sorted: _sorted,
@@ -231,6 +241,7 @@ class _Body extends ConsumerWidget {
   final String? expandedId;
   final Order? expandedOrder;
   final bool loadingDetail;
+  final ShiftReport? report;
   final Future<void> Function(Order) onToggle;
   final void Function(Order) onVoided;
   final List<Order> Function(List<Order>) sorted;
@@ -244,6 +255,7 @@ class _Body extends ConsumerWidget {
     required this.expandedId,
     required this.expandedOrder,
     required this.loadingDetail,
+    required this.report,
     required this.onToggle,
     required this.onVoided,
     required this.sorted,
@@ -251,39 +263,56 @@ class _Body extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final active = orders.where((o) => o.status != 'voided').toList();
-    final total = active.fold<int>(0, (s, o) => s + o.totalAmount);
+    // If report is available, use its highly accurate payment summary.
+    // Otherwise fallback to local calculation.
+    final total = report?.netPayments ?? orders.where((o) => o.status != 'voided').fold<int>(0, (s, o) => s + o.totalAmount);
+    final orderCount = orders.where((o) => o.status != 'voided').length;
 
-    // Build one stat entry per payment method that actually appears in orders,
-    // plus a catch-all "Mixed" bucket. Order matches the methods list ordering.
-    final methodStats =
-        <({String id, String label, Color color, int amount})>[];
-
+    final methodStats = <({String id, String label, Color color, int amount})>[];
+    
     for (final m in methods) {
-      final sum = active
-          .where((o) => o.paymentMethod == m.wireFormat)
-          .fold<int>(0, (s, o) => s + o.totalAmount);
-      if (sum > 0) {
-        methodStats.add((
-          id: m.id,
-          label: m.label('en'),
-          color: m.color,
-          amount: sum,
-        ));
+      int sum = 0;
+      if (report != null) {
+        sum = report!.paymentSummary.where((p) => p.paymentMethod == m.wireFormat).fold<int>(0, (s, p) => s + p.total);
+      } else {
+        sum = orders
+            .where((o) => o.status != 'voided' && (o.paymentMethod == m.wireFormat || o.tipPaymentMethod == m.wireFormat))
+            .fold<int>(0, (s, o) {
+               int orderAmt = o.paymentMethod == m.wireFormat ? o.totalAmount : 0;
+               int tipAmt = o.tipPaymentMethod == m.wireFormat ? (o.tipAmount ?? 0) : 0;
+               return s + orderAmt + tipAmt;
+            });
       }
+      methodStats.add((
+        id: m.id,
+        label: m.label('en'),
+        color: m.color,
+        amount: sum,
+      ));
     }
 
-    // Mixed orders (split payment) tracked separately
-    final mixedSum = active
-        .where((o) => o.paymentMethod == 'mixed')
-        .fold<int>(0, (s, o) => s + o.totalAmount);
-    if (mixedSum > 0) {
-      methodStats.add((
-        id: 'mixed',
-        label: 'Mixed',
-        color: AppColors.warning,
-        amount: mixedSum,
-      ));
+    if (report != null) {
+      final mixedSum = report!.paymentSummary.where((p) => p.paymentMethod == 'mixed').fold<int>(0, (s, p) => s + p.total);
+      if (mixedSum > 0) {
+        methodStats.add((
+          id: 'mixed',
+          label: 'Mixed',
+          color: AppColors.warning,
+          amount: mixedSum,
+        ));
+      }
+    } else {
+      final mixedSum = orders
+          .where((o) => o.status != 'voided' && o.paymentMethod == 'mixed')
+          .fold<int>(0, (s, o) => s + o.totalAmount);
+      if (mixedSum > 0) {
+        methodStats.add((
+          id: 'mixed',
+          label: 'Mixed',
+          color: AppColors.warning,
+          amount: mixedSum,
+        ));
+      }
     }
 
     return Padding(
@@ -299,7 +328,7 @@ class _Body extends ConsumerWidget {
                 Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               _StatCard(
                 label: 'Orders',
-                value: '${active.length}',
+                value: '${orderCount}',
                 sub: 'this shift',
               ),
               const SizedBox(width: 10),
@@ -341,11 +370,9 @@ class _Body extends ConsumerWidget {
               const Divider(height: 1, color: AppColors.borderLight),
               // Rows
               Expanded(
-                child: ListView.separated(
+                child: ListView.builder(
                   padding: EdgeInsets.zero,
                   itemCount: sorted(orders).length,
-                  separatorBuilder: (_, __) =>
-                      const Divider(height: 1, color: AppColors.borderLight),
                   itemBuilder: (_, i) {
                     final o = sorted(orders)[i];
                     final isExp = expandedId == o.id;
@@ -355,6 +382,7 @@ class _Body extends ConsumerWidget {
                       expandedOrder: isExp ? expandedOrder : null,
                       isExpanded: isExp,
                       isLoadingDetail: isExp && loadingDetail,
+                      isEven: i.isEven,
                       onTap: () => onToggle(o),
                       onVoided: onVoided,
                     );
@@ -505,15 +533,17 @@ class _OrderRow extends ConsumerWidget {
   final Order? expandedOrder;
   final bool isExpanded;
   final bool isLoadingDetail;
+  final bool isEven;
   final VoidCallback onTap;
   final void Function(Order) onVoided;
 
   const _OrderRow({
     required this.order,
     required this.methods,
-    this.expandedOrder,
+    required this.expandedOrder,
     required this.isExpanded,
     required this.isLoadingDetail,
+    required this.isEven,
     required this.onTap,
     required this.onVoided,
   });
@@ -536,8 +566,8 @@ class _OrderRow extends ConsumerWidget {
           color: isExpanded
               ? AppColors.primary.withOpacity(0.04)
               : isVoided
-                  ? AppColors.bg.withOpacity(0.4)
-                  : Colors.white,
+                  ? AppColors.danger.withOpacity(0.05)
+                  : isEven ? Colors.white : AppColors.bg,
           child: Opacity(
             opacity: isVoided ? 0.55 : 1.0,
             child: Row(children: [

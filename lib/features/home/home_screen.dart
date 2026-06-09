@@ -148,8 +148,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   child: OutlinedButton.icon(
                     onPressed: () => context.push('/shift-history'),
                     icon: const Icon(Icons.history_rounded, size: 16),
-                    label: Text('View Shift History',
-                        style: cairo(fontSize: 14)),
+                    label: Text('View Past Shifts',
+                        style: cairo(fontSize: 13, fontWeight: FontWeight.w600)),
                     style: OutlinedButton.styleFrom(
                       minimumSize: const Size(double.infinity, 48),
                       shape: RoundedRectangleBorder(

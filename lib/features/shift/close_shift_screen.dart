@@ -6,12 +6,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/l10n/l10n.dart';
+import '../../core/models/branch.dart';
 import '../../core/models/inventory.dart';
 import '../../core/models/shift.dart';
 import '../../core/providers/auth_notifier.dart';
+import '../../core/providers/payment_method_notifier.dart';
 import '../../core/providers/shift_notifier.dart';
 import '../../core/repositories/shift_repository.dart';
 import '../../core/services/connectivity_service.dart';
+import '../../core/services/printer_service.dart';
 import '../../core/storage/storage_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatting.dart';
@@ -294,6 +297,42 @@ class _CloseShiftScreenState extends ConsumerState<CloseShiftScreen> {
     }
   }
 
+  /// Print the final, backend-sourced shift report straight to the branch
+  /// printer right after an online close. Best-effort: a failure is surfaced
+  /// in a snackbar but never blocks the teller from leaving the closed shift.
+  Future<void> _autoPrintReport(String shiftId) async {
+    final branch = ref.read(authProvider).branch;
+    // Nothing to print to — the manual print flow guards the same way.
+    if (branch == null || !branch.hasPrinter) return;
+
+    try {
+      // Re-fetch from the backend so the printout reflects the just-closed
+      // shift (closing cash, closed-at, final totals) — not the local draft.
+      final report = await ref.read(shiftRepositoryProvider).getReport(shiftId);
+      final methods = ref.read(paymentMethodProvider).items;
+      final err = await PrinterService.printShiftReport(
+        ip: branch.printerIp!,
+        port: branch.printerPort ?? 9100,
+        brand: branch.printerBrand!,
+        report: report,
+        paymentMethods: methods,
+        branchName: branch.name,
+        logoUrl: branch.orgLogoUrl,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(err ?? l10n(context).shiftReportPrinted),
+        backgroundColor: err == null ? context.tokens.success : context.tokens.danger,
+      ));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(l10n(context).commonFailedLoadReport('$e')),
+        backgroundColor: context.tokens.danger,
+      ));
+    }
+  }
+
   // ── Close ──────────────────────────────────────────────────────────────────
 
   Future<void> _close() async {
@@ -336,6 +375,10 @@ class _CloseShiftScreenState extends ConsumerState<CloseShiftScreen> {
 
     final branchId = ref.read(authProvider).user!.branchId!;
     final shiftId = ref.read(shiftProvider).shift?.id;
+    // Offline/queued closes don't reach the backend yet, so the report wouldn't
+    // be final — only auto-print when the close lands on the server live.
+    final willQueue =
+        !ref.read(isOnlineProvider) || ref.read(authProvider).isOfflineSession;
     final ok = await ref.read(shiftProvider.notifier).closeShift(
           branchId: branchId,
           closingCash: piastres,
@@ -349,6 +392,12 @@ class _CloseShiftScreenState extends ConsumerState<CloseShiftScreen> {
       _draftTimer?.cancel();
       if (shiftId != null) await _clearDraft(shiftId);
       if (!mounted) return;
+      // Auto-print the final report before logout/navigation tears the branch
+      // printer config down.
+      if (shiftId != null && !willQueue) {
+        await _autoPrintReport(shiftId);
+        if (!mounted) return;
+      }
       final canNowLogout = await ref.read(authProvider.notifier).canLogout();
       if (!mounted) return;
       if (canNowLogout) {

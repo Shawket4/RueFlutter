@@ -1,7 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sufrix_pos/core/models/bundle.dart';
-import 'package:sufrix_pos/core/models/inventory.dart';
-import 'package:sufrix_pos/core/models/menu.dart';
+
+import 'helpers/model_fixtures.dart';
+
+/// Converts legacy minutes-since-midnight into the wire "HH:MM" format.
+String? _hhmm(int? minutes) => minutes == null
+    ? null
+    : '${(minutes ~/ 60).toString().padLeft(2, '0')}:'
+        '${(minutes % 60).toString().padLeft(2, '0')}';
 
 Bundle _bundle({
   BundleStatus status = BundleStatus.active,
@@ -12,18 +18,18 @@ Bundle _bundle({
   int? untilMin,
   List<BundleComponent> components = const [],
 }) =>
-    Bundle(
+    makeBundle(
       id: 'b1',
       orgId: 'o1',
       name: 'Breakfast Combo',
       price: 4500,
       status: status,
       displayOrder: 1,
-      branchAvailability: branches,
+      branchIds: branches,
       availableFromDate: fromDate,
       availableUntilDate: untilDate,
-      availableFromMinutes: fromMin,
-      availableUntilMinutes: untilMin,
+      availableFromTime: _hhmm(fromMin),
+      availableUntilTime: _hhmm(untilMin),
       components: components,
     );
 
@@ -87,16 +93,15 @@ void main() {
 
   group('bundleOutOfStockReason', () {
     test('returns component name when ingredient stock is low', () {
-      const menuItems = [
-        MenuItem(
+      final menuItems = [
+        makeMenuItem(
           id: 'item-1',
           orgId: 'o1',
           name: 'Croissant',
           basePrice: 2000,
-          isActive: true,
           displayOrder: 0,
           recipes: [
-            MenuItemRecipe(
+            makeMenuItemRecipe(
               orgIngredientId: 'ing-1',
               quantityUsed: 1,
               ingredientName: 'Flour',
@@ -106,11 +111,17 @@ void main() {
           ],
         ),
       ];
-      const inventory = [
-        InventoryItem(id: 'ing-1', name: 'Flour', unit: 'g', currentStock: 0),
+      final inventory = [
+        makeInventoryItem(
+          id: 'ing-1',
+          orgIngredientId: 'ing-1',
+          ingredientName: 'Flour',
+          unit: 'g',
+          currentStock: 0,
+        ),
       ];
       final bundle = _bundle(components: [
-        const BundleComponent(
+        makeBundleComponent(
           bundleId: 'b1',
           itemId: 'item-1',
           quantity: 1,
@@ -125,16 +136,15 @@ void main() {
     });
 
     test('returns null when all components are in stock', () {
-      const menuItems = [
-        MenuItem(
+      final menuItems = [
+        makeMenuItem(
           id: 'item-1',
           orgId: 'o1',
           name: 'Latte',
           basePrice: 3000,
-          isActive: true,
           displayOrder: 0,
           recipes: [
-            MenuItemRecipe(
+            makeMenuItemRecipe(
               orgIngredientId: 'ing-milk',
               quantityUsed: 0.2,
               ingredientName: 'Milk',
@@ -144,12 +154,17 @@ void main() {
           ],
         ),
       ];
-      const inventory = [
-        InventoryItem(
-            id: 'ing-milk', name: 'Milk', unit: 'L', currentStock: 10),
+      final inventory = [
+        makeInventoryItem(
+          id: 'ing-milk',
+          orgIngredientId: 'ing-milk',
+          ingredientName: 'Milk',
+          unit: 'L',
+          currentStock: 10,
+        ),
       ];
       final bundle = _bundle(components: [
-        const BundleComponent(
+        makeBundleComponent(
           bundleId: 'b1',
           itemId: 'item-1',
           quantity: 1,

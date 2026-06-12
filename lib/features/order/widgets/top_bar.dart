@@ -1,35 +1,43 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/l10n/l10n.dart';
 import '../../../core/providers/auth_notifier.dart';
 import '../../../core/providers/cart_notifier.dart';
-import '../../../core/providers/menu_notifier.dart';
 import '../../../core/providers/discount_notifier.dart';
+import '../../../core/providers/menu_notifier.dart';
 import '../../../core/providers/payment_method_notifier.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatting.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/widgets/sufrix_logo.dart';
-import '../../../shared/widgets/sync_status_chip.dart';
+import '../../../shared/widgets/status_chip.dart';
 import 'action_drawer.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  TOP BAR
+//  TOP BAR — logo · refresh · current order · search ··· avatar
+//  (shift stats + sync state live in the bottom action bar)
 // ─────────────────────────────────────────────────────────────────────────────
 class TopBar extends ConsumerWidget {
   final TextEditingController ctrl;
   final String query;
-  const TopBar({super.key, required this.ctrl, required this.query});
+  final FocusNode? searchFocus;
+  const TopBar(
+      {super.key, required this.ctrl, required this.query, this.searchFocus});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final cart = ref.watch(cartProvider);
-    final user = ref.watch(authProvider).user;
-    final cachedAt = ref.watch(menuProvider).cachedAt;
+    final t = context.tokens;
+    // Narrow watches — the bar only shows the order name, user name and
+    // menu freshness stamp, so don't rebuild on unrelated state changes.
+    final orderName = ref.watch(cartProvider.select((c) => c.displayName));
+    final userName = ref.watch(authProvider.select((a) => a.user?.name));
+    final cachedAt = ref.watch(menuProvider.select((m) => m.cachedAt));
     final lastSynced = cachedAt != null ? timeShort(cachedAt) : '—';
+    final isPhone = context.isPhone;
 
     return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+      color: t.surface,
+      padding: const EdgeInsetsDirectional.fromSTEB(14, 10, 14, 10),
       child: LayoutBuilder(builder: (context, constraints) {
         return SingleChildScrollView(
           scrollDirection: Axis.horizontal,
@@ -41,70 +49,57 @@ class TopBar extends ConsumerWidget {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Sufrix symbol
                     const SufrixLogo(size: 30, isRounded: true),
                     const SizedBox(width: 10),
 
-                    // Sync button
+                    // Manual menu refresh + freshness stamp.
                     const SyncBtn(),
-                    const SizedBox(width: 6),
-                    Text(lastSynced,
-                        style: cairo(fontSize: 11, color: AppColors.textMuted)),
-                    const SizedBox(width: 10),
-                    const SyncStatusChip(),
+                    if (!isPhone) ...[
+                      const SizedBox(width: 6),
+                      Text(lastSynced,
+                          style: ui(size: 11, color: t.textMuted)),
+                    ],
                     const SizedBox(width: 10),
 
-                    // Active order name pill
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(AppRadius.xs),
-                        border: Border.all(color: AppColors.primary.withOpacity(0.25)),
-                      ),
-                      child: Row(mainAxisSize: MainAxisSize.min, children: [
-                        const Icon(Icons.shopping_bag_rounded,
-                            size: 12, color: AppColors.primary),
-                        const SizedBox(width: 5),
-                        Text(
-                          cart.displayName ?? 'Order 1',
-                          style: cairo(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.primary),
-                        ),
-                      ]),
+                    // Current order tab name.
+                    StatusChip(
+                      label: orderName ?? l10n(context).shellDefaultOrderName,
+                      tone: ChipTone.info,
+                      icon: Icons.shopping_bag_rounded,
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: AppSpace.md),
 
-                    // Search bar
+                    // Search.
                     SizedBox(
-                      width: context.isPhone ? 180 : 260,
+                      width: context.responsive(
+                          phone: 180, tablet: 240, desktop: 280),
                       child: Container(
                         height: 38,
                         decoration: BoxDecoration(
-                          color: AppColors.bg,
+                          color: t.surfaceAlt,
                           borderRadius: BorderRadius.circular(AppRadius.sm),
-                          border: Border.all(color: AppColors.border),
+                          border: Border.all(color: t.border),
                         ),
                         child: TextField(
                           controller: ctrl,
-                          style: cairo(fontSize: 14),
+                          focusNode: searchFocus,
+                          style: ui(size: 14, color: t.textPrimary),
                           decoration: InputDecoration(
-                            hintText: 'Search menu…',
-                            hintStyle: cairo(fontSize: 14, color: AppColors.textMuted),
-                            prefixIcon: const Icon(Icons.search_rounded,
-                                size: 17, color: AppColors.textMuted),
+                            hintText: l10n(context).shellSearchMenu,
+                            hintStyle: ui(size: 14, color: t.textMuted),
+                            prefixIcon: Icon(Icons.search_rounded,
+                                size: 17, color: t.textMuted),
                             suffixIcon: query.isNotEmpty
                                 ? GestureDetector(
                                     onTap: ctrl.clear,
-                                    child: const Icon(Icons.close_rounded,
-                                        size: 16, color: AppColors.textMuted))
+                                    child: Icon(Icons.close_rounded,
+                                        size: 16, color: t.textMuted))
                                 : null,
                             border: InputBorder.none,
                             enabledBorder: InputBorder.none,
                             focusedBorder: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(vertical: 10),
+                            contentPadding:
+                                const EdgeInsets.symmetric(vertical: 10),
                             isDense: true,
                             filled: false,
                           ),
@@ -116,44 +111,15 @@ class TopBar extends ConsumerWidget {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Cart summary pill (tablet/desktop only).
-                    if (context.isTablet || context.isDesktop) ...[
-                      const SizedBox(width: 12),
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 250),
-                        transitionBuilder: (child, anim) => ScaleTransition(
-                            scale: anim,
-                            child: FadeTransition(opacity: anim, child: child)),
-                        child: cart.isEmpty
-                            ? const SizedBox.shrink(key: ValueKey('empty'))
-                            : Container(
-                                key: const ValueKey('pill'),
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 14, vertical: 7),
-                                decoration: BoxDecoration(
-                                  color: AppColors.primary,
-                                  borderRadius: BorderRadius.circular(20),
-                                  boxShadow: AppShadows.primaryGlow(),
-                                ),
-                                child: Row(children: [
-                                  const Icon(Icons.shopping_bag_outlined,
-                                      size: 14, color: Colors.white),
-                                  const SizedBox(width: 6),
-                                  Text('${cart.count} · ${egp(cart.total)}',
-                                      style: cairo(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w700,
-                                          color: Colors.white)),
-                                ]),
-                              ),
-                      ),
-                    ],
+                    const SizedBox(width: AppSpace.md),
 
-                    // User avatar
-                    const SizedBox(width: 10),
-                    AnimatedPressScale(
-                      onTap: () => ActionDrawer.show(context),
-                      child: _UserAvatar(name: user?.name ?? ''),
+                    // Avatar → actions drawer.
+                    Tooltip(
+                      message: l10n(context).shellShiftActions,
+                      child: AnimatedPressScale(
+                        onTap: () => ActionDrawer.show(context),
+                        child: _UserAvatar(name: userName ?? ''),
+                      ),
                     ),
                   ],
                 ),
@@ -183,29 +149,31 @@ class _UserAvatar extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) => Container(
-        width: 32,
-        height: 32,
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF0A2540), Color(0xFF1A3A5C)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(9),
-        ),
-        alignment: Alignment.center,
-        child: Text(_initials,
-            style: cairo(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: Colors.white)),
-      );
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    return Container(
+      width: 32,
+      height: 32,
+      decoration: BoxDecoration(
+        color: t.navyBg,
+        borderRadius: BorderRadius.circular(9),
+        border: Border.all(color: t.navy.withOpacity(0.3)),
+      ),
+      alignment: Alignment.center,
+      child: Text(_initials,
+          style: ui(size: 12, weight: FontWeight.w700, color: t.navy)),
+    );
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  SYNC BUTTON
+//  SYNC BUTTON — manual menu/discount/payment refresh
 // ─────────────────────────────────────────────────────────────────────────────
+
+/// Whether a manual refresh is in flight. autoDispose: resets when the button
+/// leaves the tree; the spin AnimationController stays in the State object.
+final _menuSyncingProvider = StateProvider.autoDispose<bool>((_) => false);
+
 class SyncBtn extends ConsumerStatefulWidget {
   const SyncBtn({super.key});
 
@@ -215,7 +183,6 @@ class SyncBtn extends ConsumerStatefulWidget {
 
 class _SyncBtnState extends ConsumerState<SyncBtn>
     with SingleTickerProviderStateMixin {
-  bool _syncing = false;
   late final AnimationController _spinCtrl;
 
   @override
@@ -232,8 +199,8 @@ class _SyncBtnState extends ConsumerState<SyncBtn>
   }
 
   Future<void> _sync() async {
-    if (_syncing) return;
-    setState(() => _syncing = true);
+    if (ref.read(_menuSyncingProvider)) return;
+    ref.read(_menuSyncingProvider.notifier).state = true;
     _spinCtrl.repeat();
     try {
       final orgId = ref.read(authProvider).user?.orgId;
@@ -248,28 +215,34 @@ class _SyncBtnState extends ConsumerState<SyncBtn>
       if (mounted) {
         _spinCtrl.stop();
         _spinCtrl.reset();
-        setState(() => _syncing = false);
+        ref.read(_menuSyncingProvider.notifier).state = false;
       }
     }
   }
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    final syncing = ref.watch(_menuSyncingProvider);
+    return Tooltip(
+      message: l10n(context).shellRefreshMenu,
+      child: GestureDetector(
         onTap: _sync,
         child: Container(
           width: 36,
           height: 36,
           decoration: BoxDecoration(
-              color: AppColors.bg,
+              color: t.surfaceAlt,
               borderRadius: BorderRadius.circular(AppRadius.xs),
-              border: Border.all(color: AppColors.border)),
+              border: Border.all(color: t.border)),
           alignment: Alignment.center,
           child: RotationTransition(
             turns: _spinCtrl,
             child: Icon(Icons.sync_rounded,
-                size: 18,
-                color: _syncing ? AppColors.primary : AppColors.textSecondary),
+                size: 18, color: syncing ? t.accent : t.textSecondary),
           ),
         ),
-      );
+      ),
+    );
+  }
 }

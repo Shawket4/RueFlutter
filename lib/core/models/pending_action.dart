@@ -106,9 +106,13 @@ class PendingOrder extends PendingAction {
   final int? amountTendered; 
   final int? tipAmount; 
   final String? tipPaymentMethod;
-  final List<PaymentSplit>? paymentSplits; 
+  final List<PaymentSplit>? paymentSplits;
   final List<CartItem> items;
   final DateTime orderedAt;
+
+  /// Cash physically taken for this order (piastres), computed at checkout.
+  /// Lets the shift drawer guidance include still-queued offline orders.
+  final int cashAmount;
 
   const PendingOrder({
     required super.localId,
@@ -129,6 +133,7 @@ class PendingOrder extends PendingAction {
     this.paymentSplits,
     required this.items,
     required this.orderedAt,
+    this.cashAmount = 0,
   }) : super(type: PendingActionType.order);
 
   @override
@@ -137,7 +142,8 @@ class PendingOrder extends PendingAction {
         paymentMethod: paymentMethod, customerName: customerName, notes: notes, discountType: discountType,
         discountValue: discountValue, discountId: discountId, amountTendered: amountTendered,
         tipAmount: tipAmount, tipPaymentMethod: tipPaymentMethod, paymentSplits: paymentSplits,
-        items: items, orderedAt: orderedAt, retryCount: retryCount + 1, lastError: error,
+        items: items, orderedAt: orderedAt, cashAmount: cashAmount,
+        retryCount: retryCount + 1, lastError: error,
       );
 
   @override
@@ -146,7 +152,7 @@ class PendingOrder extends PendingAction {
         paymentMethod: paymentMethod, customerName: customerName, notes: notes, discountType: discountType,
         discountValue: discountValue, discountId: discountId, amountTendered: amountTendered,
         tipAmount: tipAmount, tipPaymentMethod: tipPaymentMethod, paymentSplits: paymentSplits,
-        items: items, orderedAt: orderedAt,
+        items: items, orderedAt: orderedAt, cashAmount: cashAmount,
       );
 
   @override
@@ -158,6 +164,7 @@ class PendingOrder extends PendingAction {
         'tip_amount': tipAmount, 'tip_payment_method': tipPaymentMethod,
         if (paymentSplits != null) 'payment_splits': paymentSplits!.map((s) => s.toApiJson()).toList(),
         'ordered_at': orderedAt.toUtc().toIso8601String(),
+        'cash_amount': cashAmount,
         'items': items.map((i) => i.toStorageJson()).toList(),
       };
 
@@ -178,9 +185,12 @@ class PendingOrder extends PendingAction {
         tipAmount: j['tip_amount'] as int?,
         tipPaymentMethod: j['tip_payment_method'] as String?,
         paymentSplits: (j['payment_splits'] as List?)
-            ?.map((s) => PaymentSplit(method: s['method'], amount: s['amount']))
+            ?.map((s) => PaymentSplit(
+                method: s['method'] as String,
+                amount: (s['amount'] as num).toInt()))
             .toList(),
         orderedAt: DateTime.parse((j['ordered_at'] as String?) ?? j['created_at'] as String),
+        cashAmount: (j['cash_amount'] as num?)?.toInt() ?? 0,
         items: (j['items'] as List).map((i) => CartItem.fromStorageJson(i as Map<String, dynamic>)).toList(),
       );
 }

@@ -4,7 +4,7 @@ import 'package:sufrix_pos/core/models/cart.dart';
 void main() {
   group('SelectedOptional', () {
     test('toApiJson & toStorageJson & fromStorageJson', () {
-      final opt = SelectedOptional(optionalFieldId: 'o1', name: 'Extra Sugar', price: 50);
+      const opt = SelectedOptional(optionalFieldId: 'o1', name: 'Extra Sugar', price: 50);
       expect(opt.toApiJson(), {'optional_field_id': 'o1'});
       
       final storage = opt.toStorageJson();
@@ -21,7 +21,7 @@ void main() {
 
   group('SelectedAddon', () {
     test('copyWith & toApiJson & toStorageJson & fromStorageJson', () {
-      final addon = SelectedAddon(addonItemId: 'a1', name: 'Milk', priceModifier: 100, quantity: 2);
+      const addon = SelectedAddon(addonItemId: 'a1', name: 'Milk', priceModifier: 100, quantity: 2);
       
       final modified = addon.copyWith(quantity: 3);
       expect(modified.quantity, 3);
@@ -42,7 +42,7 @@ void main() {
 
   group('BundleComponentSnapshot', () {
     test('price calculations & serialization', () {
-      final snap = BundleComponentSnapshot(
+      const snap = BundleComponentSnapshot(
         itemId: 'm1',
         itemName: 'Coffee',
         quantity: 1,
@@ -67,7 +67,7 @@ void main() {
 
   group('CartItem', () {
     test('lineTotal for regular item', () {
-      final item = CartItem(
+      const item = CartItem(
         menuItemId: 'm1',
         itemName: 'Burger',
         unitPrice: 500,
@@ -84,7 +84,7 @@ void main() {
 
     test('lineTotal for bundle item', () {
       final bundleComps = [
-        BundleComponentSnapshot(
+        const BundleComponentSnapshot(
           itemId: 'm1', itemName: 'Burger', quantity: 1,
           addons: [SelectedAddon(addonItemId: 'a1', name: 'Cheese', priceModifier: 50)]
         )
@@ -102,7 +102,7 @@ void main() {
     });
 
     test('serialization regular item', () {
-      final item = CartItem(
+      const item = CartItem(
         menuItemId: 'm1',
         itemName: 'Burger',
         unitPrice: 500,
@@ -116,7 +116,7 @@ void main() {
     });
 
     test('serialization bundle item', () {
-      final item = CartItem(
+      const item = CartItem(
         bundleId: 'b1',
         bundleComponents: [BundleComponentSnapshot(itemId: 'm1', itemName: 'B', quantity: 1)],
         itemName: 'Combo',
@@ -130,15 +130,15 @@ void main() {
     });
 
     test('addonsMatch & optionalsMatch', () {
-      final a1 = [SelectedAddon(addonItemId: '1', name: '1', priceModifier: 1)];
-      final a2 = [SelectedAddon(addonItemId: '1', name: '1', priceModifier: 1)];
-      final a3 = [SelectedAddon(addonItemId: '2', name: '2', priceModifier: 1)];
+      final a1 = [const SelectedAddon(addonItemId: '1', name: '1', priceModifier: 1)];
+      final a2 = [const SelectedAddon(addonItemId: '1', name: '1', priceModifier: 1)];
+      final a3 = [const SelectedAddon(addonItemId: '2', name: '2', priceModifier: 1)];
 
       expect(CartItem.addonsMatch(a1, a2), true);
       expect(CartItem.addonsMatch(a1, a3), false);
 
-      final o1 = [SelectedOptional(optionalFieldId: '1', name: '1', price: 1)];
-      final o2 = [SelectedOptional(optionalFieldId: '1', name: '1', price: 1)];
+      final o1 = [const SelectedOptional(optionalFieldId: '1', name: '1', price: 1)];
+      final o2 = [const SelectedOptional(optionalFieldId: '1', name: '1', price: 1)];
       
       expect(CartItem.optionalsMatch(o1, o2), true);
     });
@@ -146,7 +146,7 @@ void main() {
 
   group('CartState', () {
     test('calculations', () {
-      final state = CartState(
+      const state = CartState(
         items: [
           CartItem(menuItemId: 'm1', itemName: 'Burger', unitPrice: 500, quantity: 2), // 1000
           CartItem(menuItemId: 'm2', itemName: 'Fries', unitPrice: 200, quantity: 1), // 200
@@ -164,7 +164,7 @@ void main() {
     });
 
     test('fixed discount', () {
-      final state = CartState(
+      const state = CartState(
         items: [CartItem(menuItemId: 'm1', itemName: 'Burger', unitPrice: 500, quantity: 1)],
         discountType: DiscountType.fixed,
         discountValue: 100,
@@ -174,7 +174,7 @@ void main() {
     });
 
     test('discount clamped to subtotal', () {
-      final state = CartState(
+      const state = CartState(
         items: [CartItem(menuItemId: 'm1', itemName: 'Burger', unitPrice: 500, quantity: 1)],
         discountType: DiscountType.fixed,
         discountValue: 1000,
@@ -184,7 +184,7 @@ void main() {
     });
 
     test('copyWith clears fields', () {
-      final state = CartState(
+      const state = CartState(
         customerName: 'John',
         discountType: DiscountType.fixed,
         amountTendered: 100,
@@ -202,7 +202,7 @@ void main() {
     });
 
     test('toStorageJson & fromStorageJson', () {
-      final state = CartState(
+      const state = CartState(
         id: 'c1',
         customerName: 'John',
         items: [CartItem(menuItemId: 'm1', itemName: 'Burger', unitPrice: 500)],

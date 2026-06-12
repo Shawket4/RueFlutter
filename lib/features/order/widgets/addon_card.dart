@@ -1,13 +1,36 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/l10n/l10n.dart';
 import '../../../core/models/menu.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatting.dart';
-import 'shared_widgets.dart';
+import '../../../shared/widgets/status_chip.dart';
+import '../../../shared/widgets/surface_card.dart';
+
+/// Visibility of the auto-dismissing "max N selections" hint. The 2.6 s
+/// dismiss timer stays in the card's State object; only the flag lives here.
+/// Family-keyed by the card's [AddonCard.id] so cards never share hint state.
+final _addonMaxHintProvider =
+    NotifierProvider.autoDispose.family<_AddonMaxHintNotifier, bool, String>(
+        _AddonMaxHintNotifier.new);
+
+class _AddonMaxHintNotifier extends AutoDisposeFamilyNotifier<bool, String> {
+  @override
+  bool build(String arg) => false;
+
+  void show() => state = true;
+
+  void hide() => state = false;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  ADDON CARD  — one per addon type (slotted or unslotted)
 // ─────────────────────────────────────────────────────────────────────────────
-class AddonCard extends StatefulWidget {
+class AddonCard extends ConsumerStatefulWidget {
+  /// Stable identity (slot id or addon type) for sheet-local provider state.
+  final String id;
   final String title;
   final bool isRequired;
   final bool isMulti;
@@ -23,6 +46,7 @@ class AddonCard extends StatefulWidget {
 
   const AddonCard({
     super.key,
+    required this.id,
     required this.title,
     required this.isRequired,
     required this.isMulti,
@@ -38,22 +62,16 @@ class AddonCard extends StatefulWidget {
   });
 
   @override
-  State<AddonCard> createState() => _AddonCardState();
+  ConsumerState<AddonCard> createState() => _AddonCardState();
 }
 
-class _AddonCardState extends State<AddonCard> {
+class _AddonCardState extends ConsumerState<AddonCard> {
   final _searchCtrl = TextEditingController();
-  String _query = '';
-
-  @override
-  void initState() {
-    super.initState();
-    _searchCtrl.addListener(
-        () => setState(() => _query = _searchCtrl.text.trim().toLowerCase()));
-  }
+  Timer? _hintTimer;
 
   @override
   void dispose() {
+    _hintTimer?.cancel();
     _searchCtrl.dispose();
     super.dispose();
   }
@@ -72,144 +90,266 @@ class _AddonCardState extends State<AddonCard> {
       widget.maxSelections != null &&
       _selCount >= widget.maxSelections!;
 
+  /// Visible feedback when tapping a chip that is blocked by the max limit.
+  void _showMaxHint() {
+    _hintTimer?.cancel();
+    ref.read(_addonMaxHintProvider(widget.id).notifier).show();
+    _hintTimer = Timer(const Duration(milliseconds: 2600), () {
+      if (mounted) ref.read(_addonMaxHintProvider(widget.id).notifier).hide();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    final accent = widget.accentColor ?? AppColors.primary;
+    final t = context.tokens;
+    final dotColor = widget.accentColor ?? t.accent;
     final showSearch = widget.items.length > 5;
-    final opts = _query.isEmpty
-        ? widget.items
-        : widget.items
-            .where((o) => o.name.toLowerCase().contains(_query))
-            .toList();
+    final hintVisible = ref.watch(_addonMaxHintProvider(widget.id));
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(
-            color: _selCount > 0
-                ? accent.withOpacity(0.25)
-                : AppColors.border),
-        boxShadow: AppShadows.card,
-      ),
+    return SurfaceCard(
+      padding: const EdgeInsets.all(AppSpace.md),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        // Header
-        Padding(
-          padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
-          child: Row(children: [
-            Expanded(
-                child: Row(children: [
-              // Type color dot
-              Container(
-                width: 8,
-                height: 8,
-                margin: const EdgeInsets.only(right: 8),
-                decoration: BoxDecoration(
-                    color: accent, shape: BoxShape.circle),
-              ),
-              Text(widget.title.toUpperCase(),
-                  style: cairo(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textSecondary,
-                      letterSpacing: 0.7)),
-              const SizedBox(width: 6),
-              if (widget.isRequired) const Pill('Required', AppColors.danger),
-              if (widget.isMulti) ...[
-                const SizedBox(width: 4),
-                Pill('Multi', accent),
-              ],
-              if (widget.maxSelections != null) ...[
-                const SizedBox(width: 4),
-                Pill('Max ${widget.maxSelections}', AppColors.textSecondary),
-              ],
-            ])),
-            if (_selCount > 0) CountBadge(count: _selCount),
-          ]),
+        // ── Header ──────────────────────────────────────────────────────────
+        Row(children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: AppSpace.sm),
+          Expanded(
+            child: Text(widget.title.toUpperCase(),
+                style: ui(
+                    size: 11,
+                    weight: FontWeight.w700,
+                    color: t.textSecondary,
+                    letterSpacing: 0.6)),
+          ),
+          if (widget.isRequired) ...[
+            const SizedBox(width: AppSpace.xs),
+            StatusChip(
+                label: l10n(context).orderRequiredChip,
+                tone: ChipTone.danger),
+          ],
+          if (widget.maxSelections != null) ...[
+            const SizedBox(width: AppSpace.xs),
+            StatusChip(
+                label:
+                    l10n(context).orderMaxSelections(widget.maxSelections!)),
+          ],
+          if (_selCount > 0) ...[
+            const SizedBox(width: AppSpace.xs),
+            StatusChip(label: '$_selCount', tone: ChipTone.accent),
+          ],
+        ]),
+
+        // ── Max-selections hint (auto-dismissing) ───────────────────────────
+        AnimatedSize(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          alignment: AlignmentDirectional.topStart,
+          child: !hintVisible
+              ? const SizedBox(width: double.infinity)
+              : Padding(
+                  padding: const EdgeInsets.only(top: AppSpace.sm),
+                  child: Row(children: [
+                    Icon(Icons.info_outline_rounded,
+                        size: 14, color: t.warning),
+                    const SizedBox(width: AppSpace.xs),
+                    Expanded(
+                      child: Text(
+                          l10n(context).orderMaxHint(
+                              widget.maxSelections ?? 0, widget.title),
+                          style: ui(
+                              size: 12,
+                              weight: FontWeight.w600,
+                              color: t.warning)),
+                    ),
+                  ]),
+                ),
         ),
 
-        // Search
-        if (showSearch) ...[
-          const SizedBox(height: 10),
-          Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              child: Container(
-                height: 34,
-                decoration: BoxDecoration(
-                    color: AppColors.bg,
-                    borderRadius: BorderRadius.circular(AppRadius.xs),
-                    border: Border.all(color: AppColors.border)),
-                child: TextField(
-                    controller: _searchCtrl,
-                    style: cairo(fontSize: 13),
-                    decoration: InputDecoration(
-                      hintText: 'Search options…',
-                      hintStyle:
-                          cairo(fontSize: 13, color: AppColors.textMuted),
-                      prefixIcon: const Icon(Icons.search_rounded,
-                          size: 15, color: AppColors.textMuted),
-                      suffixIcon: _query.isNotEmpty
-                          ? GestureDetector(
-                              onTap: _searchCtrl.clear,
-                              child: const Icon(Icons.close_rounded,
-                                  size: 14, color: AppColors.textMuted))
-                          : null,
-                      border: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      focusedBorder: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 9),
-                      isDense: true,
-                      filled: false,
-                    )),
-              )),
-        ],
+        // ── Search + chips ──────────────────────────────────────────────────
+        // Keystrokes only rebuild this builder — never the parent sheet.
+        ListenableBuilder(
+          listenable: _searchCtrl,
+          builder: (context, _) {
+            final query = _searchCtrl.text.trim().toLowerCase();
+            final opts = query.isEmpty
+                ? widget.items
+                : widget.items
+                    .where((o) => o.name.toLowerCase().contains(query))
+                    .toList();
 
-        // Chips
-        Padding(
-          padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-          child: opts.isEmpty
-              ? Text('No match for "$_query"',
-                  style: cairo(fontSize: 12, color: AppColors.textMuted))
-              : Wrap(
-                  spacing: 7,
-                  runSpacing: 7,
-                  children: opts.map((opt) {
-                    final sel = widget.isMulti
-                        ? _isSelected(opt.id)
-                        : widget.selectedSingle == opt.id;
-                    final qty = _qty(opt.id);
+            return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (showSearch) ...[
+                    const SizedBox(height: AppSpace.md),
+                    Container(
+                      height: 38,
+                      decoration: BoxDecoration(
+                          color: t.surfaceAlt,
+                          borderRadius: BorderRadius.circular(AppRadius.xs),
+                          border: Border.all(color: t.border)),
+                      child: TextField(
+                        controller: _searchCtrl,
+                        style: ui(size: 13, color: t.textPrimary),
+                        decoration: InputDecoration(
+                          hintText: l10n(context).orderSearchOptions,
+                          hintStyle: ui(size: 13, color: t.textMuted),
+                          prefixIcon: Icon(Icons.search_rounded,
+                              size: 16, color: t.textMuted),
+                          suffixIcon: query.isNotEmpty
+                              ? GestureDetector(
+                                  onTap: _searchCtrl.clear,
+                                  child: Icon(Icons.close_rounded,
+                                      size: 15, color: t.textMuted))
+                              : null,
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          contentPadding:
+                              const EdgeInsets.symmetric(vertical: 10),
+                          isDense: true,
+                          filled: false,
+                        ),
+                      ),
+                    ),
+                  ],
 
-                    // Multi-select selected chip: show qty stepper inline
-                    if (widget.isMulti && sel) {
-                      return QtyChip(
-                        label: normaliseName(opt.name),
-                        price: opt.defaultPrice,
-                        qty: qty,
-                        accentColor: accent,
-                        onIncrement: () => widget.onIncrement(opt.id),
-                        onDecrement: () => widget.onDecrement(opt.id),
-                      );
-                    }
+                  // ── Chips ──────────────────────────────────────────────────
+                  const SizedBox(height: AppSpace.md),
+                  if (opts.isEmpty)
+                    Text(l10n(context).orderNoMatchFor(query),
+                        style: ui(size: 12, color: t.textMuted))
+                  else
+                    Wrap(
+                        spacing: AppSpace.sm,
+                        runSpacing: AppSpace.sm,
+                        children: opts.map((opt) {
+                          final sel = widget.isMulti
+                              ? _isSelected(opt.id)
+                              : widget.selectedSingle == opt.id;
 
-                    // Disable unselected chips when at max
-                    final canSelect = !_atMax || sel;
+                          // Multi-select selected chip: show qty stepper
+                          // inline.
+                          if (widget.isMulti && sel) {
+                            return QtyChip(
+                              label: normaliseName(opt.name),
+                              price: opt.defaultPrice,
+                              qty: _qty(opt.id),
+                              onIncrement: () => widget.onIncrement(opt.id),
+                              onDecrement: () => widget.onDecrement(opt.id),
+                            );
+                          }
 
-                    return SelectableChip(
-                      label: normaliseName(opt.name),
-                      sublabel: opt.defaultPrice > 0
-                          ? '+${egp(opt.defaultPrice)}'
-                          : null,
-                      selected: sel,
-                      checkbox: widget.isMulti,
-                      enabled: canSelect,
-                      accentColor: accent,
-                      onTap: () => widget.isMulti
-                          ? widget.onToggleMulti(opt.id)
-                          : widget.onToggleSingle(opt.id),
-                    );
-                  }).toList()),
+                          // At max: unselected chips dim, but stay tappable
+                          // so the tap can explain *why* nothing happens.
+                          final blocked = widget.isMulti && _atMax && !sel;
+
+                          return OptionChip(
+                            label: normaliseName(opt.name),
+                            sublabel: opt.defaultPrice > 0
+                                ? '+${egp(opt.defaultPrice)}'
+                                : null,
+                            selected: sel,
+                            checkbox: widget.isMulti,
+                            dimmed: blocked,
+                            onTap: () {
+                              if (blocked) {
+                                _showMaxHint();
+                                return;
+                              }
+                              widget.isMulti
+                                  ? widget.onToggleMulti(opt.id)
+                                  : widget.onToggleSingle(opt.id);
+                            },
+                          );
+                        }).toList()),
+                ]);
+          },
         ),
       ]),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  OPTION CHIP  — token-aware selectable chip (sizes, addons, optionals)
+// ─────────────────────────────────────────────────────────────────────────────
+class OptionChip extends StatelessWidget {
+  final String label;
+  final String? sublabel;
+  final bool selected;
+  final bool checkbox;
+  final bool dimmed;
+  final VoidCallback onTap;
+
+  const OptionChip({
+    super.key,
+    required this.label,
+    this.sublabel,
+    required this.selected,
+    this.checkbox = false,
+    this.dimmed = false,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    final fg = selected
+        ? t.textOnAccent
+        : dimmed
+            ? t.textMuted
+            : t.textPrimary;
+
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 150),
+        opacity: dimmed ? 0.55 : 1,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+          decoration: BoxDecoration(
+            color: selected ? t.accent : t.surfaceAlt,
+            borderRadius: BorderRadius.circular(AppRadius.xs),
+            border: Border.all(color: selected ? t.accent : t.border),
+          ),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            if (checkbox) ...[
+              Icon(
+                  selected
+                      ? Icons.check_box_rounded
+                      : Icons.check_box_outline_blank_rounded,
+                  size: 15,
+                  color: selected ? t.textOnAccent : t.textMuted),
+              const SizedBox(width: 6),
+            ],
+            Text(label, style: ui(size: 13, weight: FontWeight.w600, color: fg)),
+            if (sublabel != null) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                    color: selected
+                        ? t.textOnAccent.withOpacity(0.2)
+                        : t.accentBg,
+                    borderRadius: BorderRadius.circular(4)),
+                child: Text(sublabel!,
+                    style: money(
+                        size: 10.5,
+                        weight: FontWeight.w700,
+                        color: selected ? t.textOnAccent : t.accent)),
+              ),
+            ],
+          ]),
+        ),
+      ),
     );
   }
 }
@@ -223,7 +363,6 @@ class QtyChip extends StatelessWidget {
   final int qty;
   final VoidCallback onIncrement;
   final VoidCallback onDecrement;
-  final Color? accentColor;
 
   const QtyChip({
     super.key,
@@ -232,69 +371,67 @@ class QtyChip extends StatelessWidget {
     required this.qty,
     required this.onIncrement,
     required this.onDecrement,
-    this.accentColor,
   });
 
   @override
   Widget build(BuildContext context) {
-    final accent = accentColor ?? AppColors.primary;
+    final t = context.tokens;
     return Container(
       decoration: BoxDecoration(
-          color: accent,
-          borderRadius: BorderRadius.circular(AppRadius.xs),
-          border: Border.all(color: accent, width: 1.5)),
+          color: t.accent,
+          borderRadius: BorderRadius.circular(AppRadius.xs)),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
-        // Decrement / remove
-        GestureDetector(
-          onTap: onDecrement,
-          child: Container(
-            width: 30,
-            height: 34,
-            alignment: Alignment.center,
-            child: const Icon(Icons.remove, size: 13, color: Colors.white),
-          ),
-        ),
-        // Label + qty
+        _StepBtn(icon: Icons.remove, onTap: onDecrement),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             Text(label,
-                style: cairo(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white)),
+                style: ui(
+                    size: 12,
+                    weight: FontWeight.w600,
+                    color: t.textOnAccent)),
             if (price > 0)
               Text('+${egp(price * qty)}',
-                  style: cairo(
-                      fontSize: 9,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white.withOpacity(0.8))),
+                  style: money(
+                      size: 9.5,
+                      weight: FontWeight.w700,
+                      color: t.textOnAccent.withOpacity(0.85))),
           ]),
         ),
-        // Qty badge
         Container(
           margin: const EdgeInsets.symmetric(horizontal: 2),
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
           decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: t.textOnAccent.withOpacity(0.22),
               borderRadius: BorderRadius.circular(4)),
           child: Text('$qty',
-              style: cairo(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white)),
+              style: ui(
+                  size: 11,
+                  weight: FontWeight.w800,
+                  color: t.textOnAccent)),
         ),
-        // Increment
-        GestureDetector(
-          onTap: onIncrement,
-          child: Container(
-            width: 30,
-            height: 34,
-            alignment: Alignment.center,
-            child: const Icon(Icons.add, size: 13, color: Colors.white),
-          ),
-        ),
+        _StepBtn(icon: Icons.add, onTap: onIncrement),
       ]),
+    );
+  }
+}
+
+class _StepBtn extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  const _StepBtn({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: SizedBox(
+        width: 32,
+        height: 38,
+        child: Icon(icon, size: 14, color: t.textOnAccent),
+      ),
     );
   }
 }

@@ -1,34 +1,7 @@
-class User {
-  final String  id;
-  final String? orgId;
-  final String? branchId;
-  final String  name;
-  final String? email;
-  final String  role;
-  final bool    isActive;
+// Façade over the OpenAPI-generated wire models (packages/sufrix_api).
+// The app's `User` is the spec's `UserPublic` (auth/me + login payloads).
+import 'package:sufrix_api/sufrix_api.dart';
 
-  const User({
-    required this.id,
-    this.orgId,
-    this.branchId,
-    required this.name,
-    this.email,
-    required this.role,
-    required this.isActive,
-  });
+export 'package:sufrix_api/sufrix_api.dart' show UserPublic, UserRole;
 
-  factory User.fromJson(Map<String, dynamic> j) => User(
-    id:       j['id']        as String,
-    orgId:    j['org_id']    as String?,
-    branchId: j['branch_id'] as String?,
-    name:     j['name']      as String,
-    email:    j['email']     as String?,
-    role:     j['role']      as String,
-    isActive: j['is_active'] as bool,
-  );
-
-  Map<String, dynamic> toJson() => {
-    'id': id, 'org_id': orgId, 'branch_id': branchId,
-    'name': name, 'email': email, 'role': role, 'is_active': isActive,
-  };
-}
+typedef User = UserPublic;

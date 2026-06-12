@@ -9,7 +9,7 @@ import 'package:sufrix_pos/core/storage/storage_service.dart';
 
 class MockStorageService extends Mock implements StorageService {}
 class MockCartNotifier extends Notifier<CartState> implements CartNotifier {
-  @override CartState build() => CartState(id: 'c1');
+  @override CartState build() => const CartState(id: 'c1');
   @override void replaceWith(CartState newState) => state = newState;
   @override void startNewOrder({String? id, String? displayName}) {}
   @override void add(CartItem incoming) {}
@@ -42,6 +42,7 @@ class MockShiftNotifier extends Notifier<ShiftState> implements ShiftNotifier {
   @override Future<void> loadSystemCash() async {}
   @override Future<bool> openShift(String branchId, int openingCash) async => true;
   @override void updateShiftSynced(dynamic shift) {}
+  @override void addLocalCash(int amount) {}
 }
 
 void main() {
@@ -93,7 +94,7 @@ void main() {
 
     test('parkCurrentCart adds to drafts and starts new order', () async {
       final notifier = container.read(draftCartsProvider.notifier);
-      final current = CartState(
+      const current = CartState(
         id: 'c1',
         displayName: 'Order 1',
         items: [CartItem(menuItemId: 'm1', itemName: 'Burger', unitPrice: 100)]
@@ -110,7 +111,7 @@ void main() {
 
     test('parkCurrentCart ignores empty cart', () async {
       final notifier = container.read(draftCartsProvider.notifier);
-      final success = await notifier.parkCurrentCart(CartState());
+      final success = await notifier.parkCurrentCart(const CartState());
       
       expect(success, false);
       expect(container.read(draftCartsProvider), isEmpty);
@@ -118,7 +119,7 @@ void main() {
 
     test('renameDraft updates name', () async {
       final notifier = container.read(draftCartsProvider.notifier);
-      final current = CartState(id: 'c1', items: [CartItem(menuItemId: 'm1', itemName: 'Burger', unitPrice: 100)]);
+      const current = CartState(id: 'c1', items: [CartItem(menuItemId: 'm1', itemName: 'Burger', unitPrice: 100)]);
       await notifier.parkCurrentCart(current);
 
       final draftId = container.read(draftCartsProvider).first.id;
@@ -131,7 +132,7 @@ void main() {
 
     test('deleteDraft removes from list', () async {
       final notifier = container.read(draftCartsProvider.notifier);
-      final current = CartState(id: 'c1', items: [CartItem(menuItemId: 'm1', itemName: 'Burger', unitPrice: 100)]);
+      const current = CartState(id: 'c1', items: [CartItem(menuItemId: 'm1', itemName: 'Burger', unitPrice: 100)]);
       await notifier.parkCurrentCart(current);
 
       final draftId = container.read(draftCartsProvider).first.id;

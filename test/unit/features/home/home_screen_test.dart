@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:sufrix_pos/core/l10n/app_localizations.dart';
 import 'package:sufrix_pos/core/models/user.dart';
 import 'package:sufrix_pos/core/providers/auth_notifier.dart';
 import 'package:sufrix_pos/core/providers/shift_notifier.dart';
@@ -10,9 +10,11 @@ import 'package:sufrix_pos/core/services/offline_queue.dart';
 import 'package:sufrix_pos/core/services/connectivity_service.dart';
 import 'package:sufrix_pos/features/home/home_screen.dart';
 
+import '../../../helpers/model_fixtures.dart';
+
 class FakeAuthNotifier extends AuthNotifier {
   @override
-  AuthState build() => const AuthState(user: User(id: '1', orgId: 'org1', branchId: 'b1', name: 'John Doe', role: 'admin', isActive: true));
+  AuthState build() => AuthState(user: makeUser(id: '1', orgId: 'org1', branchId: 'b1', name: 'John Doe', role: UserRole.orgAdmin));
 }
 
 class FakeShiftNotifier extends ShiftNotifier {
@@ -40,10 +42,6 @@ class FakeOfflineQueueNotifier extends OfflineQueueNotifier {
 }
 
 void main() {
-  setUpAll(() {
-    GoogleFonts.config.allowRuntimeFetching = false;
-  });
-
   Widget buildSubject() {
     return ProviderScope(
       overrides: [
@@ -54,6 +52,8 @@ void main() {
         isOnlineProvider.overrideWithValue(true),
       ],
       child: const MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: HomeScreen(),
       ),
     );
@@ -66,7 +66,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining(', John'), findsWidgets);
-    expect(find.text('ADMIN'), findsWidgets);
-    expect(find.text('No Open Shift'), findsWidgets);
+    expect(find.text('ORG ADMIN'), findsWidgets);
+    expect(find.text('No open shift'), findsWidgets);
   });
 }

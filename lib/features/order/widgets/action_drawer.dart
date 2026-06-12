@@ -1,151 +1,153 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../core/l10n/l10n.dart';
+import '../../../core/models/shift.dart';
 import '../../../core/providers/auth_notifier.dart';
 import '../../../core/providers/shift_notifier.dart';
 import '../../../core/repositories/shift_repository.dart';
 import '../../../core/services/connectivity_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatting.dart';
+import '../../../shared/widgets/confirm_sheet.dart';
+import '../../../shared/widgets/offline_banner.dart';
+import '../../../shared/widgets/responsive_sheet.dart';
+import '../../../shared/widgets/section_header.dart';
+import '../../../shared/widgets/surface_card.dart';
 import '../../shift/cash_movement_sheet.dart';
 import '../../shift/shift_report_preview_sheet.dart';
-import '../../../core/models/shift.dart';
-import '../../../core/services/offline_queue.dart';
 
+/// Bottom drawer with shift-level actions: navigation that doesn't fit the
+/// order screen's bottom action bar on small screens (Past Shifts / Settings),
+/// plus cash, reports, closing and signing out.
 class ActionDrawer extends ConsumerWidget {
   final BuildContext parentContext;
   const ActionDrawer({super.key, required this.parentContext});
 
-  static Future<void> show(BuildContext callerContext) => showModalBottomSheet(
+  static Future<void> show(BuildContext callerContext) =>
+      ResponsiveSheet.show(
         context: callerContext,
-        backgroundColor: Colors.transparent,
-        isScrollControlled: true,
         builder: (_) => ActionDrawer(parentContext: callerContext),
       );
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final shiftState = ref.watch(shiftProvider);
-    final shift = shiftState.shift;
-    final systemCash = shiftState.systemCash;
-    final user = ref.watch(authProvider).user;
+    final t = context.tokens;
+    final s = l10n(context);
+    // Narrow watches — the drawer shows shift, system cash and user name.
+    final shift = ref.watch(shiftProvider.select((st) => st.shift));
+    final systemCash = ref.watch(shiftProvider.select((st) => st.systemCash));
+    final userName = ref.watch(authProvider.select((a) => a.user?.name));
     final isOnline = ref.watch(isOnlineProvider);
-    final syncState = ref.watch(offlineQueueProvider);
 
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
+      decoration: BoxDecoration(
+        color: t.surfaceRaised,
+        borderRadius:
+            const BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
       ),
       child: SafeArea(
         top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // ── Handle ──────────────────────────────────────────────────
-            _Handle(),
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(
+                AppSpace.lg, 0, AppSpace.lg, AppSpace.sm),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const _Handle(),
 
-            // ── Shift status card ────────────────────────────────────────
-            if (shift != null) ...[
-              _ShiftCard(
-                  shift: shift, isOnline: isOnline, systemCash: systemCash),
-              const SizedBox(height: 4),
-            ],
+                // ── Shift status card ────────────────────────────────────
+                if (shift != null)
+                  _ShiftCard(
+                      shift: shift,
+                      isOnline: isOnline,
+                      systemCash: systemCash),
 
-            // ── Offline banner ───────────────────────────────────────────
-            if (!isOnline) ...[
-              _OfflineBanner(),
-              const SizedBox(height: 2),
-            ],
+                // ── Degraded-state banner (hides itself when fine) ───────
+                const Padding(
+                  padding: EdgeInsets.only(top: AppSpace.sm),
+                  child: OfflineBanner(margin: EdgeInsets.zero),
+                ),
 
-            // ── Section: Orders ──────────────────────────────────────────
-            _SectionLabel('Orders'),
-            _ActionGroup(children: [
-              _ActionTile(
-                icon: Icons.receipt_long_rounded,
-                label: 'Past Orders',
-                onTap: () =>
-                    _popThen(() => parentContext.push('/order-history')),
-              ),
-              _ActionTile(
-                icon: Icons.cloud_upload_outlined,
-                label: 'Pending Sync',
-                badge: syncState.orderCount > 0
-                    ? _Badge(
-                        label: '${syncState.orderCount} queued',
-                        color: isOnline ? _BadgeColor.muted : _BadgeColor.warning,
-                      )
-                    : null,
-                onTap: () =>
-                    _popThen(() => parentContext.push('/pending-orders')),
-              ),
-            ]),
+                // ── Browse ───────────────────────────────────────────────
+                SectionHeader(title: s.shellBrowse),
+                SurfaceCard(
+                  padding: EdgeInsets.zero,
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    _ActionTile(
+                      icon: Icons.schedule_rounded,
+                      label: s.shellPastShifts,
+                      onTap: () =>
+                          _popThen(() => parentContext.push('/shift-history')),
+                    ),
+                    Divider(height: 1, color: t.borderLight),
+                    _ActionTile(
+                      icon: Icons.settings_rounded,
+                      label: s.settings,
+                      onTap: () =>
+                          _popThen(() => parentContext.push('/settings')),
+                    ),
+                  ]),
+                ),
 
-            // ── Section: Cash & Shift ────────────────────────────────────
-            _SectionLabel('Cash & Shift'),
-            _ActionGroup(children: [
-              _ActionTile(
-                icon: Icons.payments_outlined,
-                label: 'Cash In / Out',
-                onTap: () => _popThen(() {
-                  if (shift != null) {
-                    CashMovementSheet.show(parentContext, shiftId: shift.id);
-                  }
-                }),
-              ),
-              _ActionTile(
-                icon: Icons.history_rounded,
-                label: 'Past Shifts',
-                onTap: () =>
-                    _popThen(() => parentContext.push('/shift-history')),
-              ),
-              _ActionTile(
-                icon: Icons.print_rounded,
-                label: 'Print Report',
-                disabled: !isOnline || shift == null,
-                onTap: () {
-                  Navigator.pop(context);
-                  if (shift != null) {
-                    _printReport(parentContext, ref, shift.id);
-                  }
-                },
-              ),
-            ]),
+                // ── Cash & shift ─────────────────────────────────────────
+                SectionHeader(title: s.shellCashAndShift),
+                SurfaceCard(
+                  padding: EdgeInsets.zero,
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    _ActionTile(
+                      icon: Icons.payments_outlined,
+                      label: s.shellCashInOut,
+                      disabled: !isOnline || shift == null,
+                      subtitle: !isOnline ? s.commonCashOfflineHint : null,
+                      onTap: () => _popThen(() {
+                        if (shift != null) {
+                          CashMovementSheet.show(parentContext,
+                              shiftId: shift.id);
+                        }
+                      }),
+                    ),
+                    Divider(height: 1, color: t.borderLight),
+                    _ActionTile(
+                      icon: Icons.print_rounded,
+                      label: s.commonPrintReport,
+                      disabled: !isOnline || shift == null,
+                      subtitle: !isOnline ? s.commonRequiresConnection : null,
+                      onTap: () {
+                        Navigator.pop(context);
+                        if (shift != null) {
+                          _printReport(parentContext, ref, shift.id);
+                        }
+                      },
+                    ),
+                    Divider(height: 1, color: t.borderLight),
+                    _ActionTile(
+                      icon: Icons.lock_outline_rounded,
+                      label: isOnline ? s.shiftClose : s.shiftCloseWillSync,
+                      danger: true,
+                      onTap: () {
+                        Navigator.pop(context);
+                        _confirmClose(parentContext, isOnline);
+                      },
+                    ),
+                  ]),
+                ),
 
-            // ── Section: System ──────────────────────────────────────────
-            _SectionLabel('System'),
-            _ActionGroup(children: [
-              _ActionTile(
-                icon: Icons.settings_outlined,
-                label: 'Settings',
-                onTap: () => _popThen(() => parentContext.push('/settings')),
-              ),
-              _ActionTile(
-                icon: Icons.lock_outline_rounded,
-                label: 'Close Shift',
-                danger: true,
-                disabled: !isOnline,
-                onTap: () {
-                  Navigator.pop(context);
-                  _confirmClose(parentContext, isOnline);
-                },
-              ),
-            ]),
-
-            // ── Divider + Sign out ───────────────────────────────────────
-            const SizedBox(height: 8),
-            const Divider(height: 1, color: AppColors.borderLight),
-            _SignOutRow(
-              userName: user?.name,
-              onTap: () {
-                Navigator.pop(context);
-                _signOut(parentContext, ref);
-              },
+                // ── Sign out ─────────────────────────────────────────────
+                const SizedBox(height: AppSpace.lg),
+                Divider(height: 1, color: t.borderLight),
+                _SignOutRow(
+                  userName: userName,
+                  onTap: () {
+                    Navigator.pop(context);
+                    _signOut(parentContext, ref);
+                  },
+                ),
+              ],
             ),
-
-            SizedBox(height: MediaQuery.of(context).padding.bottom + 8),
-          ],
+          ),
         ),
       ),
     );
@@ -161,18 +163,18 @@ class ActionDrawer extends ConsumerWidget {
   Future<void> _printReport(
       BuildContext ctx, WidgetRef ref, String shiftId) async {
     ScaffoldMessenger.of(ctx).showSnackBar(
-      const SnackBar(
+      SnackBar(
         content: Row(children: [
-          SizedBox(
+          const SizedBox(
             width: 16,
             height: 16,
             child:
                 CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
           ),
-          SizedBox(width: 12),
-          Text('Loading shift report…'),
+          const SizedBox(width: 12),
+          Text(l10n(ctx).commonLoading),
         ]),
-        duration: Duration(seconds: 15),
+        duration: const Duration(seconds: 15),
       ),
     );
 
@@ -186,45 +188,28 @@ class ActionDrawer extends ConsumerWidget {
       if (ctx.mounted) {
         ScaffoldMessenger.of(ctx).hideCurrentSnackBar();
         ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
-          content: Text('Failed to load report: $e'),
-          backgroundColor: AppColors.danger,
+          content: Text(l10n(ctx).commonFailedLoadReport('$e')),
+          backgroundColor: ctx.tokens.danger,
         ));
       }
     }
   }
 
-  void _confirmClose(BuildContext ctx, bool isOnline) {
-    if (!isOnline) {
-      ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
-        content: Text('Internet required to close shift'),
-      ));
-      return;
-    }
-    showDialog(
-      context: ctx,
-      builder: (dialogCtx) => AlertDialog(
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.lg)),
-        title: Text('Close Shift?', style: cairo(fontWeight: FontWeight.w800)),
-        content: Text('You will count cash and inventory on the next screen.',
-            style: cairo(fontSize: 14, color: AppColors.textSecondary)),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(dialogCtx),
-              child:
-                  Text('Cancel', style: cairo(color: AppColors.textSecondary))),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(dialogCtx);
-              ctx.go('/close-shift');
-            },
-            child: Text('Continue',
-                style: cairo(
-                    color: AppColors.danger, fontWeight: FontWeight.w700)),
-          ),
-        ],
-      ),
+  /// Closing is always allowed — an offline close is queued on-device and
+  /// synced once connection returns.
+  Future<void> _confirmClose(BuildContext ctx, bool isOnline) async {
+    final s = l10n(ctx);
+    final ok = await ConfirmSheet.show(
+      ctx,
+      title: s.shiftCloseConfirmTitle,
+      body: isOnline
+          ? s.shiftCloseConfirmBodyOnline
+          : s.shiftCloseConfirmBodyOffline,
+      confirmLabel: isOnline ? s.commonContinue : s.shiftCloseQueueConfirm,
+      destructive: true,
+      icon: Icons.lock_outline_rounded,
     );
+    if (ok && ctx.mounted) ctx.go('/close-shift');
   }
 
   Future<void> _signOut(BuildContext ctx, WidgetRef ref) async {
@@ -232,51 +217,36 @@ class ActionDrawer extends ConsumerWidget {
     if (!ctx.mounted) return;
     if (canLeave) {
       await ref.read(authProvider.notifier).logout();
-    } else {
-      showDialog(
-        context: ctx,
-        builder: (dialogCtx) => AlertDialog(
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg)),
-          title: Text('Close Shift First',
-              style: cairo(fontWeight: FontWeight.w800)),
-          content: Text(
-              'You have an open shift. Please close it before signing out.',
-              style: cairo(fontSize: 14, color: AppColors.textSecondary)),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(dialogCtx),
-                child: Text('Cancel',
-                    style: cairo(color: AppColors.textSecondary))),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(dialogCtx);
-                ctx.go('/close-shift');
-              },
-              child: Text('Close Shift',
-                  style: cairo(
-                      color: AppColors.danger, fontWeight: FontWeight.w700)),
-            ),
-          ],
-        ),
-      );
+      return;
     }
+    final s = l10n(ctx);
+    final goClose = await ConfirmSheet.show(
+      ctx,
+      title: s.shiftCloseFirstTitle,
+      body: s.shiftCloseFirstBody,
+      confirmLabel: s.shiftClose,
+      destructive: true,
+      icon: Icons.lock_outline_rounded,
+    );
+    if (goClose && ctx.mounted) ctx.go('/close-shift');
   }
 }
 
 // ── Handle ───────────────────────────────────────────────────────────────────
 
 class _Handle extends StatelessWidget {
+  const _Handle();
+
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: 12, bottom: 8),
+      padding: const EdgeInsets.only(top: AppSpace.md, bottom: AppSpace.sm),
       child: Center(
         child: Container(
           width: 36,
           height: 4,
           decoration: BoxDecoration(
-            color: AppColors.border,
+            color: context.tokens.border,
             borderRadius: BorderRadius.circular(2),
           ),
         ),
@@ -296,154 +266,49 @@ class _ShiftCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: isOnline ? AppColors.bg : AppColors.warning.withOpacity(0.07),
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(
-          color: isOnline
-              ? AppColors.borderLight
-              : AppColors.warning.withOpacity(0.25),
-          width: 0.5,
-        ),
-      ),
+    final t = context.tokens;
+    final s = l10n(context);
+    return SurfaceCard(
+      color: isOnline ? t.surfaceAlt : t.warningBg,
+      padding: const EdgeInsetsDirectional.symmetric(
+          horizontal: AppSpace.lg, vertical: AppSpace.md),
       child: Row(children: [
-        // Status dot
         Container(
           width: 8,
           height: 8,
           decoration: BoxDecoration(
-            color: isOnline ? AppColors.success : AppColors.warning,
+            color: isOnline ? t.success : t.warning,
             shape: BoxShape.circle,
           ),
         ),
         const SizedBox(width: 10),
-        // Name + meta
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                shift.tellerName,
-                style: cairo(fontSize: 13, fontWeight: FontWeight.w700),
-              ),
+              Text(shift.tellerName,
+                  style: ui(
+                      size: 13,
+                      weight: FontWeight.w700,
+                      color: t.textPrimary)),
               const SizedBox(height: 1),
               Text(
                 isOnline
-                    ? 'Opened ${timeShort(shift.openedAt)} · Opening ${egp(shift.openingCash)}'
-                    : 'Opened ${timeShort(shift.openedAt)} · Offline mode',
-                style: cairo(fontSize: 11, color: AppColors.textSecondary),
+                    ? s.shellShiftOpenedAt(
+                        timeShort(shift.openedAt), egp(shift.openingCash))
+                    : s.shellShiftOpenedOffline(timeShort(shift.openedAt)),
+                style: ui(size: 11, color: t.textSecondary),
               ),
             ],
           ),
         ),
-        const SizedBox(width: 8),
-        // Running total
-        Text(
-          egp(systemCash),
-          style: cairo(fontSize: 13, fontWeight: FontWeight.w700),
-        ),
+        const SizedBox(width: AppSpace.sm),
+        Text(egp(systemCash),
+            style:
+                money(size: 13, weight: FontWeight.w700, color: t.textPrimary)),
       ]),
     );
   }
-}
-
-// ── Offline banner ────────────────────────────────────────────────────────────
-
-class _OfflineBanner extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-      decoration: BoxDecoration(
-        color: AppColors.warning.withOpacity(0.10),
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border:
-            Border.all(color: AppColors.warning.withOpacity(0.3), width: 0.5),
-      ),
-      child: Row(children: [
-        Icon(Icons.wifi_off_rounded, size: 15, color: AppColors.warning),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            'You\'re offline — some actions are unavailable until connection is restored.',
-            style: cairo(fontSize: 11, color: AppColors.warning),
-          ),
-        ),
-      ]),
-    );
-  }
-}
-
-// ── Section label ─────────────────────────────────────────────────────────────
-
-class _SectionLabel extends StatelessWidget {
-  final String text;
-  const _SectionLabel(this.text);
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
-      child: Text(
-        text.toUpperCase(),
-        style: cairo(
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
-          color: AppColors.textMuted,
-          letterSpacing: 0.8,
-        ),
-      ),
-    );
-  }
-}
-
-// ── Action group (rounded card wrapper) ──────────────────────────────────────
-
-class _ActionGroup extends StatelessWidget {
-  final List<Widget> children;
-  const _ActionGroup({required this.children});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          border: Border.all(color: AppColors.borderLight, width: 0.5),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (int i = 0; i < children.length; i++) ...[
-              children[i],
-              if (i < children.length - 1)
-                const Divider(
-                  height: 1,
-                  indent: 56,
-                  color: AppColors.borderLight,
-                ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Badge model ───────────────────────────────────────────────────────────────
-
-enum _BadgeColor { warning, muted }
-
-class _Badge {
-  final String label;
-  final _BadgeColor color;
-  const _Badge({required this.label, required this.color});
 }
 
 // ── Action tile ───────────────────────────────────────────────────────────────
@@ -454,7 +319,7 @@ class _ActionTile extends StatelessWidget {
   final VoidCallback onTap;
   final bool danger;
   final bool disabled;
-  final _Badge? badge;
+  final String? subtitle;
 
   const _ActionTile({
     required this.icon,
@@ -462,29 +327,30 @@ class _ActionTile extends StatelessWidget {
     required this.onTap,
     this.danger = false,
     this.disabled = false,
-    this.badge,
+    this.subtitle,
   });
 
   @override
   Widget build(BuildContext context) {
+    final t = context.tokens;
     final Color fg = disabled
-        ? AppColors.textMuted
+        ? t.textMuted
         : danger
-            ? AppColors.danger
-            : AppColors.textPrimary;
+            ? t.danger
+            : t.textPrimary;
 
     final Color iconBg = disabled
-        ? AppColors.borderLight
+        ? t.borderLight
         : danger
-            ? AppColors.danger.withOpacity(0.08)
-            : AppColors.bg;
+            ? t.dangerBg
+            : t.surfaceAlt;
 
     return AnimatedPressScale(
       onTap: disabled ? null : onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+        padding: const EdgeInsetsDirectional.symmetric(
+            horizontal: 14, vertical: 11),
         child: Row(children: [
-          // Icon wrap
           Container(
             width: 34,
             height: 34,
@@ -494,68 +360,20 @@ class _ActionTile extends StatelessWidget {
             ),
             child: Icon(icon, size: 17, color: fg),
           ),
-          const SizedBox(width: 12),
-          // Label
+          const SizedBox(width: AppSpace.md),
           Expanded(
-            child: Text(
-              label,
-              style: cairo(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: fg,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                    style: ui(size: 14, weight: FontWeight.w600, color: fg)),
+                if (subtitle != null)
+                  Text(subtitle!,
+                      style: ui(size: 11, color: t.textMuted, height: 1.3)),
+              ],
             ),
           ),
-          // Optional badge
-          if (badge != null) ...[
-            _BadgeWidget(badge: badge!),
-            const SizedBox(width: 6),
-          ],
-          // Chevron
-          if (!disabled)
-            Icon(Icons.chevron_right_rounded,
-                size: 17, color: AppColors.border),
         ]),
-      ),
-    );
-  }
-}
-
-// ── Badge widget ──────────────────────────────────────────────────────────────
-
-class _BadgeWidget extends StatelessWidget {
-  final _Badge badge;
-  const _BadgeWidget({required this.badge});
-
-  @override
-  Widget build(BuildContext context) {
-    final Color bg;
-    final Color fg;
-
-    switch (badge.color) {
-      case _BadgeColor.warning:
-        bg = AppColors.warning.withOpacity(0.12);
-        fg = AppColors.warning;
-        break;
-      case _BadgeColor.muted:
-        bg = AppColors.borderLight;
-        fg = AppColors.textSecondary;
-        break;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        badge.label,
-        style: cairo(
-          fontSize: 10,
-          fontWeight: FontWeight.w600,
-          color: fg,
-        ),
       ),
     );
   }
@@ -570,28 +388,21 @@ class _SignOutRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.tokens;
     return AnimatedPressScale(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        padding: const EdgeInsetsDirectional.symmetric(
+            horizontal: AppSpace.xs, vertical: 14),
         child: Row(children: [
-          const Icon(Icons.logout_rounded,
-              size: 16, color: AppColors.textSecondary),
+          Icon(Icons.logout_rounded, size: 16, color: t.textSecondary),
           const SizedBox(width: 10),
-          Text(
-            'Sign Out',
-            style: cairo(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: AppColors.textSecondary,
-            ),
-          ),
+          Text(l10n(context).commonSignOut,
+              style: ui(
+                  size: 14, weight: FontWeight.w500, color: t.textSecondary)),
           const Spacer(),
           if (userName != null)
-            Text(
-              userName!,
-              style: cairo(fontSize: 12, color: AppColors.textMuted),
-            ),
+            Text(userName!, style: ui(size: 12, color: t.textMuted)),
         ]),
       ),
     );

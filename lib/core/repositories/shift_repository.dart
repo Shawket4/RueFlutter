@@ -1,13 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sqflite/sqflite.dart';
-import '../api/order_api.dart';
 import '../api/shift_api.dart';
 import '../api/inventory_api.dart';
 import '../db/app_database.dart';
 import '../models/shift.dart';
 import '../models/inventory.dart';
 import '../models/shift_report.dart';
-import '../models/payment_method.dart';
 import '../storage/storage_service.dart';
 
 /// TTL for inventory freshness: 5 minutes in ms.
@@ -15,13 +13,11 @@ const _kInventoryTtlMs = 5 * 60 * 1000;
 
 class ShiftRepository {
   final ShiftApi       _shiftApi;
-  final OrderApi       _orderApi;
   final InventoryApi   _inventoryApi;
   final StorageService _storage;
   final AppDatabase    _db;
 
-  ShiftRepository(this._shiftApi, this._orderApi, this._inventoryApi,
-      this._storage, this._db);
+  ShiftRepository(this._shiftApi, this._inventoryApi, this._storage, this._db);
 
   // ── Freshness / sync_meta ────────────────────────────────────────────────
 
@@ -167,7 +163,6 @@ class ShiftRepository {
 
 final shiftRepositoryProvider = Provider<ShiftRepository>((ref) => ShiftRepository(
       ref.watch(shiftApiProvider),
-      ref.watch(orderApiProvider),
       ref.watch(inventoryApiProvider),
       ref.watch(storageServiceProvider),
       AppDatabase.instance,

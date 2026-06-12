@@ -1,152 +1,157 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/api/recipe_api.dart';
+import '../../../core/l10n/l10n.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatting.dart';
-import '../../../shared/widgets/app_button.dart';
-import 'shared_widgets.dart';
+import '../../../shared/widgets/empty_state.dart';
+import '../../../shared/widgets/responsive_sheet.dart';
+import '../../../shared/widgets/status_chip.dart';
+
+/// Holds the in-flight recipe future (seeded on open, replaced on retry).
+/// autoDispose.family keyed by item+size so the sheet resets per open and
+/// never shares state with another configured drink.
+final _recipeFutureProvider = NotifierProvider.autoDispose.family<
+    _RecipeFutureNotifier,
+    Future<List<RecipeIngredient>>?,
+    String>(_RecipeFutureNotifier.new);
+
+class _RecipeFutureNotifier extends AutoDisposeFamilyNotifier<
+    Future<List<RecipeIngredient>>?, String> {
+  @override
+  Future<List<RecipeIngredient>>? build(String arg) => null;
+
+  void set(Future<List<RecipeIngredient>> future) => state = future;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  RECIPE SHEET
+//  RECIPE SHEET — ingredient composition preview for the configured drink
 // ─────────────────────────────────────────────────────────────────────────────
-class RecipeSheet extends StatefulWidget {
+class RecipeSheet extends ConsumerStatefulWidget {
   final String itemName;
   final String? sizeLabel;
   final Future<List<RecipeIngredient>> Function() fetchRecipe;
+
+  /// Pre-fetched data (e.g. the recipe button already loaded it) — shown
+  /// instantly. Retry still goes through [fetchRecipe].
+  final List<RecipeIngredient>? initialData;
 
   const RecipeSheet({
     super.key,
     required this.itemName,
     required this.sizeLabel,
     required this.fetchRecipe,
+    this.initialData,
   });
 
+  static Future<void> show(
+    BuildContext context, {
+    required String itemName,
+    String? sizeLabel,
+    required Future<List<RecipeIngredient>> Function() fetchRecipe,
+    List<RecipeIngredient>? initialData,
+  }) =>
+      ResponsiveSheet.show(
+        context: context,
+        builder: (_) => RecipeSheet(
+          itemName: itemName,
+          sizeLabel: sizeLabel,
+          fetchRecipe: fetchRecipe,
+          initialData: initialData,
+        ),
+      );
+
   @override
-  State<RecipeSheet> createState() => _RecipeSheetState();
+  ConsumerState<RecipeSheet> createState() => _RecipeSheetState();
 }
 
-class _RecipeSheetState extends State<RecipeSheet> {
-  late Future<List<RecipeIngredient>> _future;
+class _RecipeSheetState extends ConsumerState<RecipeSheet> {
+  String get _key => '${widget.itemName}|${widget.sizeLabel ?? ''}';
 
   @override
   void initState() {
     super.initState();
-    _future = widget.fetchRecipe();
+    // Riverpod forbids provider mutations inside widget lifecycles — seed
+    // after the first frame (which renders the skeleton from the null
+    // default, so the one-frame gap is invisible behind the sheet animation).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref.read(_recipeFutureProvider(_key).notifier).set(
+          widget.initialData != null
+              ? Future.value(widget.initialData)
+              : widget.fetchRecipe());
+    });
   }
 
   void _retry() {
-    setState(() {
-      _future = widget.fetchRecipe();
-    });
+    ref.read(_recipeFutureProvider(_key).notifier).set(widget.fetchRecipe());
   }
 
   @override
   Widget build(BuildContext context) {
-    final mq = MediaQuery.of(context);
-    final maxH = mq.size.height * 0.75;
+    final t = context.tokens;
+    final future = ref.watch(_recipeFutureProvider(_key));
+    final maxH = MediaQuery.of(context).size.height * 0.75;
 
     return Container(
       constraints: BoxConstraints(maxHeight: maxH),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: t.surfaceRaised,
         borderRadius: AppRadius.sheetRadius,
-        boxShadow: const [
-          BoxShadow(
-            color: Colors.black26,
-            blurRadius: 20,
-            offset: Offset(0, -4),
-          )
-        ],
       ),
+      clipBehavior: Clip.antiAlias,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Header
+          const _DragHandle(),
+
+          // ── Header ──────────────────────────────────────────────────────
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 12, 8),
+            padding: const EdgeInsetsDirectional.fromSTEB(
+                AppSpace.lg, 0, AppSpace.lg, AppSpace.md),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration:
+                      BoxDecoration(color: t.navyBg, shape: BoxShape.circle),
+                  child: Icon(Icons.science_rounded, size: 16, color: t.navy),
+                ),
+                const SizedBox(width: AppSpace.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Center(
-                        child: Container(
-                          width: 40,
-                          height: 4,
-                          margin: const EdgeInsets.only(bottom: 12),
-                          decoration: BoxDecoration(
-                            color: AppColors.border,
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
+                      Text(
+                        widget.itemName,
+                        style: Theme.of(context).textTheme.titleLarge,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withOpacity(0.1),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.science_rounded,
-                              size: 16,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              widget.itemName,
-                              style: cairo(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w800,
-                                height: 1.2,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (widget.sizeLabel != null) ...[
-                        const SizedBox(height: 2),
-                        Padding(
-                          padding: const EdgeInsets.only(left: 36),
-                          child: Text(
-                            'Size: ${normaliseName(widget.sizeLabel!)}',
-                            style: cairo(
-                              fontSize: 13,
-                              color: AppColors.textSecondary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
+                      if (widget.sizeLabel != null)
+                        Text(
+                          l10n(context).orderRecipeSizeLabel(
+                              normaliseName(widget.sizeLabel!)),
+                          style: ui(
+                              size: 12.5,
+                              weight: FontWeight.w600,
+                              color: t.textSecondary),
                         ),
-                      ],
                     ],
                   ),
                 ),
-                Align(
-                  alignment: Alignment.topRight,
-                  child: IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close_rounded,
-                        color: AppColors.textMuted),
-                    style: IconButton.styleFrom(
-                      backgroundColor: AppColors.bg,
-                      minimumSize: const Size(36, 36),
-                    ),
-                  ),
-                ),
+                const SizedBox(width: AppSpace.sm),
+                _CloseBtn(onTap: () => Navigator.pop(context)),
               ],
             ),
           ),
-          const Divider(height: 1, color: AppColors.border),
+          Container(height: 1, color: t.border),
 
-          // Dynamic Body
+          // ── Dynamic body ────────────────────────────────────────────────
           Flexible(
             child: FutureBuilder<List<RecipeIngredient>>(
-              future: _future,
+              future: future,
               builder: (context, snapshot) {
                 return AnimatedSwitcher(
                   duration: const Duration(milliseconds: 300),
@@ -163,118 +168,81 @@ class _RecipeSheetState extends State<RecipeSheet> {
   }
 
   Widget _buildStateContent(AsyncSnapshot<List<RecipeIngredient>> snapshot) {
-    if (snapshot.connectionState == ConnectionState.waiting) {
+    // `none` only occurs in the (theoretically impossible) frame before the
+    // initState seed lands — treat it as loading rather than empty.
+    if (snapshot.connectionState == ConnectionState.waiting ||
+        snapshot.connectionState == ConnectionState.none) {
       return ListView.builder(
         key: const ValueKey('loading'),
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpace.lg),
         itemCount: 4,
         itemBuilder: (_, __) => const _RecipeRowSkeleton(),
       );
     }
 
     if (snapshot.hasError) {
-      return Center(
+      return SingleChildScrollView(
         key: const ValueKey('error'),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.danger.withOpacity(0.05),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.broken_image_rounded,
-                    size: 36, color: AppColors.danger),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Failed to construct recipe',
-                style: cairo(fontSize: 16, fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'There was a problem pulling the composition data from the server.',
-                textAlign: TextAlign.center,
-                style: cairo(
-                    fontSize: 13, color: AppColors.textSecondary, height: 1.4),
-              ),
-              const SizedBox(height: 24),
-              AppButton(
-                label: 'Try Again',
-                icon: Icons.refresh_rounded,
-                width: 140,
-                height: 44,
-                onTap: _retry,
-              ),
-            ],
-          ),
+        child: ErrorState(
+          message: l10n(context).orderRecipeLoadError,
+          onRetry: _retry,
         ),
       );
     }
 
     final result = snapshot.data;
     if (result == null || result.isEmpty) {
-      return Center(
+      return SingleChildScrollView(
         key: const ValueKey('empty'),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.inbox_rounded, size: 40, color: AppColors.border),
-            const SizedBox(height: 12),
-            Text('No ingredients mapped',
-                style: cairo(fontSize: 14, color: AppColors.textMuted)),
-          ],
+        child: EmptyState(
+          icon: Icons.science_outlined,
+          title: l10n(context).orderNoIngredients,
+          body: l10n(context).orderNoRecipeYet,
         ),
       );
     }
 
     return ListView.separated(
       key: const ValueKey('data'),
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+      padding: const EdgeInsetsDirectional.fromSTEB(
+          AppSpace.lg, AppSpace.lg, AppSpace.lg, AppSpace.xxl),
       itemCount: result.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
-      itemBuilder: (_, i) => _RecipeIngredientCard(ingredient: result[i]),
+      separatorBuilder: (_, __) => const SizedBox(height: AppSpace.sm),
+      itemBuilder: (_, i) => _RecipeIngredientRow(ingredient: result[i]),
     );
   }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  INGREDIENT CARD
+//  INGREDIENT ROW
 // ─────────────────────────────────────────────────────────────────────────────
-class _RecipeIngredientCard extends StatelessWidget {
+class _RecipeIngredientRow extends StatelessWidget {
   final RecipeIngredient ingredient;
 
-  const _RecipeIngredientCard({required this.ingredient});
+  const _RecipeIngredientRow({required this.ingredient});
 
   @override
   Widget build(BuildContext context) {
-    final bool isBase = ingredient.isBase;
-    final Color badgeColor =
-        isBase ? AppColors.primary : AppColors.textSecondary;
-    final Color bgColor =
-        isBase ? AppColors.primary.withOpacity(0.04) : Colors.white;
-    final Color borderColor =
-        isBase ? AppColors.primary.withOpacity(0.15) : AppColors.border;
+    final t = context.tokens;
+    final isBase = ingredient.isBase;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpace.md, vertical: AppSpace.md),
       decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: borderColor),
+        color: isBase ? t.navyBg : t.surface,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(color: isBase ? t.navy.withOpacity(0.25) : t.border),
       ),
       child: Row(
         children: [
           Container(
-            width: 52,
+            width: 54,
             padding: const EdgeInsets.symmetric(vertical: 6),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: t.surfaceRaised,
               borderRadius: BorderRadius.circular(AppRadius.xs),
-              border: Border.all(color: AppColors.borderLight),
+              border: Border.all(color: t.borderLight),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -283,50 +251,34 @@ class _RecipeIngredientCard extends StatelessWidget {
                   ingredient.quantity % 1 == 0
                       ? ingredient.quantity.toInt().toString()
                       : ingredient.quantity.toStringAsFixed(1),
-                  style: cairo(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.textPrimary,
-                    height: 1.1,
-                  ),
+                  style: ui(
+                      size: 14,
+                      weight: FontWeight.w700,
+                      color: t.textPrimary,
+                      height: 1.1),
                 ),
                 Text(
                   ingredient.unit,
-                  style: cairo(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textMuted,
-                  ),
+                  style: ui(
+                      size: 10, weight: FontWeight.w600, color: t.textMuted),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: AppSpace.md),
           Expanded(
             child: Text(
               ingredient.name,
-              style: cairo(
-                fontSize: 14,
-                fontWeight: isBase ? FontWeight.w700 : FontWeight.w600,
-                color: AppColors.textPrimary,
-              ),
+              style: ui(
+                  size: 14,
+                  weight: isBase ? FontWeight.w700 : FontWeight.w600,
+                  color: t.textPrimary),
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: badgeColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              ingredient.sourceLabel.toUpperCase(),
-              style: cairo(
-                fontSize: 9,
-                fontWeight: FontWeight.w800,
-                color: badgeColor,
-                letterSpacing: 0.5,
-              ),
-            ),
+          const SizedBox(width: AppSpace.sm),
+          StatusChip(
+            label: ingredient.sourceLabel.toUpperCase(),
+            tone: isBase ? ChipTone.info : ChipTone.neutral,
           ),
         ],
       ),
@@ -366,51 +318,99 @@ class _RecipeRowSkeletonState extends State<_RecipeRowSkeleton>
 
   @override
   Widget build(BuildContext context) {
+    final t = context.tokens;
     return AnimatedBuilder(
       animation: _anim,
       builder: (_, __) {
-        final c = Color.lerp(skeletonBase, skeletonHighlight, _anim.value)!;
+        final c = Color.lerp(t.surfaceAlt, t.borderLight, _anim.value)!;
         return Container(
-          margin: const EdgeInsets.only(bottom: 10),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          margin: const EdgeInsets.only(bottom: AppSpace.sm),
+          padding: const EdgeInsets.symmetric(
+              horizontal: AppSpace.md, vertical: AppSpace.md),
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(AppRadius.md),
-            border: Border.all(color: AppColors.borderLight),
+            color: t.surface,
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+            border: Border.all(color: t.borderLight),
           ),
           child: Row(
             children: [
               Container(
-                width: 52,
+                width: 54,
                 height: 40,
                 decoration: BoxDecoration(
                   color: c,
                   borderRadius: BorderRadius.circular(AppRadius.xs),
                 ),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: AppSpace.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(width: 120, height: 14, color: c),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppSpace.sm),
                     Container(width: 60, height: 10, color: c),
                   ],
                 ),
               ),
               Container(
-                width: 45,
+                width: 48,
                 height: 20,
                 decoration: BoxDecoration(
                   color: c,
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
                 ),
               ),
             ],
           ),
         );
       },
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  SMALL PARTS
+// ─────────────────────────────────────────────────────────────────────────────
+class _DragHandle extends StatelessWidget {
+  const _DragHandle();
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding:
+            const EdgeInsets.only(top: AppSpace.md, bottom: AppSpace.md),
+        child: Center(
+          child: Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: context.tokens.border,
+              borderRadius: BorderRadius.circular(AppRadius.pill),
+            ),
+          ),
+        ),
+      );
+}
+
+class _CloseBtn extends StatelessWidget {
+  final VoidCallback onTap;
+  const _CloseBtn({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    return AnimatedPressScale(
+      onTap: onTap,
+      child: Container(
+        width: 34,
+        height: 34,
+        decoration: BoxDecoration(
+          color: t.surfaceAlt,
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+          border: Border.all(color: t.border),
+        ),
+        child: Icon(Icons.close_rounded, size: 18, color: t.textSecondary),
+      ),
     );
   }
 }

@@ -76,6 +76,10 @@ class PrinterService {
           pdfBytes: pdfBytes,
           kickDrawer: kickDrawer,
         ),
+      // Unknown brands never get here: Branch.hasPrinter gates all print
+      // entry points and treats an unrecognised brand as "no printer".
+      PrinterBrand.unknownDefaultOpenApi =>
+        Future.value('Unsupported printer brand'),
     };
   }
 
@@ -248,8 +252,9 @@ class PrinterService {
   /// Handles all known Talabat variants and underscore-separated names.
   static String _fmtPayment(String raw, List<PaymentMethod> methods) {
     final method = methods.where((m) => m.wireFormat == raw).firstOrNull;
-    if (method != null) {
-      return method.labelTranslations['en'] ?? raw[0].toUpperCase() + raw.substring(1).replaceAll('_', ' ');
+    final translations = method?.labelTranslations;
+    if (translations is Map && translations['en'] is String) {
+      return translations['en'] as String;
     }
     return raw[0].toUpperCase() + raw.substring(1).replaceAll('_', ' ');
   }
@@ -324,7 +329,7 @@ class PrinterService {
               _row('${item.quantity}x ${item.itemName}',
                   egp(item.lineTotal),
                   font: font, fontB: fontB, bold: true, sz: 8),
-              ...item.bundleComponents.expand((c) {
+              ...(item.bundleComponents ?? const []).expand((c) {
                 final sizePart =
                     c.sizeLabel != null ? ' (${c.sizeLabel})' : '';
                 return [

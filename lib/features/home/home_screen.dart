@@ -1,7 +1,10 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
+import '../../core/l10n/l10n.dart';
 import '../../core/providers/auth_notifier.dart';
 import '../../core/providers/shift_notifier.dart';
 import '../../core/services/connectivity_service.dart';
@@ -9,10 +12,13 @@ import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatting.dart';
 import '../../core/utils/responsive.dart';
 import '../../shared/widgets/app_button.dart';
-import '../../shared/widgets/card_container.dart';
-import '../../core/widgets/sufrix_logo.dart';
+import '../../shared/widgets/confirm_sheet.dart';
+import '../../shared/widgets/empty_state.dart';
+import '../../shared/widgets/offline_banner.dart';
+import '../../shared/widgets/status_chip.dart';
+import '../../shared/widgets/surface_card.dart';
 
-/// Home screen — only visible when NO shift is open.
+/// Shift-start dashboard — only visible when NO shift is open.
 /// On load, if a shift IS open, auto-redirects to `/order`.
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -54,236 +60,220 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (!mounted) return;
     if (canLeave) {
       await ref.read(authProvider.notifier).logout();
-    } else {
-      await showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppRadius.lg)),
-          title: Text('Close Shift First',
-              style: cairo(fontWeight: FontWeight.w800)),
-          content: Text(
-            'You have an open shift. You must close it before signing out.',
-            style: cairo(fontSize: 14, color: AppColors.textSecondary),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child:
-                  Text('Cancel', style: cairo(color: AppColors.textSecondary)),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pop(ctx);
-                context.go('/close-shift');
-              },
-              child: Text('Close Shift',
-                  style: cairo(
-                      color: AppColors.danger, fontWeight: FontWeight.w700)),
-            ),
-          ],
-        ),
-      );
+      return;
     }
+    final s = l10n(context);
+    final closeNow = await ConfirmSheet.show(
+      context,
+      title: s.shiftCloseFirstTitle,
+      body: s.shiftCloseFirstBody,
+      confirmLabel: s.shiftClose,
+      destructive: true,
+      icon: Icons.lock_clock_rounded,
+    );
+    if (closeNow && mounted) context.go('/close-shift');
   }
 
   @override
   Widget build(BuildContext context) {
-    final user    = ref.watch(authProvider).user!;
-    final shiftSt = ref.watch(shiftProvider);
-    final isTablet = context.isTablet || context.isDesktop;
+    final t = context.tokens;
+    final user = ref.watch(authProvider.select((a) => a.user))!;
+    final pad = context.responsive(phone: 20, tablet: 32);
 
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: t.bg,
       body: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.all(isTablet ? 36 : 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // ── Header ─────────────────────────────────────────────
-              Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-                SufrixLongLogo(height: isTablet ? 40 : 34),
-                const Spacer(),
-                Text(user.name,
-                    style: cairo(
-                        fontSize: isTablet ? 14 : 13,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textSecondary)),
-                const SizedBox(width: 12),
-                _SignOutBtn(onTap: _onSignOut),
-              ]),
-              SizedBox(height: isTablet ? 36 : 28),
-
-              // ── Greeting ───────────────────────────────────────────
-              Text(_greet(user.name.split(' ').first),
-                  style: cairo(
-                      fontSize: isTablet ? 28 : 22,
-                      fontWeight: FontWeight.w800)),
-              const SizedBox(height: 2),
-              Text(user.role.replaceAll('_', ' ').toUpperCase(),
-                  style: cairo(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textMuted,
-                      letterSpacing: 1)),
-              SizedBox(height: isTablet ? 32 : 24),
-
-              // ── Content ────────────────────────────────────────────
-              if (shiftSt.isLoading)
-                const Expanded(
-                  child: Center(
-                    child: CircularProgressIndicator(color: AppColors.primary)),
-                )
-              else if (shiftSt.error != null && !shiftSt.hasOpenShift)
-                _ErrorBanner(message: shiftSt.error!, onRetry: _load)
-              else ...[
-                _NoShiftCard(
-                  suggested: shiftSt.suggestedOpeningCash,
-                  isTablet: isTablet,
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: isTablet ? 480 : double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: () => context.push('/shift-history'),
-                    icon: const Icon(Icons.history_rounded, size: 16),
-                    label: Text('View Past Shifts',
-                        style: cairo(fontSize: 13, fontWeight: FontWeight.w600)),
-                    style: OutlinedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 48),
-                      shape: RoundedRectangleBorder(
-                          borderRadius:
-                              BorderRadius.circular(AppRadius.sm)),
-                      side: const BorderSide(color: AppColors.border),
-                      foregroundColor: AppColors.textSecondary,
-                    ),
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 560),
+            child: Padding(
+              padding: EdgeInsets.all(pad),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // ── Greeting + quiet sign-out ──────────────────────────
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(_greet(context, user.name.split(' ').first),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .headlineMedium),
+                            const SizedBox(height: AppSpace.xs),
+                            Text(
+                              user.role.value.replaceAll('_', ' ').toUpperCase(),
+                              style: ui(
+                                  size: 11,
+                                  weight: FontWeight.w600,
+                                  color: t.textMuted,
+                                  letterSpacing: 1),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Settings must be reachable WITHOUT an open shift —
+                      // device reconfiguration only works while no shift is
+                      // open, and the order screen (the other Settings entry)
+                      // requires one.
+                      IconButton(
+                        onPressed: () => context.push('/settings'),
+                        tooltip: l10n(context).settings,
+                        icon: Icon(Icons.settings_rounded,
+                            size: 20, color: t.textSecondary),
+                      ),
+                      IconButton(
+                        onPressed: _onSignOut,
+                        tooltip: l10n(context).commonSignOut,
+                        icon: Icon(Icons.logout_rounded,
+                            size: 20, color: t.textSecondary),
+                      ),
+                    ],
                   ),
-                ),
-              ],
-            ],
+                  SizedBox(
+                      height: context.responsive(
+                          phone: AppSpace.xl, tablet: AppSpace.xxl)),
+
+                  const OfflineBanner(),
+
+                  // ── Content ────────────────────────────────────────────
+                  // Leaf consumer: the greeting/header above doesn't rebuild
+                  // when shift state changes.
+                  Expanded(child: _HomeBody(onRetry: _load)),
+                ],
+              ),
+            ),
           ),
         ),
       ),
     );
   }
 
-  String _greet(String first) {
+  String _greet(BuildContext context, String first) {
+    final s = l10n(context);
     final h = DateTime.now().hour;
-    final w = h < 12
-        ? 'Morning'
-        : h < 17
-            ? 'Afternoon'
-            : 'Evening';
-    return 'Good $w, $first';
+    if (h < 12) return s.shellGreetingMorning(first);
+    if (h < 17) return s.shellGreetingAfternoon(first);
+    return s.shellGreetingEvening(first);
   }
 }
 
-// ── No Shift Card ───────────────────────────────────────────────────────────
+// ── Body (leaf consumer — narrow rebuild scope) ──────────────────────────────
 
-class _NoShiftCard extends StatelessWidget {
-  final int suggested;
-  final bool isTablet;
-  const _NoShiftCard({required this.suggested, required this.isTablet});
+class _HomeBody extends ConsumerWidget {
+  final VoidCallback onRetry;
+  const _HomeBody({required this.onRetry});
 
   @override
-  Widget build(BuildContext context) => ConstrainedBox(
-        constraints: BoxConstraints(
-            maxWidth: isTablet ? 480 : double.infinity),
-        child: CardContainer(
-          padding: EdgeInsets.all(isTablet ? 28 : 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+  Widget build(BuildContext context, WidgetRef ref) {
+    final (isLoading, error, hasOpenShift, suggested) = ref.watch(
+        shiftProvider.select((s) =>
+            (s.isLoading, s.error, s.hasOpenShift, s.suggestedOpeningCash)));
+
+    if (isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (error != null && !hasOpenShift) {
+      return ErrorState(message: error, onRetry: onRetry);
+    }
+    return SingleChildScrollView(
+      child: _ShiftStatusCard(suggested: suggested),
+    );
+  }
+}
+
+// ── Shift status card ────────────────────────────────────────────────────────
+
+class _ShiftStatusCard extends StatelessWidget {
+  final int suggested;
+  const _ShiftStatusCard({required this.suggested});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    final s = l10n(context);
+    return SurfaceCard(
+      padding: const EdgeInsets.all(AppSpace.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Row(children: [
-                Container(
-                  width: 46,
-                  height: 46,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: const Icon(Icons.wb_sunny_outlined,
-                      color: AppColors.primary, size: 22),
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: t.navyBg,
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
                 ),
-                const SizedBox(width: 14),
-                Column(
+                child: Icon(Icons.storefront_rounded, color: t.navy, size: 22),
+              ),
+              const SizedBox(width: AppSpace.md),
+              Expanded(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('No Open Shift',
-                        style: cairo(
-                            fontSize: isTablet ? 18 : 16,
-                            fontWeight: FontWeight.w700)),
-                    if (suggested > 0)
-                      Text('Last closing: ${egp(suggested)}',
-                          style: cairo(
-                              fontSize: 12,
-                              color: AppColors.textSecondary)),
+                    Text(s.shiftNoOpenShift,
+                        style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 2),
+                    Text(s.shiftOpenPrompt,
+                        style: ui(size: 12, color: t.textSecondary)),
                   ],
                 ),
-              ]),
-              const SizedBox(height: 22),
-              AppButton(
-                label: 'Open Shift',
-                width: double.infinity,
-                icon: Icons.play_arrow_rounded,
-                onTap: () => context.go('/open-shift'),
               ),
+              const SizedBox(width: AppSpace.sm),
+              StatusChip(label: s.shiftStatusClosed),
             ],
           ),
-        ),
-      );
-}
-
-// ── Sign Out Button ─────────────────────────────────────────────────────────
-
-class _SignOutBtn extends StatelessWidget {
-  final VoidCallback onTap;
-  const _SignOutBtn({required this.onTap});
-  @override
-  Widget build(BuildContext context) => GestureDetector(
-        onTap: onTap,
-        child: Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(11),
-              border: Border.all(color: AppColors.border)),
-          alignment: Alignment.center,
-          child: const Icon(Icons.logout_rounded,
-              size: 15, color: AppColors.textSecondary),
-        ),
-      );
-}
-
-// ── Error Banner ────────────────────────────────────────────────────────────
-
-class _ErrorBanner extends StatelessWidget {
-  final String message;
-  final VoidCallback onRetry;
-  const _ErrorBanner({required this.message, required this.onRetry});
-  @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-            color: AppColors.danger.withOpacity(0.06),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.danger.withOpacity(0.2))),
-        child: Row(children: [
-          const Icon(Icons.error_outline_rounded,
-              color: AppColors.danger, size: 18),
-          const SizedBox(width: 10),
-          Expanded(
-              child: Text(message,
-                  style: cairo(fontSize: 13, color: AppColors.danger))),
-          TextButton(
-              onPressed: onRetry,
-              child: Text('Retry',
-                  style: cairo(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.primary))),
-        ]),
-      );
+          if (suggested > 0) ...[
+            const SizedBox(height: AppSpace.lg),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(AppSpace.md),
+              decoration: BoxDecoration(
+                color: t.surfaceAlt,
+                borderRadius: BorderRadius.circular(AppRadius.xs),
+                border: Border.all(color: t.borderLight),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.account_balance_wallet_outlined,
+                      size: 18, color: t.textSecondary),
+                  const SizedBox(width: AppSpace.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(s.shiftSuggestedOpeningCash,
+                            style: ui(
+                                size: 12,
+                                weight: FontWeight.w600,
+                                color: t.textPrimary)),
+                        Text(s.shiftCarriedOver,
+                            style: ui(size: 11, color: t.textMuted)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: AppSpace.sm),
+                  Text(egp(suggested),
+                      style: money(size: 15, color: t.textPrimary)),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: AppSpace.lg),
+          AppButton(
+            label: s.shiftOpen,
+            width: double.infinity,
+            icon: Icons.play_arrow_rounded,
+            onTap: () => context.go('/open-shift'),
+          ),
+        ],
+      ),
+    );
+  }
 }

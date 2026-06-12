@@ -53,10 +53,14 @@ class OrderApi {
   ///
   /// Backend (`GET /orders`) paginates (shift default `per_page=1000`) and returns:
   /// `{ data, total, page, per_page, total_pages, summary }`.
-  Future<List<Order>> list({String? shiftId, String? branchId}) async {
+  Future<List<Order>> list(
+      {String? shiftId, String? branchId, bool includeItems = true}) async {
     final baseParams = <String, dynamic>{
       // Sufrix API allows up to 999999; use a high page size for POS shift loads.
       'per_page': 500,
+      // Embed line items so cached orders are complete offline and screens
+      // never need a per-order detail fetch.
+      if (includeItems) 'include_items': true,
     };
     if (shiftId  != null) baseParams['shift_id']  = shiftId;
     if (branchId != null) baseParams['branch_id'] = branchId;
@@ -120,7 +124,10 @@ class OrderApi {
       'restore_inventory': restoreInventory,
       if (voidedAt != null) 'voided_at': voidedAt.toUtc().toIso8601String(),
     });
-    return Order.fromJson(res.data as Map<String, dynamic>);
+    // The void endpoint returns a bare order WITHOUT line items; the app's
+    // Order (OrderFull) requires the `items` key, so default it.
+    final body = res.data as Map<String, dynamic>;
+    return Order.fromJson({'items': const [], ...body});
   }
 }
 

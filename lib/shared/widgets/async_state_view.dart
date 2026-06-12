@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/l10n/l10n.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/services/connectivity_service.dart';
 
@@ -8,7 +9,9 @@ class AsyncStateView<T> extends StatelessWidget {
   final bool isEmpty;
   final Widget Function(BuildContext) builder;
   final VoidCallback onRetry;
-  final String emptyMessage;
+
+  /// Custom empty message; defaults to the localized "No data available".
+  final String? emptyMessage;
   final IconData emptyIcon;
 
   const AsyncStateView({
@@ -18,7 +21,7 @@ class AsyncStateView<T> extends StatelessWidget {
     required this.isEmpty,
     required this.builder,
     required this.onRetry,
-    this.emptyMessage = 'No data available',
+    this.emptyMessage,
     this.emptyIcon = Icons.inbox_rounded,
   });
 
@@ -45,7 +48,9 @@ class AsyncStateView<T> extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                isOffline ? 'Offline' : 'Something went wrong',
+                isOffline
+                    ? l10n(context).commonOffline
+                    : l10n(context).commonSomethingWentWrong,
                 style: cairo(fontSize: 18, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 8),
@@ -58,7 +63,8 @@ class AsyncStateView<T> extends StatelessWidget {
               ElevatedButton.icon(
                 onPressed: onRetry,
                 icon: const Icon(Icons.refresh_rounded, size: 18),
-                label: Text('Retry', style: cairo(fontWeight: FontWeight.w600)),
+                label: Text(l10n(context).retryAction,
+                    style: cairo(fontWeight: FontWeight.w600)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
@@ -80,7 +86,7 @@ class AsyncStateView<T> extends StatelessWidget {
             Icon(emptyIcon, size: 48, color: AppColors.textMuted),
             const SizedBox(height: 16),
             Text(
-              emptyMessage,
+              emptyMessage ?? l10n(context).commonNoDataAvailable,
               style: cairo(fontSize: 16, color: AppColors.textSecondary, fontWeight: FontWeight.w600),
             ),
           ],

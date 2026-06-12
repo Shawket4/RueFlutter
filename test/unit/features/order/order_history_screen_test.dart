@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:sufrix_pos/core/api/shift_api.dart';
+import 'package:sufrix_pos/core/l10n/app_localizations.dart';
 import 'package:sufrix_pos/core/models/order.dart';
 import 'package:sufrix_pos/core/models/shift.dart';
+import 'package:sufrix_pos/core/providers/auth_notifier.dart';
 import 'package:sufrix_pos/core/providers/order_history_notifier.dart';
 import 'package:sufrix_pos/core/providers/shift_notifier.dart';
 import 'package:sufrix_pos/core/repositories/order_repository.dart';
@@ -13,9 +15,17 @@ import 'package:mocktail/mocktail.dart';
 class FakeShiftNotifier extends ShiftNotifier {
   final ShiftState _state;
   FakeShiftNotifier(this._state);
-  
+
   @override
   ShiftState build() => _state;
+}
+
+class FakeAuthNotifier extends AuthNotifier {
+  @override
+  AuthState build() => const AuthState(isLoading: false);
+
+  @override
+  Future<void> init() async {}
 }
 
 class FakeOrderHistoryNotifier extends OrderHistoryNotifier {
@@ -33,24 +43,28 @@ class FakeOrderHistoryNotifier extends OrderHistoryNotifier {
 }
 
 class MockOrderRepository extends Mock implements OrderRepository {}
+class MockShiftApi extends Mock implements ShiftApi {}
 
 void main() {
-  setUpAll(() {
-    GoogleFonts.config.allowRuntimeFetching = false;
-  });
-
   Widget buildSubject({
     required ShiftState shiftState,
     required OrderHistoryState historyState,
     MockOrderRepository? orderRepo,
   }) {
+    final mockShiftApi = MockShiftApi();
+    when(() => mockShiftApi.getReport(any())).thenThrow(Exception('offline'));
+
     return ProviderScope(
       overrides: [
+        authProvider.overrideWith(() => FakeAuthNotifier()),
         shiftProvider.overrideWith(() => FakeShiftNotifier(shiftState)),
         orderHistoryProvider.overrideWith(() => FakeOrderHistoryNotifier(historyState)),
+        shiftApiProvider.overrideWithValue(mockShiftApi),
         if (orderRepo != null) orderRepositoryProvider.overrideWithValue(orderRepo),
       ],
       child: const MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: OrderHistoryScreen(),
       ),
     );
@@ -74,6 +88,7 @@ void main() {
       openedAt: DateTime.now(),
       status: 'open',
       openingCash: 100,
+      openingCashWasEdited: false,
     );
 
     await tester.pumpWidget(buildSubject(
@@ -93,6 +108,7 @@ void main() {
       openedAt: DateTime.now(),
       status: 'open',
       openingCash: 100,
+      openingCashWasEdited: false,
     );
 
     await tester.pumpWidget(buildSubject(
@@ -100,7 +116,7 @@ void main() {
       historyState: const OrderHistoryState(orders: []),
     ));
 
-    expect(find.text('No orders yet for this shift'), findsOneWidget);
+    expect(find.text('No orders yet'), findsOneWidget);
   });
 
   testWidgets('renders orders list', (tester) async {
@@ -112,6 +128,7 @@ void main() {
       openedAt: DateTime.now(),
       status: 'open',
       openingCash: 100,
+      openingCashWasEdited: false,
     );
 
     final orders = <Order>[

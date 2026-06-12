@@ -4,6 +4,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/db/app_database.dart';
 import 'core/db/kv_store.dart';
+import 'core/l10n/app_localizations.dart';
 import 'core/db/outbox_dao.dart';
 import 'core/providers/auth_notifier.dart';
 import 'core/providers/order_history_notifier.dart';
@@ -12,6 +13,8 @@ import 'core/router/router.dart';
 import 'core/services/connectivity_service.dart';
 import 'core/services/offline_queue.dart';
 import 'core/providers/locale_notifier.dart';
+import 'core/providers/theme_mode_notifier.dart';
+import 'core/storage/secure_token_store.dart';
 import 'core/storage/storage_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/widgets/sufrix_logo.dart';
@@ -36,11 +39,15 @@ void main() async {
   await kv.init(); // hydrate in-memory cache from kv table
   final outboxDao = OutboxDao(AppDatabase.instance);
 
+  // JWT lives in the platform keychain; migrate any legacy plaintext token.
+  final tokenStore = SecureTokenStore();
+  await tokenStore.init(migrateFrom: kv);
+
   await ConnectivityService.instance.init();
 
   runApp(ProviderScope(
     overrides: [
-      storageServiceProvider.overrideWithValue(StorageService(kv)),
+      storageServiceProvider.overrideWithValue(StorageService(kv, tokenStore)),
       outboxDaoProvider.overrideWithValue(outboxDao),
     ],
     child: const _App(),
@@ -63,7 +70,17 @@ class _AppState extends ConsumerState<_App> {
       final shiftNotif = ref.read(shiftProvider.notifier);
 
       // Wire up optimistic replacement callbacks.
-      queue.onOrderSynced     = (order, localId) => history.replaceOrder(localId, order);
+      queue.onOrderSynced = (order, localId) {
+        history.replaceOrder(localId, order);
+        // The synced order is leaving the outbox and now counts toward the
+        // server's expected-cash figure — refresh so systemCash doesn't keep
+        // a stale queued-cash adjustment (loadSystemCash re-adds whatever is
+        // still queued via _queuedCashForShift).
+        final current = ref.read(shiftProvider).shift;
+        if (current != null && current.id == order.shiftId) {
+          shiftNotif.loadSystemCash();
+        }
+      };
       queue.onVoidSynced      = history.updateOrder;
       queue.onShiftOpenSynced = (shift) {
         final current = ref.read(shiftProvider).shift;
@@ -79,9 +96,10 @@ class _AppState extends ConsumerState<_App> {
 
   @override
   Widget build(BuildContext context) {
-    final auth   = ref.watch(authProvider);
-    final router = ref.watch(routerProvider);
-    final locale = ref.watch(localeProvider);
+    final auth      = ref.watch(authProvider);
+    final router    = ref.watch(routerProvider);
+    final locale    = ref.watch(localeProvider);
+    final themeMode = ref.watch(themeModeProvider);
 
     if (auth.isLoading) return const _SplashScreen();
 
@@ -89,9 +107,12 @@ class _AppState extends ConsumerState<_App> {
       debugShowCheckedModeBanner: false,
       title: 'Sufrix POS',
       theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      themeMode: themeMode,
       locale: locale,
       routerConfig: router,
       localizationsDelegates: const [
+        AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,

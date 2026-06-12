@@ -33,6 +33,9 @@ void main() {
         'printer_port': 9100,
         'is_active': true,
         'org_logo_url': 'http://example.com/logo.png',
+        'timezone': 'Africa/Cairo',
+        'created_at': '2023-01-01T00:00:00Z',
+        'updated_at': '2023-01-01T00:00:00Z',
       };
 
       when(() => mockDio.get('/branches/b1')).thenAnswer((_) async => Response(

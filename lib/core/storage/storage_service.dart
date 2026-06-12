@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../db/kv_store.dart';
+import '../utils/app_log.dart';
+import 'secure_token_store.dart';
 
 // ---------------------------------------------------------------------------
 // StorageService
@@ -8,80 +10,118 @@ import '../db/kv_store.dart';
 // Public method signatures are byte-for-byte identical to the SharedPreferences
 // implementation so that none of the ~80 call sites need to change.
 //
-// Constructor changed: StorageService(SharedPreferences) → StorageService(KvStore).
 // Reads are synchronous (KvStore._cache); writes are async (KvStore.setString).
+// The JWT lives in SecureTokenStore (platform keychain), not the kv table.
 //
-// Removed:
-//   - savePendingActions / loadPendingActions / _pendingKey
-//     → the OutboxDao (sqflite outbox table) owns the mutation queue now.
-//
-// Changed:
-//   - menuCachedAt(orgId) now reads KvStore.tsOf('menu_v2_$orgId') (ms epoch)
-//     instead of the separate 'menu_cached_at_$orgId' ISO8601 string key.
-//   - loadDraftCartsWithLegacyMigration: legacy branch is dead (no SharedPrefs);
-//     simply delegates to loadDraftCarts(scope).
+// Corrupt cache entries are dropped (so a bad blob can't brick a load path)
+// but every drop is recorded in AppLog so it is diagnosable from Settings →
+// Diagnostics instead of vanishing silently.
 // ---------------------------------------------------------------------------
 
 class StorageService {
   final KvStore _kv;
-  StorageService(this._kv);
+  final SecureTokenStore _tokens;
+  StorageService(this._kv, this._tokens);
 
   /// Expose raw KvStore for non-domain code (e.g. locale, settings).
   KvStore get raw => _kv;
 
-  // ── Auth ────────────────────────────────────────────────────────────────────
-
-  String? get token => _kv.getString('auth_token');
-  Future<void> saveToken(String t) => _kv.setString('auth_token', t);
-  Future<void> removeToken() => _kv.remove('auth_token');
-
-  Future<void> saveUser(Map<String, dynamic> j) =>
-      _kv.setString('cached_user', jsonEncode(j));
-
-  Map<String, dynamic>? loadUser() {
-    final raw = _kv.getString('cached_user');
+  /// Decodes a cached JSON value; on corruption logs, deletes, returns null.
+  T? _decode<T>(String key, T Function(String raw) parse) {
+    final raw = _kv.getString(key);
     if (raw == null) return null;
     try {
-      return jsonDecode(raw) as Map<String, dynamic>;
-    } catch (_) {
-      _kv.remove('cached_user');
+      return parse(raw);
+    } catch (e) {
+      AppLog.warn('storage', 'Corrupt cache "$key" dropped: $e');
+      _kv.remove(key);
       return null;
     }
   }
 
+  Map<String, dynamic>? _decodeMap(String key) =>
+      _decode(key, (r) => jsonDecode(r) as Map<String, dynamic>);
+
+  List<Map<String, dynamic>>? _decodeList(String key) =>
+      _decode(key, (r) => (jsonDecode(r) as List).cast<Map<String, dynamic>>());
+
+  // ── Auth ────────────────────────────────────────────────────────────────────
+
+  String? get token => _tokens.token;
+  Future<void> saveToken(String t) => _tokens.write(t);
+  Future<void> removeToken() => _tokens.clear();
+
+  Future<void> saveUser(Map<String, dynamic> j) =>
+      _kv.setString('cached_user', jsonEncode(j));
+
+  Map<String, dynamic>? loadUser() => _decodeMap('cached_user');
+
   Future<void> removeUser() => _kv.remove('cached_user');
+
+  // ── Device config (one-time setup: which org/branch this till serves) ─────
+
+  static const _kDeviceOrgId      = 'device_org_id';
+  static const _kDeviceBranchId   = 'device_branch_id';
+  static const _kDeviceBranchName = 'device_branch_name';
+
+  Future<void> saveDeviceConfig({
+    required String orgId,
+    required String branchId,
+    required String branchName,
+  }) async {
+    await _kv.setString(_kDeviceOrgId, orgId);
+    await _kv.setString(_kDeviceBranchId, branchId);
+    await _kv.setString(_kDeviceBranchName, branchName);
+  }
+
+  String? get deviceOrgId      => _kv.getString(_kDeviceOrgId);
+  String? get deviceBranchId   => _kv.getString(_kDeviceBranchId);
+  String? get deviceBranchName => _kv.getString(_kDeviceBranchName);
+
+  bool get isDeviceConfigured =>
+      deviceOrgId != null && deviceBranchId != null;
+
+  Future<void> clearDeviceConfig() async {
+    await _kv.remove(_kDeviceOrgId);
+    await _kv.remove(_kDeviceBranchId);
+    await _kv.remove(_kDeviceBranchName);
+  }
+
+  // ── Offline unlock (salted PIN hash — never the PIN itself) ────────────────
+  // These survive logout/clearAuth on purpose: they exist precisely so a
+  // teller can get back in when the network (and therefore /auth/login) is
+  // unreachable.
+
+  String _normName(String name) => name.trim().toLowerCase();
+
+  Future<void> saveOfflineUnlock(String name, String saltedHash) =>
+      _kv.setString('offline_unlock_${_normName(name)}', saltedHash);
+
+  String? offlineUnlockHash(String name) =>
+      _kv.getString('offline_unlock_${_normName(name)}');
+
+  /// Snapshot of the user object for offline unlock; kept separate from
+  /// `cached_user` because that one is wiped by [clearAuth].
+  Future<void> saveOfflineUser(String name, Map<String, dynamic> j) =>
+      _kv.setString('offline_user_${_normName(name)}', jsonEncode(j));
+
+  Map<String, dynamic>? loadOfflineUser(String name) =>
+      _decodeMap('offline_user_${_normName(name)}');
 
   // ── Branch ──────────────────────────────────────────────────────────────────
 
   Future<void> saveBranch(String id, Map<String, dynamic> j) =>
       _kv.setString('branch_$id', jsonEncode(j));
 
-  Map<String, dynamic>? loadBranch(String id) {
-    final raw = _kv.getString('branch_$id');
-    if (raw == null) return null;
-    try {
-      return jsonDecode(raw) as Map<String, dynamic>;
-    } catch (_) {
-      _kv.remove('branch_$id');
-      return null;
-    }
-  }
+  Map<String, dynamic>? loadBranch(String id) => _decodeMap('branch_$id');
 
   // ── Shift ───────────────────────────────────────────────────────────────────
 
   Future<void> saveShift(String branchId, Map<String, dynamic> j) =>
       _kv.setString('shift_$branchId', jsonEncode(j));
 
-  Map<String, dynamic>? loadShift(String branchId) {
-    final raw = _kv.getString('shift_$branchId');
-    if (raw == null) return null;
-    try {
-      return jsonDecode(raw) as Map<String, dynamic>;
-    } catch (_) {
-      _kv.remove('shift_$branchId');
-      return null;
-    }
-  }
+  Map<String, dynamic>? loadShift(String branchId) =>
+      _decodeMap('shift_$branchId');
 
   Future<void> removeShift(String branchId) => _kv.remove('shift_$branchId');
 
@@ -92,16 +132,7 @@ class StorageService {
   Future<void> saveMenu(String orgId, Map<String, dynamic> j) =>
       _kv.setString('menu_v2_$orgId', jsonEncode(j));
 
-  Map<String, dynamic>? loadMenu(String orgId) {
-    final raw = _kv.getString('menu_v2_$orgId');
-    if (raw == null) return null;
-    try {
-      return jsonDecode(raw) as Map<String, dynamic>;
-    } catch (_) {
-      _kv.remove('menu_v2_$orgId');
-      return null;
-    }
-  }
+  Map<String, dynamic>? loadMenu(String orgId) => _decodeMap('menu_v2_$orgId');
 
   /// Returns the wall-clock time of the last [saveMenu] call for [orgId].
   /// Reads the KvStore write-timestamp (epoch ms) instead of a separate key.
@@ -116,16 +147,8 @@ class StorageService {
   Future<void> saveBundles(String orgId, List<Map<String, dynamic>> bundles) =>
       _kv.setString('bundles_v1_$orgId', jsonEncode(bundles));
 
-  List<Map<String, dynamic>>? loadBundles(String orgId) {
-    final raw = _kv.getString('bundles_v1_$orgId');
-    if (raw == null) return null;
-    try {
-      return (jsonDecode(raw) as List).cast<Map<String, dynamic>>();
-    } catch (_) {
-      _kv.remove('bundles_v1_$orgId');
-      return null;
-    }
-  }
+  List<Map<String, dynamic>>? loadBundles(String orgId) =>
+      _decodeList('bundles_v1_$orgId');
 
   // ── Addons ──────────────────────────────────────────────────────────────────
 
@@ -133,16 +156,8 @@ class StorageService {
           String orgId, List<Map<String, dynamic>> addons) =>
       _kv.setString('addons_$orgId', jsonEncode(addons));
 
-  List<Map<String, dynamic>>? loadAddons(String orgId) {
-    final raw = _kv.getString('addons_$orgId');
-    if (raw == null) return null;
-    try {
-      return (jsonDecode(raw) as List).cast<Map<String, dynamic>>();
-    } catch (_) {
-      _kv.remove('addons_$orgId');
-      return null;
-    }
-  }
+  List<Map<String, dynamic>>? loadAddons(String orgId) =>
+      _decodeList('addons_$orgId');
 
   // ── Discounts ────────────────────────────────────────────────────────────────
 
@@ -150,16 +165,8 @@ class StorageService {
           String orgId, List<Map<String, dynamic>> discounts) =>
       _kv.setString('discounts_$orgId', jsonEncode(discounts));
 
-  List<Map<String, dynamic>> loadDiscounts(String orgId) {
-    final raw = _kv.getString('discounts_$orgId');
-    if (raw == null) return [];
-    try {
-      return (jsonDecode(raw) as List).cast<Map<String, dynamic>>();
-    } catch (_) {
-      _kv.remove('discounts_$orgId');
-      return [];
-    }
-  }
+  List<Map<String, dynamic>> loadDiscounts(String orgId) =>
+      _decodeList('discounts_$orgId') ?? [];
 
   // ── Payment methods ──────────────────────────────────────────────────────────
 
@@ -167,16 +174,8 @@ class StorageService {
           String orgId, List<Map<String, dynamic>> methods) =>
       _kv.setString('payment_methods_$orgId', jsonEncode(methods));
 
-  List<Map<String, dynamic>> loadPaymentMethods(String orgId) {
-    final raw = _kv.getString('payment_methods_$orgId');
-    if (raw == null) return [];
-    try {
-      return (jsonDecode(raw) as List).cast<Map<String, dynamic>>();
-    } catch (_) {
-      _kv.remove('payment_methods_$orgId');
-      return [];
-    }
-  }
+  List<Map<String, dynamic>> loadPaymentMethods(String orgId) =>
+      _decodeList('payment_methods_$orgId') ?? [];
 
   // ── Orders ───────────────────────────────────────────────────────────────────
 
@@ -184,16 +183,8 @@ class StorageService {
           String shiftId, List<Map<String, dynamic>> orders) =>
       _kv.setString('orders_$shiftId', jsonEncode(orders));
 
-  List<Map<String, dynamic>>? loadOrders(String shiftId) {
-    final raw = _kv.getString('orders_$shiftId');
-    if (raw == null) return null;
-    try {
-      return (jsonDecode(raw) as List).cast<Map<String, dynamic>>();
-    } catch (_) {
-      _kv.remove('orders_$shiftId');
-      return null;
-    }
-  }
+  List<Map<String, dynamic>>? loadOrders(String shiftId) =>
+      _decodeList('orders_$shiftId');
 
   // ── Shifts list ───────────────────────────────────────────────────────────────
 
@@ -201,16 +192,8 @@ class StorageService {
           String branchId, List<Map<String, dynamic>> shifts) =>
       _kv.setString('shifts_list_$branchId', jsonEncode(shifts));
 
-  List<Map<String, dynamic>>? loadShifts(String branchId) {
-    final raw = _kv.getString('shifts_list_$branchId');
-    if (raw == null) return null;
-    try {
-      return (jsonDecode(raw) as List).cast<Map<String, dynamic>>();
-    } catch (_) {
-      _kv.remove('shifts_list_$branchId');
-      return null;
-    }
-  }
+  List<Map<String, dynamic>>? loadShifts(String branchId) =>
+      _decodeList('shifts_list_$branchId');
 
   // ── Inventory ──────────────────────────────────────────────────────────────────
 
@@ -218,48 +201,24 @@ class StorageService {
           String branchId, List<Map<String, dynamic>> items) =>
       _kv.setString('inventory_$branchId', jsonEncode(items));
 
-  List<Map<String, dynamic>>? loadInventory(String branchId) {
-    final raw = _kv.getString('inventory_$branchId');
-    if (raw == null) return null;
-    try {
-      return (jsonDecode(raw) as List).cast<Map<String, dynamic>>();
-    } catch (_) {
-      _kv.remove('inventory_$branchId');
-      return null;
-    }
-  }
+  List<Map<String, dynamic>>? loadInventory(String branchId) =>
+      _decodeList('inventory_$branchId');
 
   // ── Single menu item ────────────────────────────────────────────────────────────
 
   Future<void> saveMenuItem(String itemId, Map<String, dynamic> item) =>
       _kv.setString('menu_item_$itemId', jsonEncode(item));
 
-  Map<String, dynamic>? loadMenuItem(String itemId) {
-    final raw = _kv.getString('menu_item_$itemId');
-    if (raw == null) return null;
-    try {
-      return jsonDecode(raw) as Map<String, dynamic>;
-    } catch (_) {
-      _kv.remove('menu_item_$itemId');
-      return null;
-    }
-  }
+  Map<String, dynamic>? loadMenuItem(String itemId) =>
+      _decodeMap('menu_item_$itemId');
 
   // ── Shift report ────────────────────────────────────────────────────────────────
 
   Future<void> saveShiftReport(String shiftId, Map<String, dynamic> report) =>
       _kv.setString('shift_report_$shiftId', jsonEncode(report));
 
-  Map<String, dynamic>? loadShiftReport(String shiftId) {
-    final raw = _kv.getString('shift_report_$shiftId');
-    if (raw == null) return null;
-    try {
-      return jsonDecode(raw) as Map<String, dynamic>;
-    } catch (_) {
-      _kv.remove('shift_report_$shiftId');
-      return null;
-    }
-  }
+  Map<String, dynamic>? loadShiftReport(String shiftId) =>
+      _decodeMap('shift_report_$shiftId');
 
   // ── Recipe preview ───────────────────────────────────────────────────────────────
 
@@ -267,16 +226,8 @@ class StorageService {
           String key, List<Map<String, dynamic>> recipe) =>
       _kv.setString('recipe_preview_$key', jsonEncode(recipe));
 
-  List<Map<String, dynamic>>? loadRecipe(String key) {
-    final raw = _kv.getString('recipe_preview_$key');
-    if (raw == null) return null;
-    try {
-      return (jsonDecode(raw) as List).cast<Map<String, dynamic>>();
-    } catch (_) {
-      _kv.remove('recipe_preview_$key');
-      return null;
-    }
-  }
+  List<Map<String, dynamic>>? loadRecipe(String key) =>
+      _decodeList('recipe_preview_$key');
 
   // ── Draft carts ──────────────────────────────────────────────────────────────────
 
@@ -289,16 +240,8 @@ class StorageService {
           String scope, List<Map<String, dynamic>> drafts) =>
       _kv.setString(_draftCartsKey(scope), jsonEncode(drafts));
 
-  List<Map<String, dynamic>> loadDraftCarts(String scope) {
-    final raw = _kv.getString(_draftCartsKey(scope));
-    if (raw == null) return [];
-    try {
-      return (jsonDecode(raw) as List).cast<Map<String, dynamic>>();
-    } catch (_) {
-      _kv.remove(_draftCartsKey(scope));
-      return [];
-    }
-  }
+  List<Map<String, dynamic>> loadDraftCarts(String scope) =>
+      _decodeList(_draftCartsKey(scope)) ?? [];
 
   /// Legacy migration path is dead (SharedPreferences no longer exists).
   /// Kept for API compatibility with [DraftCartsNotifier].
@@ -308,16 +251,8 @@ class StorageService {
   Future<void> saveActiveCart(String scope, Map<String, dynamic> cart) =>
       _kv.setString(_activeCartKey(scope), jsonEncode(cart));
 
-  Map<String, dynamic>? loadActiveCart(String scope) {
-    final raw = _kv.getString(_activeCartKey(scope));
-    if (raw == null) return null;
-    try {
-      return jsonDecode(raw) as Map<String, dynamic>;
-    } catch (_) {
-      _kv.remove(_activeCartKey(scope));
-      return null;
-    }
-  }
+  Map<String, dynamic>? loadActiveCart(String scope) =>
+      _decodeMap(_activeCartKey(scope));
 
   Future<void> clearCartDataForScope(String scope) async {
     await _kv.remove(_draftCartsKey(scope));

@@ -94,7 +94,8 @@ List<RecipeIngredient>? computeRecipeLocally({
     // Pick the first available size_label present
     final firstSize = item.recipes
         .map((r) => r.sizeLabel)
-        .firstWhere((s) => s != null, orElse: () => null);
+        .where((s) => s.isNotEmpty)
+        .firstOrNull;
     baseRows = firstSize != null
         ? item.recipes.where((r) => r.sizeLabel == firstSize).toList()
         : item.recipes.toList();
@@ -141,9 +142,10 @@ List<RecipeIngredient>? computeRecipeLocally({
 
       // Guard: if no embedded ingredient rows on this addon item, we can't
       // determine whether it's a swap or the base → fallback to API.
-      if (addonItem.ingredients.isEmpty) continue;
+      final addonIngredients = addonItem.ingredients ?? const [];
+      if (addonIngredients.isEmpty) continue;
 
-      final addonIngId  = addonItem.ingredients.first.orgIngredientId;
+      final addonIngId  = addonIngredients.first.orgIngredientId;
       final baseIngId   = baseRow?.orgIngredientId;
 
       // If the addon ingredient IS the base ingredient → no swap, skip
@@ -152,7 +154,7 @@ List<RecipeIngredient>? computeRecipeLocally({
           baseIngId == addonIngId;
 
       if (!isBase && baseRow != null) {
-        final replIng = addonItem.ingredients.first;
+        final replIng = addonIngredients.first;
         // Replace matching base rows in-place (may be multiple if present)
         for (int i = 0; i < result.length; i++) {
           if (result[i].source == 'drink_recipe' &&
@@ -175,7 +177,7 @@ List<RecipeIngredient>? computeRecipeLocally({
     // (An addon having zero ingredients is valid — e.g. a flavour shot with
     //  no stock impact.  We only fall back if the list is null/missing, which
     //  means the backend didn't include the field at all.)
-    for (final ing in addonItem.ingredients) {
+    for (final ing in addonItem.ingredients ?? const <AddonItemIngredient>[]) {
       result.add(RecipeIngredient(
         orgIngredientId: ing.orgIngredientId,
         name:     ing.ingredientName,

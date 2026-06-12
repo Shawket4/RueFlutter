@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/l10n/l10n.dart';
 import '../../../core/providers/cart_notifier.dart';
 import '../../../core/providers/menu_notifier.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatting.dart';
+import '../../../shared/widgets/confirm_sheet.dart';
 import 'bundle_cart_row.dart';
 import 'item_detail_sheet.dart';
 
@@ -14,6 +16,7 @@ class CartRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.tokens;
     final cart = ref.watch(cartProvider);
     final item = cart.items[index];
     if (item.isBundleLine) {
@@ -22,9 +25,9 @@ class CartRow extends ConsumerWidget {
     final menu = ref.watch(menuProvider);
 
     return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: AppColors.borderLight)),
+      padding: const EdgeInsets.all(AppSpace.md),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: t.borderLight)),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         // ── Name + total ───────────────────────────────────────────────
@@ -35,11 +38,15 @@ class CartRow extends ConsumerWidget {
                       (item.sizeLabel != null
                           ? ' · ${normaliseName(item.sizeLabel!)}'
                           : ''),
-                  style: cairo(
-                      fontSize: 13, fontWeight: FontWeight.w600, height: 1.3))),
+                  style: ui(
+                      size: 13,
+                      weight: FontWeight.w600,
+                      color: t.textPrimary,
+                      height: 1.3))),
           const SizedBox(width: 8),
           Text(egp(item.lineTotal),
-              style: cairo(fontSize: 13, fontWeight: FontWeight.w700)),
+              style:
+                  money(size: 13, weight: FontWeight.w700, color: t.textPrimary)),
         ]),
 
         // ── Addons ─────────────────────────────────────────────────────
@@ -50,19 +57,19 @@ class CartRow extends ConsumerWidget {
               runSpacing: 4,
               children: item.addons
                   .map((a) => Container(
-                        padding: const EdgeInsets.symmetric(
+                        padding: const EdgeInsetsDirectional.symmetric(
                             horizontal: 7, vertical: 2),
                         decoration: BoxDecoration(
-                            color: AppColors.primary.withOpacity(0.06),
+                            color: t.navyBg,
                             borderRadius: BorderRadius.circular(4)),
                         child: Text(
                             a.priceModifier > 0
                                 ? '${normaliseName(a.name)}${a.quantity > 1 ? " ×${a.quantity}" : ""} +${egp(a.priceModifier * a.quantity)}'
                                 : '${normaliseName(a.name)}${a.quantity > 1 ? " ×${a.quantity}" : ""}',
-                            style: cairo(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.primary)),
+                            style: ui(
+                                size: 10,
+                                weight: FontWeight.w600,
+                                color: t.navy)),
                       ))
                   .toList()),
         ],
@@ -75,19 +82,19 @@ class CartRow extends ConsumerWidget {
               runSpacing: 4,
               children: item.optionals
                   .map((o) => Container(
-                        padding: const EdgeInsets.symmetric(
+                        padding: const EdgeInsetsDirectional.symmetric(
                             horizontal: 7, vertical: 2),
                         decoration: BoxDecoration(
-                            color: AppColors.warning.withOpacity(0.07),
+                            color: t.warningBg,
                             borderRadius: BorderRadius.circular(4)),
                         child: Text(
                             o.price > 0
                                 ? '${o.name} +${egp(o.price)}'
                                 : o.name,
-                            style: cairo(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.warning)),
+                            style: ui(
+                                size: 10,
+                                weight: FontWeight.w600,
+                                color: t.warning)),
                       ))
                   .toList()),
         ],
@@ -113,12 +120,16 @@ class CartRow extends ConsumerWidget {
             },
           ),
           Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
+              padding:
+                  const EdgeInsetsDirectional.symmetric(horizontal: 10),
               child: SizedBox(
                 width: 24,
                 child: Text('${item.quantity}',
                     textAlign: TextAlign.center,
-                    style: cairo(fontSize: 14, fontWeight: FontWeight.w700)),
+                    style: money(
+                        size: 14,
+                        weight: FontWeight.w700,
+                        color: t.textPrimary)),
               )),
           _QtyControl(
             icon: Icons.add,
@@ -134,12 +145,12 @@ class CartRow extends ConsumerWidget {
           // Edit
           _ActionIcon(
             icon: Icons.edit_outlined,
-            color: AppColors.primary,
+            color: t.navy,
+            background: t.navyBg,
             onTap: () {
               final menuItemId = item.menuItemId;
               if (menuItemId == null) return;
-              final menuItem =
-                  menu.items.where((m) => m.id == menuItemId);
+              final menuItem = menu.items.where((m) => m.id == menuItemId);
               if (menuItem.isEmpty) return;
               ItemDetailSheet.show(
                 context,
@@ -154,7 +165,8 @@ class CartRow extends ConsumerWidget {
           // Delete
           _ActionIcon(
             icon: Icons.close_rounded,
-            color: AppColors.danger,
+            color: t.danger,
+            background: t.dangerBg,
             onTap: () {
               HapticFeedback.mediumImpact();
               _confirmRemove(context, ref, item.itemName, () {
@@ -168,43 +180,30 @@ class CartRow extends ConsumerWidget {
     );
   }
 
-  void _confirmRemove(
-      BuildContext context, WidgetRef ref, String itemName, VoidCallback onRemove) {
-    showDialog(
-      context: context,
-      builder: (ctx) => _ConfirmDialog(
-        title: 'Remove Item?',
-        message: 'Remove "$itemName" from the cart?',
-        confirmLabel: 'Remove',
-        onConfirm: () {
-          Navigator.pop(ctx);
-          onRemove();
-        },
-        onCancel: () => Navigator.pop(ctx),
-      ),
+  Future<void> _confirmRemove(BuildContext context, WidgetRef ref,
+      String itemName, VoidCallback onRemove) async {
+    final s = l10n(context);
+    final ok = await ConfirmSheet.show(
+      context,
+      title: s.orderRemoveItemTitle,
+      body: s.orderRemoveItemBody(itemName),
+      confirmLabel: s.commonRemove,
+      destructive: true,
     );
+    if (ok) onRemove();
   }
 
   void _showSnackbar(BuildContext context, WidgetRef ref, String itemName) {
+    if (!context.mounted) return;
     ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('$itemName removed',
-            style: cairo(
-                color: AppColors.textPrimary,
-                fontSize: 14,
-                fontWeight: FontWeight.w600)),
-        backgroundColor: Colors.white,
-        elevation: 0,
+        content: Text(l10n(context).orderItemRemoved(itemName)),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.xs),
-          side: const BorderSide(color: AppColors.border),
-        ),
         action: SnackBarAction(
-          label: 'Undo',
-          textColor: AppColors.primary,
-          onPressed: () => ref.read(cartProvider.notifier).restoreLastRemoved(),
+          label: l10n(context).commonUndo,
+          onPressed: () =>
+              ref.read(cartProvider.notifier).restoreLastRemoved(),
         ),
         duration: const Duration(seconds: 4),
       ),
@@ -220,25 +219,32 @@ class _QtyControl extends StatelessWidget {
   const _QtyControl({required this.icon, required this.onTap});
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
-      onTap: onTap,
-      child: Container(
-          width: 28,
-          height: 28,
-          decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: AppColors.border)),
-          alignment: Alignment.center,
-          child: Icon(icon, size: 14, color: AppColors.textPrimary)));
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    return GestureDetector(
+        onTap: onTap,
+        child: Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+                color: t.surface,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: t.border)),
+            alignment: Alignment.center,
+            child: Icon(icon, size: 14, color: t.textPrimary)));
+  }
 }
 
 class _ActionIcon extends StatelessWidget {
   final IconData icon;
   final Color color;
+  final Color background;
   final VoidCallback onTap;
   const _ActionIcon(
-      {required this.icon, required this.color, required this.onTap});
+      {required this.icon,
+      required this.color,
+      required this.background,
+      required this.onTap});
 
   @override
   Widget build(BuildContext context) => GestureDetector(
@@ -247,83 +253,7 @@ class _ActionIcon extends StatelessWidget {
           width: 28,
           height: 28,
           decoration: BoxDecoration(
-              color: color.withOpacity(0.06),
-              borderRadius: BorderRadius.circular(6)),
+              color: background, borderRadius: BorderRadius.circular(6)),
           alignment: Alignment.center,
           child: Icon(icon, size: 14, color: color)));
-}
-
-// ── Confirm Dialog (replaces AlertDialog for web-style) ─────────────────────
-
-class _ConfirmDialog extends StatelessWidget {
-  final String title;
-  final String message;
-  final String confirmLabel;
-  final VoidCallback onConfirm;
-  final VoidCallback onCancel;
-
-  const _ConfirmDialog({
-    required this.title,
-    required this.message,
-    required this.confirmLabel,
-    required this.onConfirm,
-    required this.onCancel,
-  });
-
-  @override
-  Widget build(BuildContext context) => Dialog(
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppRadius.md)),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 360),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child:
-                Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(title,
-                  style: cairo(fontSize: 16, fontWeight: FontWeight.w700)),
-              const SizedBox(height: 8),
-              Text(message,
-                  style: cairo(
-                      fontSize: 14,
-                      color: AppColors.textSecondary,
-                      height: 1.4)),
-              const SizedBox(height: 24),
-              Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-                AnimatedPressScale(
-                  onTap: onCancel,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 10),
-                    decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(AppRadius.xs),
-                        border: Border.all(color: AppColors.border)),
-                    child: Text('Cancel',
-                        style: cairo(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textSecondary)),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                AnimatedPressScale(
-                  onTap: onConfirm,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 10),
-                    decoration: BoxDecoration(
-                        color: AppColors.danger,
-                        borderRadius: BorderRadius.circular(AppRadius.xs)),
-                    child: Text(confirmLabel,
-                        style: cairo(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white)),
-                  ),
-                ),
-              ]),
-            ]),
-          ),
-        ),
-      );
 }

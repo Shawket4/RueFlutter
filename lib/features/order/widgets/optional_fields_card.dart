@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import '../../../core/l10n/l10n.dart';
 import '../../../core/models/menu.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatting.dart';
-import 'shared_widgets.dart';
+import '../../../shared/widgets/status_chip.dart';
+import '../../../shared/widgets/surface_card.dart';
+import 'addon_card.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  OPTIONAL FIELDS CARD — flat list under "Optional" header
@@ -23,7 +26,9 @@ class OptionalFieldsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Show only fields that match current size (or have no size restriction)
+    final t = context.tokens;
+
+    // Show only fields that match current size (or have no size restriction).
     final visible = fields
         .where((f) => f.sizeLabel == null || f.sizeLabel == sizeLabel)
         .toList();
@@ -33,92 +38,34 @@ class OptionalFieldsCard extends StatelessWidget {
     final selCount =
         selected.where((id) => visible.any((f) => f.id == id)).length;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(
-            color: selCount > 0
-                ? AppColors.primary.withOpacity(0.2)
-                : AppColors.border),
-        boxShadow: AppShadows.card,
-      ),
+    return SurfaceCard(
+      padding: const EdgeInsets.all(AppSpace.md),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
-          child: Row(children: [
-            Text('OPTIONAL',
-                style: cairo(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textSecondary,
-                    letterSpacing: 0.7)),
-            const SizedBox(width: 6),
-            const Pill('Optional', AppColors.primary),
-            const Spacer(),
-            if (selCount > 0) CountBadge(count: selCount),
-          ]),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-          child: Wrap(
-            spacing: 7,
-            runSpacing: 7,
-            children: visible.map((f) {
-              final sel = selected.contains(f.id);
-              return GestureDetector(
-                onTap: () => onToggle(f.id),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: sel ? AppColors.primary : AppColors.bg,
-                    borderRadius: BorderRadius.circular(AppRadius.xs),
-                    border: Border.all(
-                        color: sel ? AppColors.primary : AppColors.border,
-                        width: sel ? 1.5 : 1),
-                  ),
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    Icon(
-                        sel
-                            ? Icons.check_box_rounded
-                            : Icons.check_box_outline_blank_rounded,
-                        size: 14,
-                        color: sel ? Colors.white : AppColors.textMuted),
-                    const SizedBox(width: 6),
-                    Text(f.name,
-                        style: cairo(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: sel ? Colors.white : AppColors.textPrimary)),
-                    if (f.hasIngredient && !sel) ...[
-                      const SizedBox(width: 4),
-                      Icon(Icons.science_outlined,
-                          size: 11, color: AppColors.textMuted.withOpacity(0.6)),
-                    ],
-                    if (!f.isFree) ...[
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                            color: sel
-                                ? Colors.white.withOpacity(0.2)
-                                : AppColors.primary.withOpacity(0.08),
-                            borderRadius: BorderRadius.circular(4)),
-                        child: Text('+${egp(f.price)}',
-                            style: cairo(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                                color: sel ? Colors.white : AppColors.primary)),
-                      ),
-                    ],
-                  ]),
-                ),
-              );
-            }).toList(),
+        Row(children: [
+          Expanded(
+            child: Text(l10n(context).orderOptionalHeader,
+                style: ui(
+                    size: 11,
+                    weight: FontWeight.w700,
+                    color: t.textSecondary,
+                    letterSpacing: 0.6)),
           ),
+          if (selCount > 0)
+            StatusChip(label: '$selCount', tone: ChipTone.accent),
+        ]),
+        const SizedBox(height: AppSpace.md),
+        Wrap(
+          spacing: AppSpace.sm,
+          runSpacing: AppSpace.sm,
+          children: visible.map((f) {
+            return OptionChip(
+              label: f.name,
+              sublabel: f.isFree ? null : '+${egp(f.price)}',
+              selected: selected.contains(f.id),
+              checkbox: true,
+              onTap: () => onToggle(f.id),
+            );
+          }).toList(),
         ),
       ]),
     );

@@ -3,17 +3,28 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:sufrix_pos/core/api/branch_api.dart';
 import 'package:sufrix_pos/core/api/shift_api.dart';
-import 'package:sufrix_pos/core/models/branch.dart';
 import 'package:sufrix_pos/core/models/shift.dart';
 import 'package:sufrix_pos/core/models/user.dart';
 import 'package:sufrix_pos/core/providers/auth_notifier.dart';
 import 'package:sufrix_pos/core/repositories/auth_repository.dart';
+import 'package:sufrix_pos/core/services/offline_queue.dart';
 import 'package:sufrix_pos/core/storage/storage_service.dart';
+
+import '../../helpers/model_fixtures.dart';
 
 class MockAuthRepository extends Mock implements AuthRepository {}
 class MockBranchApi extends Mock implements BranchApi {}
 class MockShiftApi extends Mock implements ShiftApi {}
 class MockStorageService extends Mock implements StorageService {}
+
+/// The real notifier's drain path needs the outbox DAO (sqflite); the auth
+/// tests only care that pause/resume are invoked, so stub them out.
+class FakeOfflineQueueNotifier extends OfflineQueueNotifier {
+  @override
+  void resumeAfterAuth() {}
+  @override
+  void pauseForAuth() {}
+}
 
 void main() {
   late MockAuthRepository mockAuthRepo;
@@ -33,6 +44,7 @@ void main() {
       branchApiProvider.overrideWithValue(mockBranchApi),
       shiftApiProvider.overrideWithValue(mockShiftApi),
       storageServiceProvider.overrideWithValue(mockStorageService),
+      offlineQueueProvider.overrideWith(FakeOfflineQueueNotifier.new),
     ]);
 
     when(() => mockAuthRepo.restoreSession()).thenAnswer((_) async => null);
@@ -44,16 +56,16 @@ void main() {
 
   group('AuthNotifier', () {
     test('init restores session if available', () async {
-      const user = User(id: 'u1', name: 'John', role: 'admin', isActive: true, branchId: 'b1');
+      final user = makeUser(id: 'u1', name: 'John', role: UserRole.orgAdmin, branchId: 'b1');
       when(() => mockAuthRepo.restoreSession())
           .thenAnswer((_) async => (token: 'token', user: user));
-      
-      const branch = Branch(id: 'b1', orgId: 'org1', name: 'Branch 1', isActive: true);
+
+      final branch = makeBranch(id: 'b1', orgId: 'org1', name: 'Branch 1');
       when(() => mockBranchApi.get('b1')).thenAnswer((_) async => branch);
       when(() => mockStorageService.saveBranch('b1', any())).thenAnswer((_) async {});
-      
+
       when(() => mockShiftApi.current('b1'))
-          .thenAnswer((_) async => const ShiftPreFill(hasOpenShift: false, suggestedOpeningCash: 1000));
+          .thenAnswer((_) async => ShiftPreFill(hasOpenShift: false, suggestedOpeningCash: 1000));
 
       final notifier = container.read(authProvider.notifier);
       await notifier.init();
@@ -77,15 +89,15 @@ void main() {
     });
 
     test('login blocks if another teller has open shift', () async {
-      const user = User(id: 'u1', name: 'John', role: 'admin', isActive: true, branchId: 'b1');
+      final user = makeUser(id: 'u1', name: 'John', role: UserRole.orgAdmin, branchId: 'b1');
       when(() => mockAuthRepo.login(name: 'John', pin: '1234'))
           .thenAnswer((_) async => (token: 'token', user: user));
 
-      when(() => mockBranchApi.get('b1')).thenAnswer((_) async => const Branch(id: 'b1', orgId: 'org1', name: 'Branch 1', isActive: true));
+      when(() => mockBranchApi.get('b1')).thenAnswer((_) async => makeBranch(id: 'b1', orgId: 'org1', name: 'Branch 1'));
       when(() => mockStorageService.saveBranch('b1', any())).thenAnswer((_) async {});
 
-      final otherShift = Shift(
-        id: 's1', branchId: 'b1', tellerId: 't2', tellerName: 'Alice', status: 'open', openingCash: 1000, openedAt: DateTime.now()
+      final otherShift = makeShift(
+        id: 's1', branchId: 'b1', tellerId: 't2', tellerName: 'Alice', status: 'open', openingCash: 1000, openedAt: DateTime.now(),
       );
       when(() => mockShiftApi.current('b1'))
           .thenAnswer((_) async => ShiftPreFill(hasOpenShift: true, openShift: otherShift, suggestedOpeningCash: 1000));
@@ -103,14 +115,14 @@ void main() {
     });
 
     test('canLogout checks if shift is open', () async {
-      const user = User(id: 'u1', name: 'John', role: 'admin', isActive: true, branchId: 'b1');
+      final user = makeUser(id: 'u1', name: 'John', role: UserRole.orgAdmin, branchId: 'b1');
       when(() => mockAuthRepo.restoreSession())
           .thenAnswer((_) async => (token: 'token', user: user));
-      when(() => mockBranchApi.get('b1')).thenAnswer((_) async => const Branch(id: 'b1', orgId: 'org1', name: 'Branch 1', isActive: true));
+      when(() => mockBranchApi.get('b1')).thenAnswer((_) async => makeBranch(id: 'b1', orgId: 'org1', name: 'Branch 1'));
       when(() => mockStorageService.saveBranch('b1', any())).thenAnswer((_) async {});
-      
-      final openShift = Shift(
-        id: 's1', branchId: 'b1', tellerId: 'u1', tellerName: 'John', status: 'open', openingCash: 1000, openedAt: DateTime.now()
+
+      final openShift = makeShift(
+        id: 's1', branchId: 'b1', tellerId: 'u1', tellerName: 'John', status: 'open', openingCash: 1000, openedAt: DateTime.now(),
       );
       when(() => mockShiftApi.current('b1'))
           .thenAnswer((_) async => ShiftPreFill(hasOpenShift: true, openShift: openShift, suggestedOpeningCash: 1000));

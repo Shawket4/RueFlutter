@@ -1,18 +1,129 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../core/repositories/shift_repository.dart';
-import 'shift_report_preview_sheet.dart';
+
+import '../../core/l10n/l10n.dart';
+import '../../core/models/inventory.dart';
+import '../../core/models/shift.dart';
 import '../../core/providers/auth_notifier.dart';
 import '../../core/providers/shift_notifier.dart';
+import '../../core/repositories/shift_repository.dart';
 import '../../core/services/connectivity_service.dart';
+import '../../core/storage/storage_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatting.dart';
+import '../../core/utils/responsive.dart';
+import '../../shared/widgets/amount_field.dart';
 import '../../shared/widgets/app_button.dart';
-import '../../shared/widgets/card_container.dart';
-import '../../shared/widgets/label_value.dart';
-import '../../shared/widgets/top_bar.dart';
+import '../../shared/widgets/app_top_bar.dart';
+import '../../shared/widgets/confirm_sheet.dart';
+import '../../shared/widgets/empty_state.dart';
+import '../../shared/widgets/status_chip.dart';
+import '../../shared/widgets/surface_card.dart';
+import 'shift_report_preview_sheet.dart';
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  EPHEMERAL STATE — autoDispose provider (resets when the screen unmounts).
+//  Text/inventory controllers and the draft-save Timer stay in the State.
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _CloseShiftState {
+  static const _unset = Object();
+
+  final bool loadingInv;
+  final bool submitting;
+  final bool printing;
+  final String? error;
+  final int declaredCash;
+  final bool hasCashText;
+  final Map<String, bool> zeroWarn;
+
+  const _CloseShiftState({
+    this.loadingInv = true,
+    this.submitting = false,
+    this.printing = false,
+    this.error,
+    this.declaredCash = 0,
+    this.hasCashText = false,
+    this.zeroWarn = const {},
+  });
+
+  _CloseShiftState copyWith({
+    bool? loadingInv,
+    bool? submitting,
+    bool? printing,
+    Object? error = _unset,
+    int? declaredCash,
+    bool? hasCashText,
+    Map<String, bool>? zeroWarn,
+  }) =>
+      _CloseShiftState(
+        loadingInv: loadingInv ?? this.loadingInv,
+        submitting: submitting ?? this.submitting,
+        printing: printing ?? this.printing,
+        error: identical(error, _unset) ? this.error : error as String?,
+        declaredCash: declaredCash ?? this.declaredCash,
+        hasCashText: hasCashText ?? this.hasCashText,
+        zeroWarn: zeroWarn ?? this.zeroWarn,
+      );
+}
+
+final _closeShiftProvider =
+    NotifierProvider.autoDispose<_CloseShiftController, _CloseShiftState>(
+        _CloseShiftController.new);
+
+class _CloseShiftController extends AutoDisposeNotifier<_CloseShiftState> {
+  bool _disposed = false;
+
+  @override
+  _CloseShiftState build() {
+    ref.onDispose(() => _disposed = true);
+    return const _CloseShiftState();
+  }
+
+  void setCash(int declared, bool hasText) {
+    if (_disposed) return;
+    state = state.copyWith(declaredCash: declared, hasCashText: hasText);
+  }
+
+  void setZeroWarn(String id, bool warn) {
+    if (_disposed) return;
+    state = state.copyWith(zeroWarn: {...state.zeroWarn, id: warn});
+  }
+
+  void setZeroWarnAll(Map<String, bool> warns) {
+    if (_disposed) return;
+    state = state.copyWith(zeroWarn: warns);
+  }
+
+  void setLoadingInv(bool value) {
+    if (_disposed) return;
+    state = state.copyWith(loadingInv: value);
+  }
+
+  void setPrinting(bool value) {
+    if (_disposed) return;
+    state = state.copyWith(printing: value);
+  }
+
+  void setError(String? message) {
+    if (_disposed) return;
+    state = state.copyWith(error: message);
+  }
+
+  void startSubmit() {
+    if (_disposed) return;
+    state = state.copyWith(submitting: true, error: null);
+  }
+
+  void failSubmit(String message) {
+    if (_disposed) return;
+    state = state.copyWith(submitting: false, error: message);
+  }
+}
 
 class CloseShiftScreen extends ConsumerStatefulWidget {
   const CloseShiftScreen({super.key});
@@ -23,19 +134,17 @@ class CloseShiftScreen extends ConsumerStatefulWidget {
 class _CloseShiftScreenState extends ConsumerState<CloseShiftScreen> {
   final _cashCtrl = TextEditingController();
   final _noteCtrl = TextEditingController();
-  final Map<String, TextEditingController> _invCtrs  = {};
-  final Map<String, bool>                  _zeroWarn = {};
+  final Map<String, TextEditingController> _invCtrs = {};
 
-  bool    _loadingInv = true;
-  bool    _submitting = false;
-  bool    _printing   = false;
-  String? _error;
-  int     _declaredCash = 0;
+  Timer? _draftTimer;
+
+  _CloseShiftController get _ctl => ref.read(_closeShiftProvider.notifier);
 
   @override
   void initState() {
     super.initState();
-    _cashCtrl.addListener(_updateDeclared);
+    _cashCtrl.addListener(_onCashChanged);
+    _noteCtrl.addListener(_scheduleDraftSave);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await ref.read(shiftProvider.notifier).loadSystemCash();
       await _loadInventory();
@@ -44,75 +153,158 @@ class _CloseShiftScreenState extends ConsumerState<CloseShiftScreen> {
 
   @override
   void dispose() {
+    _draftTimer?.cancel();
     _cashCtrl
-      ..removeListener(_updateDeclared)
+      ..removeListener(_onCashChanged)
       ..dispose();
-    _noteCtrl.dispose();
+    _noteCtrl
+      ..removeListener(_scheduleDraftSave)
+      ..dispose();
     for (final c in _invCtrs.values) {
       c.dispose();
     }
     super.dispose();
   }
 
-  void _updateDeclared() {
+  void _onCashChanged() {
+    if (!mounted) return;
     final raw = double.tryParse(_cashCtrl.text);
-    setState(() => _declaredCash = raw != null ? (raw * 100).round() : 0);
+    _ctl.setCash(raw != null ? (raw * 100).round() : 0,
+        _cashCtrl.text.isNotEmpty);
+    _scheduleDraftSave();
   }
+
+  // ── Draft auto-save ────────────────────────────────────────────────────────
+  // Counting a drawer + stockroom takes minutes; a crash must not lose it.
+
+  String? get _draftKey {
+    final shiftId = ref.read(shiftProvider).shift?.id;
+    return shiftId == null ? null : 'close_draft_$shiftId';
+  }
+
+  void _scheduleDraftSave() {
+    _draftTimer?.cancel();
+    _draftTimer = Timer(const Duration(milliseconds: 400), _saveDraft);
+  }
+
+  Future<void> _saveDraft() async {
+    if (!mounted) return;
+    final key = _draftKey;
+    if (key == null) return;
+    final draft = {
+      'cash': _cashCtrl.text,
+      'note': _noteCtrl.text,
+      'counts': {for (final e in _invCtrs.entries) e.key: e.value.text},
+    };
+    await ref.read(storageServiceProvider).raw.setString(key, jsonEncode(draft));
+  }
+
+  Map<String, dynamic>? _readDraft() {
+    final key = _draftKey;
+    if (key == null) return null;
+    final raw = ref.read(storageServiceProvider).raw.getString(key);
+    if (raw == null) return null;
+    try {
+      return jsonDecode(raw) as Map<String, dynamic>;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _clearDraft(String shiftId) =>
+      ref.read(storageServiceProvider).raw.remove('close_draft_$shiftId');
+
+  // ── Inventory ──────────────────────────────────────────────────────────────
 
   Future<void> _loadInventory() async {
     final branchId = ref.read(authProvider).user?.branchId;
-    if (branchId == null) { setState(() => _loadingInv = false); return; }
-    await ref.read(shiftProvider.notifier).loadInventory(branchId);
-    if (!mounted) return;
-    final items = ref.read(shiftProvider).inventory;
-    setState(() {
-      _loadingInv = false;
-      for (final i in items) {
-        _invCtrs[i.id] =
-            TextEditingController(text: i.currentStock.toStringAsFixed(2))
-              ..addListener(() {
-                final v   = double.tryParse(_invCtrs[i.id]?.text ?? '');
-                final was = _zeroWarn[i.id] ?? false;
-                final is0 = v == 0.0;
-                if (was != is0) setState(() => _zeroWarn[i.id] = is0);
-              });
-      }
-    });
-  }
-
-  Future<void> _printReport() async {
-    final shift = ref.read(shiftProvider).shift;
-    if (shift == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('No open shift'),
-          backgroundColor: AppColors.warning));
+    if (branchId == null) {
+      _ctl.setLoadingInv(false);
       return;
     }
-    setState(() => _printing = true);
+    await ref.read(shiftProvider.notifier).loadInventory(branchId);
+    if (!mounted) return;
+
+    final items = ref.read(shiftProvider).inventory;
+    final draft = _readDraft();
+    final draftCounts =
+        (draft?['counts'] as Map<String, dynamic>?) ?? const <String, dynamic>{};
+
+    final warns = <String, bool>{};
+    for (final i in items) {
+      final initial =
+          (draftCounts[i.id] as String?) ?? i.currentStock.toStringAsFixed(2);
+      final ctrl = TextEditingController(text: initial);
+      ctrl.addListener(() {
+        if (!mounted) return;
+        final v = double.tryParse(ctrl.text);
+        final was = ref.read(_closeShiftProvider).zeroWarn[i.id] ?? false;
+        final is0 = v == 0.0;
+        if (was != is0) _ctl.setZeroWarn(i.id, is0);
+        _scheduleDraftSave();
+      });
+      _invCtrs[i.id] = ctrl;
+      warns[i.id] = double.tryParse(initial) == 0.0;
+    }
+    _ctl.setZeroWarnAll(warns);
+
+    if (draft != null) {
+      final cash = draft['cash'] as String? ?? '';
+      if (cash.isNotEmpty) _cashCtrl.text = cash;
+      final note = draft['note'] as String? ?? '';
+      if (note.isNotEmpty) _noteCtrl.text = note;
+    }
+
+    _ctl.setLoadingInv(false);
+  }
+
+  /// Fill every row's actual count with the system value in one tap.
+  void _useSystemCounts() {
+    final items = ref.read(shiftProvider).inventory;
+    for (final i in items) {
+      _invCtrs[i.id]?.text = i.currentStock.toStringAsFixed(2);
+    }
+  }
+
+  // ── Print ──────────────────────────────────────────────────────────────────
+
+  Future<void> _printReport() async {
+    final t = context.tokens;
+    final shift = ref.read(shiftProvider).shift;
+    if (shift == null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(l10n(context).shiftNoOpenShift),
+          backgroundColor: t.warning));
+      return;
+    }
+    _ctl.setPrinting(true);
     try {
       final report = await ref.read(shiftRepositoryProvider).getReport(shift.id);
       if (mounted) {
-        setState(() => _printing = false);
+        _ctl.setPrinting(false);
         await ShiftReportPreviewSheet.show(context, report);
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _printing = false);
+        _ctl.setPrinting(false);
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Failed to load report: $e'),
-            backgroundColor: AppColors.danger));
+            content: Text(l10n(context).commonFailedLoadReport('$e')),
+            backgroundColor: t.danger));
       }
     }
   }
 
+  // ── Close ──────────────────────────────────────────────────────────────────
+
   Future<void> _close() async {
-    final raw = double.tryParse(_cashCtrl.text);
-    if (raw == null || raw < 0) {
-      setState(() => _error = 'Enter a valid closing cash amount');
+    final s = l10n(context);
+    final piastres = AmountField.parsePiastres(_cashCtrl.text);
+    if (piastres == null || piastres < 0) {
+      _ctl.setError(s.shiftErrorValidClosingCash);
       return;
     }
 
-    final inv       = ref.read(shiftProvider).inventory;
+    final inv = ref.read(shiftProvider).inventory;
     final zeroItems = inv
         .where((i) {
           final v = double.tryParse(_invCtrs[i.id]?.text ?? '');
@@ -122,46 +314,41 @@ class _CloseShiftScreenState extends ConsumerState<CloseShiftScreen> {
         .toList();
 
     if (zeroItems.isNotEmpty) {
-      final ok = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title:   Text('Zero Stock Warning', style: cairo(fontWeight: FontWeight.w800)),
-          content: Text(
-              'The following items have 0 stock:\n\n${zeroItems.join(", ")}'
-              '\n\nAre you sure you want to submit?',
-              style: cairo(fontSize: 14, color: AppColors.textSecondary, height: 1.5)),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false),
-                child: Text('Go Back', style: cairo(color: AppColors.primary))),
-            TextButton(onPressed: () => Navigator.pop(ctx, true),
-                child: Text('Submit Anyway',
-                    style: cairo(color: AppColors.danger, fontWeight: FontWeight.w700))),
-          ],
-        ),
+      final ok = await ConfirmSheet.show(
+        context,
+        title: s.shiftZeroStockTitle,
+        body: s.shiftZeroStockBody(zeroItems.join(', ')),
+        confirmLabel: s.shiftSubmitAnyway,
+        destructive: true,
+        icon: Icons.inventory_2_outlined,
       );
-      if (ok != true) return;
+      if (!ok) return;
     }
 
-    setState(() { _submitting = true; _error = null; });
+    _ctl.startSubmit();
 
     final counts = _invCtrs.entries
         .map((e) => {
               'branch_inventory_id': e.key,
-              'actual_stock':        double.tryParse(e.value.text) ?? 0.0,
+              'actual_stock': double.tryParse(e.value.text) ?? 0.0,
             })
         .toList();
 
     final branchId = ref.read(authProvider).user!.branchId!;
-    final ok       = await ref.read(shiftProvider.notifier).closeShift(
-          branchId:        branchId,
-          closingCash:     (raw * 100).round(),
-          note:            _noteCtrl.text.isEmpty ? null : _noteCtrl.text,
+    final shiftId = ref.read(shiftProvider).shift?.id;
+    final ok = await ref.read(shiftProvider.notifier).closeShift(
+          branchId: branchId,
+          closingCash: piastres,
+          note: _noteCtrl.text.isEmpty ? null : _noteCtrl.text,
           inventoryCounts: counts,
         );
 
     if (!mounted) return;
 
     if (ok) {
+      _draftTimer?.cancel();
+      if (shiftId != null) await _clearDraft(shiftId);
+      if (!mounted) return;
       final canNowLogout = await ref.read(authProvider.notifier).canLogout();
       if (!mounted) return;
       if (canNowLogout) {
@@ -171,145 +358,202 @@ class _CloseShiftScreenState extends ConsumerState<CloseShiftScreen> {
         context.go('/home');
       }
     } else {
-      setState(() {
-        _error      = ref.read(shiftProvider).error ?? 'Failed to close shift';
-        _submitting = false;
-      });
+      _ctl.failSubmit(
+          ref.read(shiftProvider).error ?? l10n(context).shiftCloseFailed);
     }
   }
 
+  // ── Build ──────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
-    final shift    = ref.watch(shiftProvider).shift;
-    // Task 3.7
-    final isTablet = MediaQuery.of(context).size.shortestSide >= 600;
+    final t = context.tokens;
+    final shift = ref.watch(shiftProvider.select((s) => s.shift));
+    // Watched at the root so the provider stays alive for the whole screen.
+    final printing =
+        ref.watch(_closeShiftProvider.select((s) => s.printing));
 
     return Scaffold(
-      backgroundColor: AppColors.bg,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          TopBar(
-            title: 'Close Shift',
+          AppTopBar(
+            title: l10n(context).shiftClose,
+            subtitle: shift?.tellerName,
             onBack: () => context.go('/home'),
-            trailing: shift != null
-                ? _printing
-                    ? const SizedBox(
-                        width: 38,
-                        height: 38,
-                        child: Padding(
-                          padding: EdgeInsets.all(10),
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: AppColors.primary),
+            actions: [
+              if (shift != null)
+                printing
+                    ? const Padding(
+                        padding: EdgeInsetsDirectional.only(end: AppSpace.md),
+                        child: SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
                         ),
                       )
-                    : GestureDetector(
-                        onTap: _printReport,
-                        child: Container(
-                          width: 38,
-                          height: 38,
-                          decoration: BoxDecoration(
-                            color: AppColors.bg,
-                            borderRadius: BorderRadius.circular(AppRadius.sm),
-                            border: Border.all(color: AppColors.border),
-                          ),
-                          alignment: Alignment.center,
-                          child: const Icon(Icons.print_rounded,
-                              size: 18, color: AppColors.textPrimary),
-                        ),
-                      )
-                : null,
+                    : IconButton(
+                        onPressed: _printReport,
+                        tooltip: l10n(context).commonPrintReport,
+                        icon: Icon(Icons.print_rounded,
+                            size: 20, color: t.textPrimary),
+                      ),
+            ],
           ),
           Expanded(
             child: shift == null
-                ? const Center(child: Text('No open shift'))
-                : isTablet
-                    ? _buildTablet(shift)
-                    : _buildPhone(shift),
+                ? EmptyState(
+                    icon: Icons.lock_outline_rounded,
+                    title: l10n(context).shiftNoOpenShift,
+                    body: l10n(context).shiftNothingToClose,
+                  )
+                : context.isPhone
+                    ? _buildPhone(shift)
+                    : _buildWide(shift),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildPhone(dynamic shift) => SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+  Widget _buildPhone(Shift shift) => SingleChildScrollView(
+        padding: const EdgeInsets.all(AppSpace.lg),
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 640),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              _SummaryCard(shift: shift),
-              const SizedBox(height: 16),
-              _CashCard(state: this),
-              const SizedBox(height: 16),
-              _InventoryCard(state: this),
-              const SizedBox(height: 16),
-              _SubmitSection(state: this),
-              const SizedBox(height: 32),
-            ]),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _SummaryCard(shift: shift),
+                const SizedBox(height: AppSpace.lg),
+                _CashCard(state: this),
+                const SizedBox(height: AppSpace.lg),
+                _InventoryCard(state: this),
+                const SizedBox(height: AppSpace.lg),
+                _SubmitSection(state: this),
+                const SizedBox(height: AppSpace.xxl),
+              ],
+            ),
           ),
         ),
       );
 
-  Widget _buildTablet(dynamic shift) => Column(children: [
+  Widget _buildWide(Shift shift) => Column(children: [
         Expanded(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(28, 28, 28, 0),
-            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Expanded(child: Column(children: [
-                _SummaryCard(shift: shift),
-                const SizedBox(height: 16),
-                _CashCard(state: this),
-              ])),
-              const SizedBox(width: 20),
-              Expanded(child: _InventoryCard(state: this)),
-            ]),
+            padding: const EdgeInsetsDirectional.fromSTEB(
+                AppSpace.xl, AppSpace.xl, AppSpace.xl, 0),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1100),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(children: [
+                        _SummaryCard(shift: shift),
+                        const SizedBox(height: AppSpace.lg),
+                        _CashCard(state: this),
+                      ]),
+                    ),
+                    const SizedBox(width: AppSpace.lg),
+                    Expanded(child: _InventoryCard(state: this)),
+                  ],
+                ),
+              ),
+            ),
           ),
         ),
-        Container(
-          color:   AppColors.bg,
-          padding: const EdgeInsets.fromLTRB(28, 14, 28, 24),
-          child:   _SubmitSection(state: this),
+        Padding(
+          padding: const EdgeInsetsDirectional.fromSTEB(
+              AppSpace.xl, AppSpace.md, AppSpace.xl, AppSpace.xl),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1100),
+              child: _SubmitSection(state: this),
+            ),
+          ),
         ),
       ]);
 }
 
-// ── Section cards ─────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+//  Section cards
+// ─────────────────────────────────────────────────────────────────────────────
 
-class _SectionHeader extends StatelessWidget {
+class _CardTitle extends StatelessWidget {
   final IconData icon;
-  final Color    iconBg, iconColor;
-  final String   title;
-  const _SectionHeader({required this.icon, required this.iconBg,
-      required this.iconColor, required this.title});
+  final String title;
+  final Widget? trailing;
+  const _CardTitle({required this.icon, required this.title, this.trailing});
 
   @override
-  Widget build(BuildContext context) => Row(children: [
-        Container(
-            width: 40, height: 40,
-            decoration: BoxDecoration(
-                color: iconBg, borderRadius: BorderRadius.circular(AppRadius.xs)),
-            child: Icon(icon, color: iconColor, size: 18)),
-        const SizedBox(width: 12),
-        Text(title, style: cairo(fontSize: 14, fontWeight: FontWeight.w700)),
-      ]);
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    return Row(children: [
+      Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: t.navyBg,
+          borderRadius: BorderRadius.circular(AppRadius.xs),
+        ),
+        child: Icon(icon, color: t.navy, size: 18),
+      ),
+      const SizedBox(width: AppSpace.md),
+      Expanded(
+        child: Text(title,
+            style: ui(size: 14, weight: FontWeight.w600, color: t.textPrimary)),
+      ),
+      if (trailing != null) trailing!,
+    ]);
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final bool isMoney;
+  const _InfoRow(this.label, this.value, {this.isMoney = false});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpace.xs),
+      child: Row(children: [
+        Expanded(
+          child: Text(label, style: ui(size: 13, color: t.textSecondary)),
+        ),
+        Text(value,
+            style: isMoney
+                ? money(size: 14, color: t.textPrimary)
+                : ui(size: 13, weight: FontWeight.w600, color: t.textPrimary)),
+      ]),
+    );
+  }
 }
 
 class _SummaryCard extends StatelessWidget {
-  final dynamic shift;
+  final Shift shift;
   const _SummaryCard({required this.shift});
+
   @override
-  Widget build(BuildContext context) => CardContainer(
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const _SectionHeader(icon: Icons.summarize_outlined,
-              iconBg: Color(0xFFEEF2FF), iconColor: AppColors.primary,
-              title: 'Shift Summary'),
-          const SizedBox(height: 18),
-          LabelValue('Teller',       shift.tellerName),
-          LabelValue('Opening Cash', egp(shift.openingCash)),
-          LabelValue('Opened At',    dateTime(shift.openedAt)),
-        ]),
-      );
+  Widget build(BuildContext context) {
+    final s = l10n(context);
+    return SurfaceCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _CardTitle(icon: Icons.summarize_outlined, title: s.shiftSummary),
+          const SizedBox(height: AppSpace.lg),
+          _InfoRow(s.commonTeller, shift.tellerName),
+          _InfoRow(s.shiftOpeningCash, egp(shift.openingCash), isMoney: true),
+          _InfoRow(s.shiftOpenedAtLabel, dateTime(shift.openedAt)),
+        ],
+      ),
+    );
+  }
 }
 
 class _CashCard extends ConsumerWidget {
@@ -318,79 +562,85 @@ class _CashCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final systemCash  = ref.watch(shiftProvider.select((s) => s.systemCash));
-    final cashLoading = ref.watch(shiftProvider.select((s) => s.systemCashLoading));
-    final discrepancy = state._declaredCash - systemCash;
-    final showDiscrep = !cashLoading && state._cashCtrl.text.isNotEmpty;
+    final t = context.tokens;
+    final s = l10n(context);
+    final systemCash =
+        ref.watch(shiftProvider.select((st) => st.systemCash));
+    final cashLoading =
+        ref.watch(shiftProvider.select((st) => st.systemCashLoading));
+    final declaredCash =
+        ref.watch(_closeShiftProvider.select((st) => st.declaredCash));
+    final hasCashText =
+        ref.watch(_closeShiftProvider.select((st) => st.hasCashText));
+    final showDiscrep = !cashLoading && hasCashText;
 
-    return CardContainer(
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const _SectionHeader(icon: Icons.payments_outlined,
-            iconBg: Color(0xFFECFDF5), iconColor: AppColors.success,
-            title: 'Cash Count'),
-        const SizedBox(height: 18),
-        Container(
-          padding:    const EdgeInsets.all(14),
-          decoration: BoxDecoration(color: AppColors.bg,
-              borderRadius: BorderRadius.circular(AppRadius.sm)),
-          child: Row(children: [
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('System Cash', style: cairo(fontSize: 12,
-                  fontWeight: FontWeight.w600, color: AppColors.textSecondary)),
-              const SizedBox(height: 2),
-              Text('Opening + cash orders + movements',
-                  style: cairo(fontSize: 11, color: AppColors.textMuted)),
-            ])),
-            cashLoading
-                ? const SizedBox(width: 16, height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary))
-                : Text(egp(systemCash),
-                    style: cairo(fontSize: 20, fontWeight: FontWeight.w800)),
-          ]),
-        ),
-        const SizedBox(height: 18),
-        Text('ACTUAL CASH IN DRAWER',
-            style: cairo(fontSize: 10, fontWeight: FontWeight.w700,
-                color: AppColors.textMuted, letterSpacing: 1.2)),
-        const SizedBox(height: 8),
-        TextField(
-          controller: state._cashCtrl,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          inputFormatters: [
-            FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}'))
-          ],
-          style: cairo(fontSize: 30, fontWeight: FontWeight.w800),
-          decoration: InputDecoration(
-            prefixText:  'EGP  ',
-            prefixStyle: cairo(fontSize: 20, color: AppColors.textSecondary,
-                fontWeight: FontWeight.w500),
-            hintText:  '0',
-            hintStyle: cairo(fontSize: 30, fontWeight: FontWeight.w800,
-                color: AppColors.border),
-            border: InputBorder.none, enabledBorder: InputBorder.none,
-            focusedBorder: InputBorder.none,
+    return SurfaceCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _CardTitle(icon: Icons.payments_outlined, title: s.shiftCashCount),
+          const SizedBox(height: AppSpace.lg),
+          Container(
+            padding: const EdgeInsets.all(AppSpace.lg - 2),
+            decoration: BoxDecoration(
+              color: t.surfaceAlt,
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+            ),
+            child: Row(children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(s.shiftSystemCash,
+                        style: ui(
+                            size: 12,
+                            weight: FontWeight.w600,
+                            color: t.textSecondary)),
+                    const SizedBox(height: 2),
+                    Text(s.shiftSystemCashExplain,
+                        style: ui(size: 11, color: t.textMuted)),
+                  ],
+                ),
+              ),
+              cashLoading
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2))
+                  : Text(egp(systemCash),
+                      style: money(
+                          size: 20,
+                          weight: FontWeight.w800,
+                          color: t.textPrimary)),
+            ]),
           ),
-        ),
-        AnimatedSize(
-          duration: const Duration(milliseconds: 250),
-          curve:    Curves.easeOut,
-          child: showDiscrep
-              ? Padding(padding: const EdgeInsets.only(top: 14),
-                  child: _DiscrepancyRow(
-                      discrepancy: discrepancy, systemCash: systemCash))
-              : const SizedBox.shrink(),
-        ),
-        const SizedBox(height: 16),
-        TextField(
-          controller: state._noteCtrl,
-          decoration: InputDecoration(
-            hintText:   'Cash note (optional)',
-            hintStyle:  cairo(fontSize: 14, color: AppColors.textMuted),
-            prefixIcon: const Icon(Icons.notes_rounded,
-                size: 16, color: AppColors.textMuted),
+          const SizedBox(height: AppSpace.lg),
+          AmountField(
+            controller: state._cashCtrl,
+            label: s.shiftActualCash,
+            hint: '0.00',
           ),
-        ),
-      ]),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOut,
+            child: showDiscrep
+                ? Padding(
+                    padding: const EdgeInsets.only(top: AppSpace.md),
+                    child: _DiscrepancyBanner(
+                        declared: declaredCash, systemCash: systemCash),
+                  )
+                : const SizedBox.shrink(),
+          ),
+          const SizedBox(height: AppSpace.lg),
+          TextField(
+            controller: state._noteCtrl,
+            decoration: InputDecoration(
+              hintText: s.shiftCashNoteOptional,
+              prefixIcon: Icon(Icons.notes_rounded, size: 16, color: t.textMuted),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -401,62 +651,101 @@ class _InventoryCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final inventory = ref.watch(shiftProvider.select((s) => s.inventory));
-    return CardContainer(
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const _SectionHeader(icon: Icons.inventory_2_outlined,
-            iconBg: Color(0xFFFFFBEB), iconColor: AppColors.warning,
-            title: 'Inventory Count'),
-        const SizedBox(height: 18),
-        if (state._loadingInv)
-          const Center(child: Padding(padding: EdgeInsets.all(20),
-              child: CircularProgressIndicator(color: AppColors.primary)))
-        else if (inventory.isEmpty)
-          Text('No inventory items',
-              style: cairo(fontSize: 13, color: AppColors.textMuted))
-        else
-          ...inventory.map((item) {
-            final warn = state._zeroWarn[item.id] ?? false;
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 14),
-              child: Row(children: [
-                Expanded(child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(item.name,
-                      style: cairo(fontSize: 14, fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 2),
-                  Text('System: ${item.currentStock} ${item.unit}',
-                      style: cairo(fontSize: 12, color: AppColors.textSecondary)),
-                  if (warn)
-                    Padding(padding: const EdgeInsets.only(top: 3),
-                      child: Text('⚠ Value is 0 — confirm this is correct',
-                          style: cairo(fontSize: 11, color: AppColors.warning))),
-                ])),
-                const SizedBox(width: 12),
-                SizedBox(width: 130, child: TextField(
-                  controller:   state._invCtrs[item.id],
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  textAlign:    TextAlign.center,
-                  style: cairo(fontSize: 14, fontWeight: FontWeight.w600,
-                      color: warn ? AppColors.warning : AppColors.textPrimary),
-                  decoration: InputDecoration(
-                    suffixText:     item.unit,
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 12),
-                    enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.sm),
-                        borderSide:   BorderSide(
-                            color: warn ? AppColors.warning : AppColors.border)),
-                    focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.sm),
-                        borderSide:   const BorderSide(
-                            color: AppColors.primary, width: 2)),
+    final t = context.tokens;
+    final s = l10n(context);
+    final inventory = ref.watch(shiftProvider.select((st) => st.inventory));
+    final loadingInv =
+        ref.watch(_closeShiftProvider.select((st) => st.loadingInv));
+    final zeroWarn =
+        ref.watch(_closeShiftProvider.select((st) => st.zeroWarn));
+
+    return SurfaceCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _CardTitle(
+            icon: Icons.inventory_2_outlined,
+            title: s.shiftInventoryCount,
+            trailing: inventory.isEmpty
+                ? null
+                : StatusChip(
+                    label: s.shiftUseSystemCounts,
+                    tone: ChipTone.accent,
+                    icon: Icons.restore_rounded,
+                    onTap: state._useSystemCounts,
                   ),
-                )),
-              ]),
-            );
-          }),
-      ]),
+          ),
+          const SizedBox(height: AppSpace.lg),
+          if (loadingInv)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(AppSpace.lg),
+                child: CircularProgressIndicator(),
+              ),
+            )
+          else if (inventory.isEmpty)
+            Text(s.shiftNoInventory,
+                style: ui(size: 13, color: t.textMuted))
+          else
+            ...inventory.map((item) {
+              final warn = zeroWarn[item.id] ?? false;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: AppSpace.md + 2),
+                child: Row(children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(item.name,
+                            style: ui(
+                                size: 14,
+                                weight: FontWeight.w600,
+                                color: t.textPrimary)),
+                        const SizedBox(height: 2),
+                        Text(
+                            s.shiftSystemStock(
+                                '${item.currentStock}', item.unit),
+                            style: ui(size: 12, color: t.textSecondary)),
+                        if (warn)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 3),
+                            child: Text(s.shiftZeroConfirmHint,
+                                style: ui(size: 11, color: t.warning)),
+                          ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: AppSpace.md),
+                  SizedBox(
+                    width: 130,
+                    child: TextField(
+                      controller: state._invCtrs[item.id],
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      textAlign: TextAlign.center,
+                      style: ui(
+                          size: 14,
+                          weight: FontWeight.w600,
+                          color: warn ? t.warning : t.textPrimary),
+                      decoration: InputDecoration(
+                        suffixText: item.unit,
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 12),
+                        enabledBorder: warn
+                            ? OutlineInputBorder(
+                                borderRadius:
+                                    BorderRadius.circular(AppRadius.sm),
+                                borderSide: BorderSide(color: t.warning),
+                              )
+                            : null,
+                      ),
+                    ),
+                  ),
+                ]),
+              );
+            }),
+        ],
+      ),
     );
   }
 }
@@ -467,90 +756,144 @@ class _SubmitSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.tokens;
     final isOnline = ref.watch(isOnlineProvider);
+    final offlineSession =
+        ref.watch(authProvider.select((a) => a.isOfflineSession));
+    final error = ref.watch(_closeShiftProvider.select((st) => st.error));
+    final submitting =
+        ref.watch(_closeShiftProvider.select((st) => st.submitting));
+    final willQueue = !isOnline || offlineSession;
+
     return Column(children: [
       AnimatedSize(
         duration: const Duration(milliseconds: 200),
-        curve:    Curves.easeOut,
-        child: state._error != null
-            ? Padding(padding: const EdgeInsets.only(bottom: 14),
-                child: Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                      color:        AppColors.danger.withOpacity(0.07),
-                      borderRadius: BorderRadius.circular(AppRadius.sm),
-                      border: Border.all(color: AppColors.danger.withOpacity(0.18))),
-                  child: Row(children: [
-                    const Icon(Icons.error_outline_rounded,
-                        size: 15, color: AppColors.danger),
-                    const SizedBox(width: 8),
-                    Flexible(child: Text(state._error!,
-                        style: cairo(fontSize: 13, color: AppColors.danger))),
-                  ]),
-                ))
+        curve: Curves.easeOut,
+        child: error != null
+            ? Padding(
+                padding: const EdgeInsets.only(bottom: AppSpace.md),
+                child: _NoticeBanner(
+                  icon: Icons.error_outline_rounded,
+                  text: error,
+                  color: t.danger,
+                  background: t.dangerBg,
+                ),
+              )
             : const SizedBox.shrink(),
       ),
-      if (!isOnline)
+      if (willQueue)
         Padding(
-          padding: const EdgeInsets.only(bottom: 14),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-                color:        const Color(0xFFFFF3CD),
-                borderRadius: BorderRadius.circular(AppRadius.xs),
-                border:       Border.all(color: const Color(0xFFFFD700))),
-            child: Row(children: [
-              const Icon(Icons.wifi_off_rounded, size: 14, color: Color(0xFF856404)),
-              const SizedBox(width: 8),
-              Expanded(child: Text('Internet required to close a shift.',
-                  style: cairo(fontSize: 12, color: const Color(0xFF856404)))),
-            ]),
+          padding: const EdgeInsets.only(bottom: AppSpace.md),
+          child: _NoticeBanner(
+            icon: Icons.wifi_off_rounded,
+            text: l10n(context).shiftCloseOfflineNote,
+            color: t.navy,
+            background: t.navyBg,
           ),
         ),
       AppButton(
-        label:   'Close Shift',
+        label: l10n(context).shiftClose,
         variant: BtnVariant.danger,
-        loading: state._submitting,
-        width:   double.infinity,
-        icon:    Icons.lock_outline_rounded,
-        onTap:   (!isOnline || state._submitting) ? null : state._close,
+        loading: submitting,
+        width: double.infinity,
+        icon: Icons.lock_outline_rounded,
+        onTap: submitting ? null : state._close,
       ),
     ]);
   }
 }
 
-class _DiscrepancyRow extends StatelessWidget {
-  final int discrepancy, systemCash;
-  const _DiscrepancyRow({required this.discrepancy, required this.systemCash});
+// ─────────────────────────────────────────────────────────────────────────────
+//  Small widgets
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _NoticeBanner extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  final Color color;
+  final Color background;
+
+  const _NoticeBanner({
+    required this.icon,
+    required this.text,
+    required this.color,
+    required this.background,
+  });
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: double.infinity,
+        padding: const EdgeInsetsDirectional.symmetric(
+            horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: background,
+          borderRadius: BorderRadius.circular(AppRadius.xs),
+          border: Border.all(color: color.withOpacity(0.3)),
+        ),
+        child: Row(children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: AppSpace.sm),
+          Expanded(
+            child: Text(text,
+                style: ui(size: 12, weight: FontWeight.w600, color: color)),
+          ),
+        ]),
+      );
+}
+
+/// Explicit drawer-versus-system wording: no sign ambiguity for the teller.
+class _DiscrepancyBanner extends StatelessWidget {
+  final int declared;
+  final int systemCash;
+  const _DiscrepancyBanner({required this.declared, required this.systemCash});
 
   @override
   Widget build(BuildContext context) {
-    final isExact = discrepancy == 0;
-    final isOver  = discrepancy > 0;
-    final color   = isExact ? AppColors.success
-        : isOver ? AppColors.warning : AppColors.danger;
-    final icon  = isExact ? Icons.check_circle_outline_rounded
-        : isOver ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded;
-    final label = isExact ? 'Exact match'
-        : isOver ? 'Over by ${egp(discrepancy.abs())}'
-                 : 'Short by ${egp(discrepancy.abs())}';
+    final t = context.tokens;
+    final s = l10n(context);
+    final diff = declared - systemCash;
+    final (color, bg, icon, label) = diff == 0
+        ? (
+            t.success,
+            t.successBg,
+            Icons.check_circle_outline_rounded,
+            s.shiftDrawerMatches
+          )
+        : diff > 0
+            ? (
+                t.warning,
+                t.warningBg,
+                Icons.arrow_upward_rounded,
+                s.shiftDrawerOver(egp(diff))
+              )
+            : (
+                t.danger,
+                t.dangerBg,
+                Icons.arrow_downward_rounded,
+                s.shiftDrawerShort(egp(diff.abs()))
+              );
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 250),
-      padding:  const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      padding:
+          const EdgeInsetsDirectional.symmetric(horizontal: 14, vertical: 11),
       decoration: BoxDecoration(
-          color:        color.withOpacity(0.07),
-          borderRadius: BorderRadius.circular(AppRadius.sm),
-          border:       Border.all(color: color.withOpacity(0.2))),
+        color: bg,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(color: color.withOpacity(0.25)),
+      ),
       child: Row(children: [
         Icon(icon, size: 15, color: color),
-        const SizedBox(width: 8),
-        Text(label, style: cairo(fontSize: 13,
-            fontWeight: FontWeight.w600, color: color)),
-        const Spacer(),
-        if (!isExact)
-          Text('System: ${egp(systemCash)}',
-              style: cairo(fontSize: 11, color: color.withOpacity(0.75))),
+        const SizedBox(width: AppSpace.sm),
+        Expanded(
+          child: Text(label,
+              style: ui(size: 13, weight: FontWeight.w600, color: color)),
+        ),
+        if (diff != 0)
+          Text(s.shiftSystemAmount(egp(systemCash)),
+              style: money(
+                  size: 11, weight: FontWeight.w600,
+                  color: color.withOpacity(0.75))),
       ]),
     );
   }

@@ -26,7 +26,7 @@ void main() {
       final options = RequestOptions(path: '/test');
       final handler = MockRequestInterceptorHandler();
       
-      interceptor.onRequest!(options, handler);
+      interceptor.onRequest(options, handler);
 
       verify(() => handler.next(any(that: isA<RequestOptions>()))).called(1);
       expect(options.headers['Authorization'], 'Bearer my-token');
@@ -45,7 +45,7 @@ void main() {
       );
 
       final handler = MockErrorInterceptorHandler();
-      interceptor.onError!(err, handler);
+      interceptor.onError(err, handler);
 
       expect(cbCalled, isTrue);
       verify(() => handler.next(err)).called(1);

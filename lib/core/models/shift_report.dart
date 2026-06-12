@@ -1,34 +1,42 @@
-import 'payment_method.dart';
+// Façade over the OpenAPI-generated wire models (packages/sufrix_api).
+// The app's flattened ShiftReport maps to the spec's ShiftReportResponse
+// (shift fields live on the embedded `shift`).
+import 'package:sufrix_api/sufrix_api.dart';
 
-class PaymentSummaryItem {
-  final String paymentMethod;
-  final bool isCash;
-  final int total;
-  final int orderCount;
+export 'package:sufrix_api/sufrix_api.dart'
+    show ShiftReportResponse, PaymentSummaryRow, CashMovementSummaryRow;
 
-  const PaymentSummaryItem({
-    required this.paymentMethod,
-    required this.isCash,
-    required this.total,
-    required this.orderCount,
-  });
+typedef ShiftReport = ShiftReportResponse;
+typedef PaymentSummaryItem = PaymentSummaryRow;
+typedef CashMovementItem = CashMovementSummaryRow;
 
-  factory PaymentSummaryItem.fromJson(Map<String, dynamic> json) {
-    return PaymentSummaryItem(
-      paymentMethod: json['payment_method'] ?? '',
-      isCash: json['is_cash'] ?? (json['payment_method'] == 'cash'),
-      total: (json['total'] as num?)?.toInt() ?? 0,
-      orderCount: (json['order_count'] as num?)?.toInt() ?? 0,
-    );
+extension ShiftReportX on ShiftReportResponse {
+  String get shiftId => shift.id;
+  String get branchId => shift.branchId;
+  String get tellerName => shift.tellerName;
+  String get status => shift.status;
+  int get openingCash => shift.openingCash;
+  int? get closingCashDeclared => shift.closingCashDeclared;
+  int? get closingCashSystem => shift.closingCashSystem;
+  DateTime get openedAt => shift.openedAt;
+  DateTime? get closedAt => shift.closedAt;
+
+  /// Wire name is `voided_amount`; the app calls it "returns".
+  int get totalReturns => voidedAmount;
+
+  bool get isOpen => shift.status == 'open';
+
+  int expectedCash() {
+    if (closingCashSystem != null) {
+      return closingCashSystem!; // closed shift — use server value
+    }
+    final cashPayments =
+        paymentSummary.where((p) => p.isCash).fold(0, (s, p) => s + p.total);
+    return openingCash + cashPayments + cashMovementsIn - cashMovementsOut;
   }
+}
 
-  Map<String, dynamic> toJson() => {
-        'payment_method': paymentMethod,
-        'is_cash': isCash,
-        'total': total,
-        'order_count': orderCount,
-      };
-
+extension PaymentSummaryItemX on PaymentSummaryRow {
   String get displayLabel => switch (paymentMethod) {
         'cash' => 'Cash',
         'card' => 'Card',
@@ -41,140 +49,6 @@ class PaymentSummaryItem {
       };
 }
 
-class CashMovementItem {
-  final int amount;
-  final String note;
-  final String movedByName;
-  final DateTime createdAt;
-
-  const CashMovementItem({
-    required this.amount,
-    required this.note,
-    required this.movedByName,
-    required this.createdAt,
-  });
-
+extension CashMovementItemX on CashMovementSummaryRow {
   bool get isIn => amount > 0;
-
-  factory CashMovementItem.fromJson(Map<String, dynamic> j) => CashMovementItem(
-        amount: (j['amount'] as num).toInt(),
-        note: j['note'] as String,
-        movedByName: j['moved_by_name'] as String,
-        createdAt: DateTime.parse(j['created_at'] as String),
-      );
-
-  Map<String, dynamic> toJson() => {
-        'amount': amount,
-        'note': note,
-        'moved_by_name': movedByName,
-        'created_at': createdAt.toIso8601String(),
-      };
-}
-
-class ShiftReport {
-  final String shiftId;
-  final String branchId;
-  final String tellerName;
-  final String status;
-  final int openingCash;
-  final int? closingCashDeclared;
-  final int? closingCashSystem;
-  final DateTime openedAt;
-  final DateTime? closedAt;
-
-  final List<PaymentSummaryItem> paymentSummary;
-  final List<CashMovementItem> cashMovements;
-  final int totalPayments;
-  final int totalReturns;
-  final int netPayments;
-  final int cashMovementsIn;
-  final int cashMovementsOut;
-  final DateTime printedAt;
-
-  const ShiftReport({
-    required this.shiftId,
-    required this.branchId,
-    required this.tellerName,
-    required this.status,
-    required this.openingCash,
-    this.closingCashDeclared,
-    this.closingCashSystem,
-    required this.openedAt,
-    this.closedAt,
-    required this.paymentSummary,
-    required this.cashMovements,
-    required this.totalPayments,
-    required this.totalReturns,
-    required this.netPayments,
-    required this.cashMovementsIn,
-    required this.cashMovementsOut,
-    required this.printedAt,
-  });
-
-  bool get isOpen => status == 'open';
-
-  factory ShiftReport.fromJson(Map<String, dynamic> j) {
-    final shift = j['shift'] as Map<String, dynamic>;
-    return ShiftReport(
-      shiftId: shift['id'] as String,
-      branchId: shift['branch_id'] as String,
-      tellerName: shift['teller_name'] as String,
-      status: shift['status'] as String,
-      openingCash: (shift['opening_cash'] as num).toInt(),
-      closingCashDeclared: shift['closing_cash_declared'] != null
-          ? (shift['closing_cash_declared'] as num).toInt()
-          : null,
-      closingCashSystem: shift['closing_cash_system'] != null
-          ? (shift['closing_cash_system'] as num).toInt()
-          : null,
-      openedAt: DateTime.parse(shift['opened_at'] as String),
-      closedAt: shift['closed_at'] != null
-          ? DateTime.parse(shift['closed_at'] as String)
-          : null,
-      paymentSummary: (j['payment_summary'] as List)
-          .map((e) => PaymentSummaryItem.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      cashMovements: (j['cash_movements'] as List)
-          .map((e) => CashMovementItem.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      totalPayments: (j['total_payments'] as num?)?.toInt() ?? 0,
-      netPayments: (j['net_payments'] as num?)?.toInt() ?? 0,
-      cashMovementsIn: (j['cash_movements_in'] as num?)?.toInt() ?? 0,
-      cashMovementsOut: (j['cash_movements_out'] as num?)?.toInt() ?? 0,
-      totalReturns: (j['voided_amount'] as num?)?.toInt() ?? 0,
-      printedAt: DateTime.parse(j['printed_at'] as String),
-    );
-  }
-
-  Map<String, dynamic> toJson() => {
-        'shift': {
-          'id': shiftId,
-          'branch_id': branchId,
-          'teller_name': tellerName,
-          'status': status,
-          'opening_cash': openingCash,
-          'closing_cash_declared': closingCashDeclared,
-          'closing_cash_system': closingCashSystem,
-          'opened_at': openedAt.toIso8601String(),
-          'closed_at': closedAt?.toIso8601String(),
-        },
-        'payment_summary': paymentSummary.map((p) => p.toJson()).toList(),
-        'cash_movements': cashMovements.map((c) => c.toJson()).toList(),
-        'total_payments': totalPayments,
-        'net_payments': netPayments,
-        'cash_movements_in': cashMovementsIn,
-        'cash_movements_out': cashMovementsOut,
-        'voided_amount': totalReturns,
-        'printed_at': printedAt.toIso8601String(),
-      };
-
-  int expectedCash() {
-    if (closingCashSystem != null) {
-      return closingCashSystem!; // closed shift — use server value
-    }
-    final cashPayments = paymentSummary
-        .where((p) => p.isCash)
-        .fold(0, (s, p) => s + p.total);
-    return openingCash + cashPayments + cashMovementsIn - cashMovementsOut;
-  }
 }

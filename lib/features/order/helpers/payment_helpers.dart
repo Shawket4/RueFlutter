@@ -5,8 +5,8 @@ import '../../../core/models/payment_method.dart';
 export '../../../core/models/payment_method.dart';
 
 PaymentMethod _findMethod(List<PaymentMethod> methods, String m) {
-  if (m == 'mixed') return PaymentMethod.mixed();
-  
+  if (m == 'mixed') return paymentMethodMixed();
+
   try {
     return methods.firstWhere((x) => x.wireFormat == m);
   } catch (_) {}
@@ -15,38 +15,34 @@ PaymentMethod _findMethod(List<PaymentMethod> methods, String m) {
     try {
       return methods.firstWhere((x) => x.wireFormat == 'card' || x.wireFormat == 'credit_card');
     } catch (_) {}
-    
-    return const PaymentMethod(
+
+    return paymentMethodStub(
       id: 'card_stub',
-      orgId: '',
-      wireFormat: 'card',
-      labelTranslations: {'en': 'Card', 'ar': 'بطاقة'},
-      colorHex: '#7C3AED',
-      iconName: 'credit_card',
+      name: 'card',
+      labelTranslations: const {'en': 'Card', 'ar': 'بطاقة'},
+      color: '#7C3AED',
+      icon: 'credit_card',
       isCash: false,
-      isActive: true,
       displayOrder: 99,
     );
   }
 
   if (m == 'cash' || m == 'talabat_cash') {
-    return PaymentMethod(
+    return paymentMethodStub(
       id: 'cash_stub',
-      orgId: '',
-      wireFormat: m,
-      labelTranslations: {'en': 'Cash', 'ar': 'نقدي'},
-      colorHex: '#22C55E', // AppColors.success roughly
-      iconName: 'money',
+      name: m,
+      labelTranslations: const {'en': 'Cash', 'ar': 'نقدي'},
+      color: '#22C55E', // AppColors.success roughly
+      icon: 'money',
       isCash: true,
-      isActive: true,
       displayOrder: 1,
     );
   }
-  
-  return PaymentMethod.mixed();
+
+  return paymentMethodMixed();
 }
 
-Color methodColor(List<PaymentMethod> methods, String m) => _findMethod(methods, m).color;
+Color methodColor(List<PaymentMethod> methods, String m) => _findMethod(methods, m).uiColor;
 String methodLabel(List<PaymentMethod> methods, String locale, String m) => _findMethod(methods, m).label(locale);
 bool isCashMethod(List<PaymentMethod> methods, String m) => _findMethod(methods, m).isCash;
 

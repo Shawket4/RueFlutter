@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
+import '../../../core/l10n/l10n.dart';
 import '../../../core/models/order.dart';
 import '../../../core/models/branch.dart';
 import '../../../core/providers/auth_notifier.dart';
@@ -9,25 +10,52 @@ import '../../../core/providers/payment_method_notifier.dart';
 import '../../../core/services/printer_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatting.dart';
+import '../../../shared/widgets/app_button.dart';
+import '../../../shared/widgets/responsive_sheet.dart';
 import '../helpers/payment_helpers.dart';
-import '../../../core/providers/payment_method_notifier.dart';
+
+/// Print progress for one preview sheet. autoDispose.family keyed by order
+/// id: state resets when the sheet closes and is never shared across orders.
+@immutable
+class _PreviewPrintState {
+  final bool printing;
+  final String? error;
+
+  const _PreviewPrintState({this.printing = false, this.error});
+}
+
+class _PreviewPrintNotifier
+    extends AutoDisposeFamilyNotifier<_PreviewPrintState, String> {
+  @override
+  _PreviewPrintState build(String arg) => const _PreviewPrintState();
+
+  void started() => state = const _PreviewPrintState(printing: true);
+
+  void finished(String? error) =>
+      state = _PreviewPrintState(printing: false, error: error);
+}
+
+final _previewPrintProvider = NotifierProvider.autoDispose
+    .family<_PreviewPrintNotifier, _PreviewPrintState, String>(
+        _PreviewPrintNotifier.new);
 
 /// 1. MAIN SHEET: Handles modal state, printing logic, and action buttons.
 class ReceiptPreviewSheet extends ConsumerStatefulWidget {
   final Order order;
-  final String title;
+
+  /// Custom sheet title; defaults to the localized "Receipt Preview".
+  final String? title;
 
   const ReceiptPreviewSheet({
     super.key,
     required this.order,
-    this.title = 'Receipt Preview',
+    this.title,
   });
 
-  static Future<void> show(BuildContext context, Order order, {String title = 'Receipt Preview'}) =>
-      showModalBottomSheet(
+  static Future<void> show(BuildContext context, Order order,
+          {String? title}) =>
+      ResponsiveSheet.show(
         context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
         builder: (_) => ReceiptPreviewSheet(order: order, title: title),
       );
 
@@ -36,25 +64,20 @@ class ReceiptPreviewSheet extends ConsumerStatefulWidget {
 }
 
 class _ReceiptPreviewSheetState extends ConsumerState<ReceiptPreviewSheet> {
-  bool _printing = false;
-  String? _printError;
-
   Future<void> _print(Branch branch) async {
     if (!branch.hasPrinter) {
-      _showSnack('No printer configured for this branch', color: AppColors.warning);
+      _showSnack(l10n(context).commonNoPrinterForBranch,
+          color: context.tokens.warning);
       return;
     }
 
-    setState(() {
-      _printing = true;
-      _printError = null;
-    });
+    ref.read(_previewPrintProvider(widget.order.id).notifier).started();
 
     final methods = ref.read(paymentMethodProvider).items;
 
     final err = await PrinterService.print(
       ip: branch.printerIp!,
-      port: branch.printerPort,
+      port: branch.printerPort ?? 9100,
       brand: branch.printerBrand!,
       order: widget.order,
       paymentMethods: methods,
@@ -63,12 +86,10 @@ class _ReceiptPreviewSheetState extends ConsumerState<ReceiptPreviewSheet> {
     );
 
     if (mounted) {
-      setState(() {
-        _printing = false;
-        _printError = err;
-      });
+      ref.read(_previewPrintProvider(widget.order.id).notifier).finished(err);
       if (err == null) {
-        _showSnack('Receipt printed successfully', color: AppColors.success);
+        _showSnack(l10n(context).orderReceiptPrintedOk,
+            color: context.tokens.success);
       }
     }
   }
@@ -81,68 +102,74 @@ class _ReceiptPreviewSheetState extends ConsumerState<ReceiptPreviewSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.tokens;
     final mq = MediaQuery.of(context);
-    final methods = ref.watch(paymentMethodProvider).items;
-    final branch = ref.watch(authProvider).branch;
+    final methods = ref.watch(paymentMethodProvider.select((p) => p.items));
+    final branch = ref.watch(authProvider.select((a) => a.branch));
+    final printState = ref.watch(_previewPrintProvider(widget.order.id));
     final hasPrinter = branch?.hasPrinter ?? false;
 
     return Container(
       constraints: BoxConstraints(maxHeight: mq.size.height * 0.92),
       decoration: BoxDecoration(
-        color: AppColors.bg,
+        color: t.bg,
         borderRadius: AppRadius.sheetRadius,
       ),
       child: Column(
         children: [
-          _buildHeader(context),
-          
+          _buildHeader(context, t),
+
           // Pure UI component for the receipt visual
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+              padding: const EdgeInsetsDirectional.symmetric(
+                  horizontal: AppSpace.xl, vertical: AppSpace.lg),
               child: Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 420),
-                  child: ThermalReceiptCard(order: widget.order, branch: branch, methods: methods),
+                  child: ThermalReceiptCard(
+                      order: widget.order, branch: branch, methods: methods),
                 ),
               ),
             ),
           ),
-          
-          _buildActionFooter(mq, branch, hasPrinter),
+
+          _buildActionFooter(mq, t, branch, hasPrinter, printState),
         ],
       ),
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, AppTokens t) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: t.surfaceRaised,
         borderRadius: AppRadius.sheetRadius,
-        border: const Border(bottom: BorderSide(color: AppColors.border)),
+        border: Border(bottom: BorderSide(color: t.border)),
       ),
-      padding: const EdgeInsets.fromLTRB(20, 12, 16, 14),
+      padding: const EdgeInsetsDirectional.fromSTEB(20, 12, 16, 14),
       child: Column(
         children: [
           Container(
             width: 36,
             height: 4,
             decoration: BoxDecoration(
-              color: AppColors.border,
+              color: t.border,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
           const SizedBox(height: 14),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                widget.title,
-                style: cairo(fontSize: 18, fontWeight: FontWeight.w800),
+              Expanded(
+                child: Text(
+                  widget.title ?? l10n(context).orderReceiptPreview,
+                  style: ui(
+                      size: 17, weight: FontWeight.w700, color: t.textPrimary),
+                ),
               ),
               IconButton(
-                icon: const Icon(Icons.close_rounded),
+                icon: Icon(Icons.close_rounded, color: t.textSecondary),
                 onPressed: () => Navigator.pop(context),
               ),
             ],
@@ -152,78 +179,59 @@ class _ReceiptPreviewSheetState extends ConsumerState<ReceiptPreviewSheet> {
     );
   }
 
-  Widget _buildActionFooter(MediaQueryData mq, Branch? branch, bool hasPrinter) {
+  Widget _buildActionFooter(MediaQueryData mq, AppTokens t, Branch? branch,
+      bool hasPrinter, _PreviewPrintState printState) {
     return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        border: Border(top: BorderSide(color: AppColors.border)),
+      decoration: BoxDecoration(
+        color: t.surfaceRaised,
+        border: Border(top: BorderSide(color: t.border)),
       ),
-      padding: EdgeInsets.fromLTRB(20, 16, 20, mq.padding.bottom + 16),
-      child: _printing
-          ? const Center(
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 12),
-                child: CircularProgressIndicator(strokeWidth: 2.5, color: AppColors.primary),
-              ),
-            )
-          : Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (_printError != null) _buildErrorBanner(),
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed: (hasPrinter && branch != null) ? () => _print(branch) : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: hasPrinter ? AppColors.primary : AppColors.border,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.sm),
-                      ),
-                      elevation: 0,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          _printError != null ? Icons.refresh_rounded : Icons.print_rounded,
-                          size: 18,
-                          color: Colors.white,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          hasPrinter
-                              ? (_printError != null ? 'Retry Print' : 'Print Receipt')
-                              : 'No Printer Configured',
-                          style: cairo(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
+      padding: EdgeInsetsDirectional.fromSTEB(
+          20, AppSpace.lg, 20, mq.padding.bottom + AppSpace.lg),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (printState.error != null && !printState.printing)
+            _buildErrorBanner(t, printState.error!),
+          AppButton(
+            label: hasPrinter
+                ? (printState.error != null
+                    ? l10n(context).commonRetryPrint
+                    : l10n(context).printReceipt)
+                : l10n(context).noPrinterConfigured,
+            icon: printState.error != null
+                ? Icons.refresh_rounded
+                : Icons.print_rounded,
+            loading: printState.printing,
+            width: double.infinity,
+            height: 52,
+            onTap:
+                (hasPrinter && branch != null) ? () => _print(branch) : null,
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildErrorBanner() {
+  Widget _buildErrorBanner(AppTokens t, String error) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: AppSpace.md),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        padding: const EdgeInsetsDirectional.symmetric(
+            horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: AppColors.danger.withOpacity(0.07),
+          color: t.dangerBg,
           borderRadius: BorderRadius.circular(AppRadius.xs),
-          border: Border.all(color: AppColors.danger.withOpacity(0.2)),
+          border: Border.all(color: t.danger.withOpacity(0.3)),
         ),
         child: Row(
           children: [
-            const Icon(Icons.error_outline_rounded, size: 16, color: AppColors.danger),
-            const SizedBox(width: 8),
+            Icon(Icons.error_outline_rounded, size: 16, color: t.danger),
+            const SizedBox(width: AppSpace.sm),
             Expanded(
               child: Text(
-                _printError!,
-                style: cairo(fontSize: 12, color: AppColors.danger),
+                error,
+                style: ui(size: 12, color: t.danger),
               ),
             ),
           ],
@@ -233,8 +241,15 @@ class _ReceiptPreviewSheetState extends ConsumerState<ReceiptPreviewSheet> {
   }
 }
 
-/// 2. THERMAL RECEIPT VISUAL: Pure UI component, strictly isolated from external state logic.
+/// 2. THERMAL RECEIPT VISUAL: Pure UI component, strictly isolated from
+/// external state logic.
+///
+/// The card is intentionally brightness-invariant: it previews a physical
+/// white thermal receipt, so it keeps white paper + light-theme "ink" in
+/// both app themes (hence [AppTokens.light] instead of `context.tokens`).
 class ThermalReceiptCard extends StatelessWidget {
+  static const AppTokens _ink = AppTokens.light;
+
   final Order order;
   final Branch? branch;
   final List<PaymentMethod> methods;
@@ -248,56 +263,52 @@ class ThermalReceiptCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.tokens;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.white, // paper
         borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: AppColors.border),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        border: Border.all(color: t.border),
+        boxShadow: AppShadows.of(t),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _buildLogoAndBranch(),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpace.md),
           const _DottedLine(),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpace.md),
           _buildOrderDetails(),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpace.md),
           const _DottedLine(),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpace.md),
           _buildItemsList(),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpace.sm),
           const _DottedLine(),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpace.md),
           _buildSummary(),
-          const SizedBox(height: 20),
+          const SizedBox(height: AppSpace.lg),
           const _DottedLine(),
           const SizedBox(height: 14),
           Text(
             'Thank you for visiting!',
             textAlign: TextAlign.center,
-            style: cairo(fontSize: 11, fontStyle: FontStyle.italic, color: AppColors.textMuted),
+            style: ui(size: 11, color: _ink.textMuted),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: AppSpace.xl),
         ],
       ),
     );
   }
 
   Widget _buildLogoAndBranch() {
-    final hasLogo = branch?.orgLogoUrl != null && branch!.orgLogoUrl!.isNotEmpty;
-    
+    final hasLogo =
+        branch?.orgLogoUrl != null && branch!.orgLogoUrl!.isNotEmpty;
+
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.only(top: 24, bottom: 8),
+          padding: const EdgeInsets.only(top: AppSpace.xl, bottom: AppSpace.sm),
           child: hasLogo
               ? Image(
                   image: CachedNetworkImageProvider(branch!.orgLogoUrl!),
@@ -310,7 +321,8 @@ class ThermalReceiptCard extends StatelessWidget {
         Text(
           branch?.name ?? 'Sufrix POS',
           textAlign: TextAlign.center,
-          style: cairo(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+          style:
+              ui(size: 15, weight: FontWeight.w700, color: _ink.textPrimary),
         ),
       ],
     );
@@ -326,23 +338,27 @@ class ThermalReceiptCard extends StatelessWidget {
 
   Widget _buildOrderDetails() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsetsDirectional.symmetric(horizontal: AppSpace.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (order.isVoided) ...[
             Container(
-              margin: const EdgeInsets.only(bottom: 8),
-              padding: const EdgeInsets.symmetric(vertical: 4),
+              margin: const EdgeInsets.only(bottom: AppSpace.sm),
+              padding: const EdgeInsets.symmetric(vertical: AppSpace.xs),
               decoration: BoxDecoration(
-                color: AppColors.danger.withOpacity(0.1),
-                border: Border.all(color: AppColors.danger.withOpacity(0.3)),
+                color: _ink.dangerBg,
+                border: Border.all(color: _ink.danger.withOpacity(0.3)),
                 borderRadius: BorderRadius.circular(4),
               ),
               alignment: Alignment.center,
               child: Text(
                 '*** VOIDED ***',
-                style: cairo(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.danger, letterSpacing: 1.5),
+                style: ui(
+                    size: 14,
+                    weight: FontWeight.w800,
+                    color: _ink.danger,
+                    letterSpacing: 1.5),
               ),
             ),
           ],
@@ -350,18 +366,20 @@ class ThermalReceiptCard extends StatelessWidget {
             label: 'Order #',
             value: order.orderNumber == 0 ? 'DRAFT' : '#${order.orderNumber}',
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: AppSpace.xs),
           _ReceiptInfoRow(label: 'Date', value: dateTime(order.createdAt)),
           if (order.tellerName.isNotEmpty) ...[
-            const SizedBox(height: 4),
+            const SizedBox(height: AppSpace.xs),
             _ReceiptInfoRow(label: 'Teller', value: order.tellerName),
           ],
           if (order.customerName != null) ...[
-            const SizedBox(height: 4),
+            const SizedBox(height: AppSpace.xs),
             _ReceiptInfoRow(label: 'Customer', value: order.customerName!),
           ],
-          const SizedBox(height: 4),
-          _ReceiptInfoRow(label: 'Payment', value: methodLabel(methods, 'en', order.paymentMethod)),
+          const SizedBox(height: AppSpace.xs),
+          _ReceiptInfoRow(
+              label: 'Payment',
+              value: methodLabel(methods, 'en', order.paymentMethod)),
         ],
       ),
     );
@@ -369,26 +387,26 @@ class ThermalReceiptCard extends StatelessWidget {
 
   Widget _buildItemsList() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsetsDirectional.symmetric(horizontal: AppSpace.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'ITEMS',
-            style: cairo(
-              fontSize: 10,
-              fontWeight: FontWeight.w800,
-              color: AppColors.textMuted,
+            style: ui(
+              size: 10,
+              weight: FontWeight.w800,
+              color: _ink.textMuted,
               letterSpacing: 1.0,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpace.sm),
           if (order.items.isEmpty)
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
+              padding: const EdgeInsets.symmetric(vertical: AppSpace.sm),
               child: Text(
                 'No items in cart',
-                style: cairo(fontSize: 12, fontStyle: FontStyle.italic, color: AppColors.textSecondary),
+                style: ui(size: 12, color: _ink.textSecondary),
               ),
             )
           else
@@ -400,33 +418,38 @@ class ThermalReceiptCard extends StatelessWidget {
 
   Widget _buildSummary() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsetsDirectional.symmetric(horizontal: AppSpace.lg),
       child: Column(
         children: [
           _ReceiptAmountRow(label: 'Subtotal', value: egp(order.subtotal)),
           if (order.discountAmount > 0) ...[
-            const SizedBox(height: 4),
+            const SizedBox(height: AppSpace.xs),
             _ReceiptAmountRow(
               label: 'Discount',
               value: '- ${egp(order.discountAmount)}',
-              valueColor: AppColors.success,
+              valueColor: _ink.success,
             ),
           ],
           if (order.taxAmount > 0) ...[
-            const SizedBox(height: 4),
+            const SizedBox(height: AppSpace.xs),
             _ReceiptAmountRow(label: 'Tax (14%)', value: egp(order.taxAmount)),
           ],
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpace.sm),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'TOTAL',
-                style: cairo(fontSize: 15, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
+              Expanded(
+                child: Text(
+                  'TOTAL',
+                  style: ui(
+                      size: 15,
+                      weight: FontWeight.w800,
+                      color: _ink.textPrimary),
+                ),
               ),
               Text(
                 egp(order.totalAmount),
-                style: cairo(fontSize: 17, fontWeight: FontWeight.w800, color: AppColors.primary),
+                style: money(
+                    size: 17, weight: FontWeight.w800, color: _ink.navy),
               ),
             ],
           ),
@@ -438,7 +461,12 @@ class ThermalReceiptCard extends StatelessWidget {
 
 /// 3. ITEM ROW COMPONENT: Eliminates deep nesting from the mapping function.
 class ReceiptItemRow extends StatelessWidget {
-  final dynamic item; // Replace 'dynamic' with your actual OrderItem model type
+  static const AppTokens _ink = AppTokens.light;
+
+  // Statically typed on purpose: members like isBundleLine are EXTENSIONS on
+  // the generated wire model now — dynamic dispatch can't see extensions and
+  // throws NoSuchMethodError at runtime.
+  final OrderItem item;
 
   const ReceiptItemRow({super.key, required this.item});
 
@@ -446,7 +474,7 @@ class ReceiptItemRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final bool isBundle = item.isBundleLine;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: AppSpace.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -455,29 +483,39 @@ class ReceiptItemRow extends StatelessWidget {
             children: [
               Text(
                 '${item.quantity}x ',
-                style: cairo(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.primary),
+                style:
+                    ui(size: 13, weight: FontWeight.w700, color: _ink.navy),
               ),
               Expanded(
                 child: Text(
-                  item.itemName + (item.sizeLabel != null ? ' · ${normaliseName(item.sizeLabel!)}' : ''),
-                  style: cairo(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                  item.itemName +
+                      (item.sizeLabel != null
+                          ? ' · ${normaliseName(item.sizeLabel!)}'
+                          : ''),
+                  style: ui(
+                      size: 13,
+                      weight: FontWeight.w600,
+                      color: _ink.textPrimary),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: AppSpace.sm),
               Text(
                 egp(item.lineTotal),
-                style: cairo(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                style: money(
+                    size: 13, weight: FontWeight.w700, color: _ink.textPrimary),
               ),
             ],
           ),
-          if (isBundle && item.bundleComponents.isNotEmpty)
+          if (isBundle && (item.bundleComponents?.isNotEmpty ?? false))
             Padding(
-              padding: const EdgeInsets.only(left: 20, top: 4),
+              padding: const EdgeInsetsDirectional.only(start: 20, top: 4),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: item.bundleComponents.map<Widget>((c) {
+                children: (item.bundleComponents ?? const []).map<Widget>((c) {
                   final qty = c.quantity * item.quantity;
-                  final sizePart = c.sizeLabel != null ? ' · ${normaliseName(c.sizeLabel!)}' : '';
+                  final sizePart = c.sizeLabel != null
+                      ? ' · ${normaliseName(c.sizeLabel!)}'
+                      : '';
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 4),
                     child: Column(
@@ -485,31 +523,36 @@ class ReceiptItemRow extends StatelessWidget {
                       children: [
                         Text(
                           '– ${normaliseName(c.itemName)}$sizePart × $qty',
-                          style: cairo(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+                          style: ui(
+                              size: 11,
+                              weight: FontWeight.w600,
+                              color: _ink.textSecondary),
                         ),
                         if (c.addons.isNotEmpty)
                           Padding(
-                            padding: const EdgeInsets.only(left: 12, top: 1),
+                            padding: const EdgeInsetsDirectional.only(
+                                start: 12, top: 1),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: c.addons.map<Widget>((a) {
                                 final linePrice = a.priceModifier * a.quantity;
                                 return Text(
                                   '+ ${normaliseName(a.name)}${a.quantity > 1 ? " ×${a.quantity}" : ""}${linePrice > 0 ? " (${egp(linePrice)})" : ""}',
-                                  style: cairo(fontSize: 10, color: AppColors.primary),
+                                  style: ui(size: 10, color: _ink.navy),
                                 );
                               }).toList(),
                             ),
                           ),
                         if (c.optionals.isNotEmpty)
                           Padding(
-                            padding: const EdgeInsets.only(left: 12, top: 1),
+                            padding: const EdgeInsetsDirectional.only(
+                                start: 12, top: 1),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: c.optionals.map<Widget>((o) {
                                 return Text(
                                   '• ${normaliseName(o.name)}${o.price > 0 ? " (${egp(o.price)})" : ""}',
-                                  style: cairo(fontSize: 10, color: AppColors.warning),
+                                  style: ui(size: 10, color: _ink.warning),
                                 );
                               }).toList(),
                             ),
@@ -523,24 +566,28 @@ class ReceiptItemRow extends StatelessWidget {
           else ...[
             if (item.addons.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.only(left: 20, top: 2),
+                padding: const EdgeInsetsDirectional.only(start: 20, top: 2),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: item.addons.map<Widget>((a) => Text(
-                    '+ ${normaliseName(a.addonName)} (${egp(a.lineTotal)})',
-                    style: cairo(fontSize: 11, color: AppColors.textMuted),
-                  )).toList(),
+                  children: item.addons
+                      .map<Widget>((a) => Text(
+                            '+ ${normaliseName(a.addonName)} (${egp(a.lineTotal)})',
+                            style: ui(size: 11, color: _ink.textMuted),
+                          ))
+                      .toList(),
                 ),
               ),
             if (item.optionals.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.only(left: 20, top: 2),
+                padding: const EdgeInsetsDirectional.only(start: 20, top: 2),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: item.optionals.map<Widget>((o) => Text(
-                    '• ${normaliseName(o.fieldName)} (${egp(o.price)})',
-                    style: cairo(fontSize: 11, color: AppColors.textMuted),
-                  )).toList(),
+                  children: item.optionals
+                      .map<Widget>((o) => Text(
+                            '• ${normaliseName(o.fieldName)} (${egp(o.price)})',
+                            style: ui(size: 11, color: _ink.textMuted),
+                          ))
+                      .toList(),
                 ),
               ),
           ],
@@ -553,6 +600,8 @@ class ReceiptItemRow extends StatelessWidget {
 // ── REUSABLE HELPERS ──────────────────────────────────────────────────────────
 
 class _ReceiptInfoRow extends StatelessWidget {
+  static const AppTokens _ink = AppTokens.light;
+
   final String label;
   final String value;
 
@@ -567,13 +616,15 @@ class _ReceiptInfoRow extends StatelessWidget {
           width: 80,
           child: Text(
             label,
-            style: cairo(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textSecondary),
+            style: ui(
+                size: 12, weight: FontWeight.w500, color: _ink.textSecondary),
           ),
         ),
         Expanded(
           child: Text(
             value,
-            style: cairo(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+            style: ui(
+                size: 12, weight: FontWeight.w700, color: _ink.textPrimary),
           ),
         ),
       ],
@@ -582,6 +633,8 @@ class _ReceiptInfoRow extends StatelessWidget {
 }
 
 class _ReceiptAmountRow extends StatelessWidget {
+  static const AppTokens _ink = AppTokens.light;
+
   final String label;
   final String value;
   final Color? valueColor;
@@ -595,18 +648,20 @@ class _ReceiptAmountRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: cairo(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.textSecondary),
+        Expanded(
+          child: Text(
+            label,
+            style: ui(
+                size: 12, weight: FontWeight.w500, color: _ink.textSecondary),
+          ),
         ),
         Text(
           value,
-          style: cairo(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: valueColor ?? AppColors.textPrimary,
+          style: money(
+            size: 13,
+            weight: FontWeight.w600,
+            color: valueColor ?? _ink.textPrimary,
           ),
         ),
       ],
@@ -620,22 +675,23 @@ class _DottedLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsetsDirectional.symmetric(horizontal: AppSpace.lg),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final width = constraints.constrainWidth();
           const dashWidth = 4.0;
           const dashSpace = 4.0;
           final count = (width / (dashWidth + dashSpace)).floor();
-          
+
           return Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: List.generate(count, (_) {
-              return const SizedBox(
+              return SizedBox(
                 width: dashWidth,
                 height: 1,
                 child: DecoratedBox(
-                  decoration: BoxDecoration(color: AppColors.border),
+                  // Paper "ink" — intentionally theme-invariant.
+                  decoration: BoxDecoration(color: AppTokens.light.border),
                 ),
               );
             }),

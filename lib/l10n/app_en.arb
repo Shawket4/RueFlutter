@@ -1,109 +1,1121 @@
 {
   "@@locale": "en",
-  "@@last_modified": "2026-06-09",
-
+  "@@last_modified": "2026-06-11",
   "appTitle": "Sufrix POS",
-  "@appTitle": { "description": "Application title" },
-
+  "@appTitle": {
+    "description": "Application title"
+  },
   "loginTitle": "Sign in to your account",
-  "@loginTitle": { "description": "Login screen heading" },
-
+  "@loginTitle": {
+    "description": "Login screen heading"
+  },
   "loginButton": "Sign In",
   "@loginButton": {},
-
   "loginEmailHint": "Email address",
   "@loginEmailHint": {},
-
   "loginPasswordHint": "Password",
   "@loginPasswordHint": {},
-
   "errorSessionExpired": "Session expired — please sign in again",
   "@errorSessionExpired": {},
-
   "errorNoConnection": "No internet connection",
   "@errorNoConnection": {},
-
   "errorGeneric": "Something went wrong — please try again",
   "@errorGeneric": {},
-
   "shiftOpen": "Open Shift",
   "@shiftOpen": {},
-
   "shiftClose": "Close Shift",
   "@shiftClose": {},
-
   "shiftOpeningCash": "Opening Cash",
   "@shiftOpeningCash": {},
-
   "shiftClosingCash": "Closing Cash",
   "@shiftClosingCash": {},
-
   "orderCheckout": "Checkout",
   "@orderCheckout": {},
-
   "orderPlaceOrder": "Place Order",
   "@orderPlaceOrder": {},
-
   "orderCartEmpty": "Cart is empty",
   "@orderCartEmpty": {},
-
   "orderCustomerName": "Customer Name (optional)",
   "@orderCustomerName": {},
-
   "orderPaymentMethod": "Payment",
   "@orderPaymentMethod": {},
-
   "orderDiscount": "Discount",
   "@orderDiscount": {},
-
   "orderTotal": "Total",
   "@orderTotal": {},
-
   "orderSubtotal": "Subtotal",
   "@orderSubtotal": {},
-
   "orderTax": "Tax",
   "@orderTax": {},
-
   "offlineBannerText": "Offline — order will sync when reconnected",
   "@offlineBannerText": {},
-
   "pendingSyncTitle": "Pending Sync",
   "@pendingSyncTitle": {},
-
   "syncNow": "Sync Now",
   "@syncNow": {},
-
   "allSynced": "All synced",
   "@allSynced": {},
-
   "discardAction": "Discard",
   "@discardAction": {},
-
   "retryAction": "Retry",
   "@retryAction": {},
-
   "cancelAction": "Cancel",
   "@cancelAction": {},
-
   "cashIn": "Cash In",
   "@cashIn": {},
-
   "cashOut": "Cash Out",
   "@cashOut": {},
-
   "cashMovementOfflineError": "Cash movements require an internet connection",
   "@cashMovementOfflineError": {},
-
   "printReceipt": "Print Receipt",
   "@printReceipt": {},
-
   "noPrinterConfigured": "No Printer Configured",
   "@noPrinterConfigured": {},
-
   "home": "Home",
   "@home": {},
-
   "settings": "Settings",
-  "@settings": {}
+  "@settings": {},
+  "commonSave": "Save",
+  "@commonSave": {},
+  "commonDelete": "Delete",
+  "@commonDelete": {},
+  "commonRemove": "Remove",
+  "@commonRemove": {},
+  "commonEdit": "Edit",
+  "@commonEdit": {},
+  "commonClear": "Clear",
+  "@commonClear": {},
+  "commonCopyAll": "Copy all",
+  "@commonCopyAll": {},
+  "commonContinue": "Continue",
+  "@commonContinue": {},
+  "commonLoading": "Loading…",
+  "@commonLoading": {},
+  "commonRefresh": "Refresh",
+  "@commonRefresh": {},
+  "commonUndo": "Undo",
+  "@commonUndo": {},
+  "commonOffline": "Offline",
+  "@commonOffline": {},
+  "commonSomethingWentWrong": "Something went wrong",
+  "@commonSomethingWentWrong": {},
+  "commonNoDataAvailable": "No data available",
+  "@commonNoDataAvailable": {},
+  "commonSignOut": "Sign out",
+  "@commonSignOut": {},
+  "commonPrint": "Print",
+  "@commonPrint": {},
+  "commonPrintReport": "Print Report",
+  "@commonPrintReport": {},
+  "commonRetryPrint": "Retry Print",
+  "@commonRetryPrint": {},
+  "commonNoPrinterForBranch": "No printer configured for this branch",
+  "@commonNoPrinterForBranch": {},
+  "commonFailedLoadReport": "Failed to load report: {error}",
+  "@commonFailedLoadReport": {
+    "placeholders": {
+      "error": {}
+    }
+  },
+  "commonVoided": "Voided",
+  "@commonVoided": {},
+  "commonPendingSync": "Pending sync",
+  "@commonPendingSync": {},
+  "commonTeller": "Teller",
+  "@commonTeller": {},
+  "commonOrdersCount": "{count, plural, =1{1 order} other{{count} orders}}",
+  "@commonOrdersCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "commonItemsCount": "{count, plural, =1{1 item} other{{count} items}}",
+  "@commonItemsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "commonCopyright": "© {year} Sufrix",
+  "@commonCopyright": {
+    "placeholders": {
+      "year": {}
+    }
+  },
+  "commonCashOfflineHint": "Requires connection — cash amounts can't be queued safely",
+  "@commonCashOfflineHint": {},
+  "commonRequiresConnection": "Requires connection",
+  "@commonRequiresConnection": {},
+  "loginWelcome": "Welcome",
+  "@loginWelcome": {},
+  "loginWelcomeBack": "Welcome\nback.",
+  "@loginWelcomeBack": {},
+  "loginSubtitle": "Sign in to start your shift and manage orders.",
+  "@loginSubtitle": {},
+  "loginBrandTagline": "Sign in to start your shift\nand manage orders.",
+  "@loginBrandTagline": {},
+  "loginSessionExpiredBanner": "Your session expired — please sign in again.",
+  "@loginSessionExpiredBanner": {},
+  "loginBlockedBanner": "Branch has an open shift belonging to \"{name}\". They must close it before you can sign in.",
+  "@loginBlockedBanner": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "loginOfflineBanner": "You're offline. You can still sign in offline — sales will queue on this device until you sign in online.",
+  "@loginOfflineBanner": {},
+  "loginNameHint": "Your name",
+  "@loginNameHint": {},
+  "loginSignIn": "Sign in",
+  "@loginSignIn": {},
+  "loginSignInOffline": "Sign in offline",
+  "@loginSignInOffline": {},
+  "loginAutoSubmitHint": "Entering all 6 digits signs you in automatically.",
+  "@loginAutoSubmitHint": {},
+  "loginOfflineExplain": "Offline sign-in uses this device's cached account. Sales will queue until you sign in online.",
+  "@loginOfflineExplain": {},
+  "loginErrorEnterName": "Please enter your name",
+  "@loginErrorEnterName": {},
+  "loginErrorEnterPin": "Enter your 6-digit PIN",
+  "@loginErrorEnterPin": {},
+  "shellGreetingMorning": "Good Morning, {name}",
+  "@shellGreetingMorning": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "shellGreetingAfternoon": "Good Afternoon, {name}",
+  "@shellGreetingAfternoon": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "shellGreetingEvening": "Good Evening, {name}",
+  "@shellGreetingEvening": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "shellPastOrders": "Past Orders",
+  "@shellPastOrders": {},
+  "shellSync": "Sync",
+  "@shellSync": {},
+  "shellCashInOut": "Cash In / Out",
+  "@shellCashInOut": {},
+  "shellPastShifts": "Past Shifts",
+  "@shellPastShifts": {},
+  "shellMore": "More",
+  "@shellMore": {},
+  "shellSearchMenu": "Search menu…",
+  "@shellSearchMenu": {},
+  "shellRefreshMenu": "Refresh menu",
+  "@shellRefreshMenu": {},
+  "shellShiftActions": "Shift actions",
+  "@shellShiftActions": {},
+  "shellDefaultOrderName": "Order 1",
+  "@shellDefaultOrderName": {},
+  "shellBrowse": "Browse",
+  "@shellBrowse": {},
+  "shellCashAndShift": "Cash & shift",
+  "@shellCashAndShift": {},
+  "shellShiftOpenedAt": "Opened {time} · Opening {cash}",
+  "@shellShiftOpenedAt": {
+    "placeholders": {
+      "time": {},
+      "cash": {}
+    }
+  },
+  "shellShiftOpenedOffline": "Opened {time} · Offline mode",
+  "@shellShiftOpenedOffline": {
+    "placeholders": {
+      "time": {}
+    }
+  },
+  "shiftNoOpenShift": "No open shift",
+  "@shiftNoOpenShift": {},
+  "shiftOpenPrompt": "Open a shift to start taking orders.",
+  "@shiftOpenPrompt": {},
+  "shiftStatusOpen": "Open",
+  "@shiftStatusOpen": {},
+  "shiftStatusClosed": "Closed",
+  "@shiftStatusClosed": {},
+  "shiftStatusForceClosed": "Force closed",
+  "@shiftStatusForceClosed": {},
+  "shiftSuggestedOpeningCash": "Suggested opening cash",
+  "@shiftSuggestedOpeningCash": {},
+  "shiftCarriedOver": "Carried over from the last close",
+  "@shiftCarriedOver": {},
+  "shiftCloseFirstTitle": "Close shift first",
+  "@shiftCloseFirstTitle": {},
+  "shiftCloseFirstBody": "You have an open shift. You must close it before signing out.",
+  "@shiftCloseFirstBody": {},
+  "shiftOpenSubtitle": "Start a new selling session",
+  "@shiftOpenSubtitle": {},
+  "shiftOpenCardTitle": "Open a new shift",
+  "@shiftOpenCardTitle": {},
+  "shiftOpenCardBody": "Count the cash in the drawer before you start.",
+  "@shiftOpenCardBody": {},
+  "shiftSuggestedFromLastClose": "Suggested — carried over from the last close",
+  "@shiftSuggestedFromLastClose": {},
+  "shiftErrorValidCash": "Enter a valid cash amount",
+  "@shiftErrorValidCash": {},
+  "shiftErrorNoBranch": "No branch assigned to your account",
+  "@shiftErrorNoBranch": {},
+  "shiftOpenConfirmBody": "Open shift with {amount} in the drawer?",
+  "@shiftOpenConfirmBody": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
+  "shiftOpenOfflineNote": "You are offline — the shift will open on this device and sync when you reconnect.",
+  "@shiftOpenOfflineNote": {},
+  "shiftOpenFailed": "Failed to open shift",
+  "@shiftOpenFailed": {},
+  "shiftOpenedOfflineFooter": "Offline — the shift opens on this device and syncs later.",
+  "@shiftOpenedOfflineFooter": {},
+  "shiftCloseConfirmTitle": "Close shift?",
+  "@shiftCloseConfirmTitle": {},
+  "shiftCloseConfirmBodyOnline": "You will count cash and inventory on the next screen.",
+  "@shiftCloseConfirmBodyOnline": {},
+  "shiftCloseConfirmBodyOffline": "You're offline — the close will be queued on this device and synced when you reconnect. You will count cash and inventory on the next screen.",
+  "@shiftCloseConfirmBodyOffline": {},
+  "shiftCloseWillSync": "Close shift (will sync)",
+  "@shiftCloseWillSync": {},
+  "shiftCloseQueueConfirm": "Close (will sync)",
+  "@shiftCloseQueueConfirm": {},
+  "shiftErrorValidClosingCash": "Enter a valid closing cash amount",
+  "@shiftErrorValidClosingCash": {},
+  "shiftZeroStockTitle": "Zero stock warning",
+  "@shiftZeroStockTitle": {},
+  "shiftZeroStockBody": "These items are counted as 0:\n\n{items}\n\nAre you sure you want to submit?",
+  "@shiftZeroStockBody": {
+    "placeholders": {
+      "items": {}
+    }
+  },
+  "shiftSubmitAnyway": "Submit anyway",
+  "@shiftSubmitAnyway": {},
+  "shiftCloseFailed": "Failed to close shift",
+  "@shiftCloseFailed": {},
+  "shiftNothingToClose": "There is nothing to close right now.",
+  "@shiftNothingToClose": {},
+  "shiftSummary": "Shift Summary",
+  "@shiftSummary": {},
+  "shiftOpenedAtLabel": "Opened at",
+  "@shiftOpenedAtLabel": {},
+  "shiftCashCount": "Cash Count",
+  "@shiftCashCount": {},
+  "shiftSystemCash": "System cash",
+  "@shiftSystemCash": {},
+  "shiftSystemCashExplain": "Opening + cash orders + movements",
+  "@shiftSystemCashExplain": {},
+  "shiftActualCash": "Actual cash in drawer",
+  "@shiftActualCash": {},
+  "shiftCashNoteOptional": "Cash note (optional)",
+  "@shiftCashNoteOptional": {},
+  "shiftInventoryCount": "Inventory Count",
+  "@shiftInventoryCount": {},
+  "shiftUseSystemCounts": "Use system counts",
+  "@shiftUseSystemCounts": {},
+  "shiftNoInventory": "No inventory items",
+  "@shiftNoInventory": {},
+  "shiftSystemStock": "System: {stock} {unit}",
+  "@shiftSystemStock": {
+    "placeholders": {
+      "stock": {},
+      "unit": {}
+    }
+  },
+  "shiftZeroConfirmHint": "Value is 0 — confirm this is correct",
+  "@shiftZeroConfirmHint": {},
+  "shiftCloseOfflineNote": "You're offline — the shift will close on this device now and sync automatically",
+  "@shiftCloseOfflineNote": {},
+  "shiftDrawerMatches": "Drawer matches",
+  "@shiftDrawerMatches": {},
+  "shiftDrawerOver": "Drawer is over by {amount}",
+  "@shiftDrawerOver": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
+  "shiftDrawerShort": "Drawer is short by {amount}",
+  "@shiftDrawerShort": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
+  "shiftSystemAmount": "System: {amount}",
+  "@shiftSystemAmount": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
+  "shiftHistoryTitle": "Shifts",
+  "@shiftHistoryTitle": {},
+  "shiftHistorySubtitle": "Past shifts for this branch",
+  "@shiftHistorySubtitle": {},
+  "shiftErrorNoBranchAssigned": "No branch assigned",
+  "@shiftErrorNoBranchAssigned": {},
+  "shiftNoShiftsYet": "No shifts yet",
+  "@shiftNoShiftsYet": {},
+  "shiftShiftsAppearHere": "Opened and closed shifts will show up here.",
+  "@shiftShiftsAppearHere": {},
+  "shiftColOpened": "Opened",
+  "@shiftColOpened": {},
+  "shiftColClosed": "Closed",
+  "@shiftColClosed": {},
+  "shiftDeclaredCash": "Declared cash",
+  "@shiftDeclaredCash": {},
+  "shiftOpeningChip": "Opening {amount}",
+  "@shiftOpeningChip": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
+  "shiftOrdersInShift": "ORDERS IN THIS SHIFT",
+  "@shiftOrdersInShift": {},
+  "shiftNoOrdersInShift": "No orders in this shift",
+  "@shiftNoOrdersInShift": {},
+  "shiftOpenedOn": "Opened {date}",
+  "@shiftOpenedOn": {
+    "placeholders": {
+      "date": {}
+    }
+  },
+  "shiftReportTitle": "Shift Report",
+  "@shiftReportTitle": {},
+  "shiftReportOpenChip": "Open shift",
+  "@shiftReportOpenChip": {},
+  "shiftReportDetails": "SHIFT DETAILS",
+  "@shiftReportDetails": {},
+  "shiftExpectedCash": "Expected Cash",
+  "@shiftExpectedCash": {},
+  "shiftPaymentBreakdown": "PAYMENT BREAKDOWN",
+  "@shiftPaymentBreakdown": {},
+  "shiftNoPayments": "No payments recorded",
+  "@shiftNoPayments": {},
+  "shiftTotalPayments": "Total Payments",
+  "@shiftTotalPayments": {},
+  "shiftVoidedOrders": "Voided Orders",
+  "@shiftVoidedOrders": {},
+  "shiftNetPayments": "Net Payments",
+  "@shiftNetPayments": {},
+  "shiftCashMovementsHeader": "CASH MOVEMENTS",
+  "@shiftCashMovementsHeader": {},
+  "shiftNoCashMovements": "No cash movements",
+  "@shiftNoCashMovements": {},
+  "shiftPayIn": "Pay In",
+  "@shiftPayIn": {},
+  "shiftPayOut": "Pay Out",
+  "@shiftPayOut": {},
+  "shiftReportGenerated": "Report generated {time}",
+  "@shiftReportGenerated": {
+    "placeholders": {
+      "time": {}
+    }
+  },
+  "shiftReportPrinted": "Report printed",
+  "@shiftReportPrinted": {},
+  "shiftCashMovement": "Cash Movement",
+  "@shiftCashMovement": {},
+  "shiftErrorValidAmount": "Enter a valid amount",
+  "@shiftErrorValidAmount": {},
+  "shiftErrorNoteRequired": "Note is required",
+  "@shiftErrorNoteRequired": {},
+  "shiftCashOfflineBanner": "You're offline. Requires connection — cash amounts can't be queued safely.",
+  "@shiftCashOfflineBanner": {},
+  "shiftAmount": "Amount",
+  "@shiftAmount": {},
+  "shiftNoteRequired": "Note (required)",
+  "@shiftNoteRequired": {},
+  "shiftNoteHint": "e.g. Safe drop, float top-up…",
+  "@shiftNoteHint": {},
+  "shiftRecordCashIn": "Record Cash In",
+  "@shiftRecordCashIn": {},
+  "shiftRecordCashOut": "Record Cash Out",
+  "@shiftRecordCashOut": {},
+  "shiftCashInRecorded": "Cash in recorded — {amount}",
+  "@shiftCashInRecorded": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
+  "shiftCashOutRecorded": "Cash out recorded — {amount}",
+  "@shiftCashOutRecorded": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
+  "orderCartTitle": "Order",
+  "@orderCartTitle": {},
+  "orderTapToAdd": "Tap any item to add it.",
+  "@orderTapToAdd": {},
+  "orderHeldOrders": "Held orders ({count})",
+  "@orderHeldOrders": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "orderAddItemsBeforeHold": "Add items before holding this order",
+  "@orderAddItemsBeforeHold": {},
+  "orderDeleteHeldTitle": "Delete held order?",
+  "@orderDeleteHeldTitle": {},
+  "orderDeleteHeldBody": "Delete \"{name}\"? All its items will be permanently removed.",
+  "@orderDeleteHeldBody": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "orderDeleteActiveTitle": "Delete active order?",
+  "@orderDeleteActiveTitle": {},
+  "orderDeleteActiveBody": "Delete this active order tab? All its items will be permanently removed.",
+  "@orderDeleteActiveBody": {},
+  "orderDeleteTab": "Delete tab",
+  "@orderDeleteTab": {},
+  "orderRenameOrder": "Rename order",
+  "@orderRenameOrder": {},
+  "orderRenameHeldOrder": "Rename held order",
+  "@orderRenameHeldOrder": {},
+  "orderRenameHint": "Name this order so it's easy to find later.",
+  "@orderRenameHint": {},
+  "orderRenamePlaceholder": "e.g. Table 5, Sarah, Takeaway",
+  "@orderRenamePlaceholder": {},
+  "orderRemoveItemTitle": "Remove item?",
+  "@orderRemoveItemTitle": {},
+  "orderRemoveItemBody": "Remove \"{name}\" from the cart?",
+  "@orderRemoveItemBody": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "orderItemRemoved": "{name} removed",
+  "@orderItemRemoved": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "orderRemoveComboTitle": "Remove combo?",
+  "@orderRemoveComboTitle": {},
+  "orderRemoveComboBody": "The whole combo \"{name}\" will be removed.",
+  "@orderRemoveComboBody": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "orderNoItemsCategory": "No items in this category",
+  "@orderNoItemsCategory": {},
+  "orderPickAnotherCategory": "Pick another category or pull a fresh menu sync.",
+  "@orderPickAnotherCategory": {},
+  "orderNoResultsFor": "No results for \"{query}\"",
+  "@orderNoResultsFor": {
+    "placeholders": {
+      "query": {}
+    }
+  },
+  "orderTryShorterName": "Try a shorter name or check the spelling.",
+  "@orderTryShorterName": {},
+  "orderCombos": "Combos",
+  "@orderCombos": {},
+  "orderCombo": "Combo",
+  "@orderCombo": {},
+  "orderComboSave": "Save {amount}",
+  "@orderComboSave": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
+  "orderItemOutOfStock": "{name} is out of stock",
+  "@orderItemOutOfStock": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "orderOutOfStock": "Out of stock",
+  "@orderOutOfStock": {},
+  "orderSizeHeader": "SIZE",
+  "@orderSizeHeader": {},
+  "orderRecipe": "Recipe",
+  "@orderRecipe": {},
+  "orderRecipeRetry": "Recipe · Retry",
+  "@orderRecipeRetry": {},
+  "orderUpdateItem": "Update Item",
+  "@orderUpdateItem": {},
+  "orderAddToCart": "Add to Cart",
+  "@orderAddToCart": {},
+  "orderSelectOptions": "Select {name}",
+  "@orderSelectOptions": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "orderRequiredOptions": "required options",
+  "@orderRequiredOptions": {},
+  "orderOptionalHeader": "OPTIONAL",
+  "@orderOptionalHeader": {},
+  "orderRequiredChip": "Required",
+  "@orderRequiredChip": {},
+  "orderMaxSelections": "Max {max}",
+  "@orderMaxSelections": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "orderMaxHint": "Maximum {max} selections for {title}",
+  "@orderMaxHint": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      },
+      "title": {}
+    }
+  },
+  "orderSearchOptions": "Search options…",
+  "@orderSearchOptions": {},
+  "orderNoMatchFor": "No match for \"{query}\"",
+  "@orderNoMatchFor": {
+    "placeholders": {
+      "query": {}
+    }
+  },
+  "orderRecipeSizeLabel": "Size: {size}",
+  "@orderRecipeSizeLabel": {
+    "placeholders": {
+      "size": {}
+    }
+  },
+  "orderRecipeLoadError": "Could not load the recipe. Check your connection and try again.",
+  "@orderRecipeLoadError": {},
+  "orderNoIngredients": "No ingredients mapped",
+  "@orderNoIngredients": {},
+  "orderNoRecipeYet": "This item has no recipe composition yet.",
+  "@orderNoRecipeYet": {},
+  "orderConfiguredProgress": "{done} of {total} configured",
+  "@orderConfiguredProgress": {
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "orderReady": "Ready",
+  "@orderReady": {},
+  "orderDefaultOptions": "Default options",
+  "@orderDefaultOptions": {},
+  "orderConfigure": "Configure",
+  "@orderConfigure": {},
+  "orderConfigureItem": "Configure {name}",
+  "@orderConfigureItem": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "orderConfigureItems": "Configure items",
+  "@orderConfigureItems": {},
+  "orderItemUnavailable": "Item unavailable",
+  "@orderItemUnavailable": {},
+  "orderItemFallback": "Item",
+  "@orderItemFallback": {},
+  "orderTapToChooseOptions": "Tap to choose options",
+  "@orderTapToChooseOptions": {},
+  "orderNoOptionsToConfigure": "No options to configure",
+  "@orderNoOptionsToConfigure": {},
+  "orderHistoryTitle": "Orders",
+  "@orderHistoryTitle": {},
+  "orderCurrentShift": "Current shift",
+  "@orderCurrentShift": {},
+  "orderFilterAll": "All",
+  "@orderFilterAll": {},
+  "orderFilterSynced": "Synced",
+  "@orderFilterSynced": {},
+  "orderNoOrdersYet": "No orders yet",
+  "@orderNoOrdersYet": {},
+  "orderOrdersAppearHere": "Orders completed during this shift will appear here.",
+  "@orderOrdersAppearHere": {},
+  "orderOpenShiftToSell": "Open a shift to start selling — its orders will appear here.",
+  "@orderOpenShiftToSell": {},
+  "orderNothingHere": "Nothing here",
+  "@orderNothingHere": {},
+  "orderNoFilterMatch": "No orders match the \"{filter}\" filter.",
+  "@orderNoFilterMatch": {
+    "placeholders": {
+      "filter": {}
+    }
+  },
+  "orderStatOrders": "Orders",
+  "@orderStatOrders": {},
+  "orderMixed": "Mixed",
+  "@orderMixed": {},
+  "orderColTime": "Time",
+  "@orderColTime": {},
+  "orderColAmount": "Amount",
+  "@orderColAmount": {},
+  "orderNoItemDetails": "No item details available",
+  "@orderNoItemDetails": {},
+  "orderTax14": "Tax (14%)",
+  "@orderTax14": {},
+  "orderVoid": "Void",
+  "@orderVoid": {},
+  "orderIngredients": "Ingredients",
+  "@orderIngredients": {},
+  "orderIngredientUse": "Ingredient Use",
+  "@orderIngredientUse": {},
+  "orderNoDeductions": "No deductions recorded",
+  "@orderNoDeductions": {},
+  "orderNoDeductionsBody": "This order line has no ingredient deductions.",
+  "@orderNoDeductionsBody": {},
+  "orderSourceBase": "Base",
+  "@orderSourceBase": {},
+  "orderSourceComboItem": "Combo item",
+  "@orderSourceComboItem": {},
+  "orderSourceAddon": "Addon",
+  "@orderSourceAddon": {},
+  "orderVoidTitle": "Void Order #{number}",
+  "@orderVoidTitle": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "orderVoidCannotUndo": "This action cannot be undone",
+  "@orderVoidCannotUndo": {},
+  "orderVoidOfflineQueued": "Offline — void will be queued and applied when reconnected",
+  "@orderVoidOfflineQueued": {},
+  "orderVoidReasonHeader": "Reason",
+  "@orderVoidReasonHeader": {},
+  "orderVoidReasonCustomerRequest": "Customer request",
+  "@orderVoidReasonCustomerRequest": {},
+  "orderVoidReasonWrongOrder": "Wrong order",
+  "@orderVoidReasonWrongOrder": {},
+  "orderVoidReasonQualityIssue": "Quality issue",
+  "@orderVoidReasonQualityIssue": {},
+  "orderVoidReasonOther": "Other",
+  "@orderVoidReasonOther": {},
+  "orderVoidSelectReason": "Please select a reason",
+  "@orderVoidSelectReason": {},
+  "orderVoidSpecifyReason": "Please specify the other reason",
+  "@orderVoidSpecifyReason": {},
+  "orderVoidDescribeHint": "Describe the reason…",
+  "@orderVoidDescribeHint": {},
+  "orderVoidConfirmTitle": "Void order #{number}?",
+  "@orderVoidConfirmTitle": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "orderVoidConfirmBodyOnline": "This permanently voids the order and cannot be undone.",
+  "@orderVoidConfirmBodyOnline": {},
+  "orderVoidConfirmBodyOffline": "You are offline — the void will be queued and applied when you reconnect.",
+  "@orderVoidConfirmBodyOffline": {},
+  "orderVoidConfirmAction": "Void order",
+  "@orderVoidConfirmAction": {},
+  "orderVoidRestoreTitle": "Return items to inventory",
+  "@orderVoidRestoreTitle": {},
+  "orderVoidRestoreBody": "Ingredients go back into stock",
+  "@orderVoidRestoreBody": {},
+  "orderVoidAction": "Void Order",
+  "@orderVoidAction": {},
+  "orderQueueVoid": "Queue Void",
+  "@orderQueueVoid": {},
+  "orderPlaced": "Order Placed!",
+  "@orderPlaced": {},
+  "orderQueuedSyncs": "Queued — syncs automatically",
+  "@orderQueuedSyncs": {},
+  "orderNumber": "Order #{number}",
+  "@orderNumber": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "orderReceiptTip": "Tip",
+  "@orderReceiptTip": {},
+  "orderReceiptCustomer": "Customer",
+  "@orderReceiptCustomer": {},
+  "orderReceiptTime": "Time",
+  "@orderReceiptTime": {},
+  "orderChangeGiven": "Change Given",
+  "@orderChangeGiven": {},
+  "orderNewOrder": "New Order",
+  "@orderNewOrder": {},
+  "orderPrintingReceipt": "Printing receipt…",
+  "@orderPrintingReceipt": {},
+  "orderReceiptFailed": "Receipt didn't print",
+  "@orderReceiptFailed": {},
+  "orderReceiptPrinted": "Receipt printed",
+  "@orderReceiptPrinted": {},
+  "orderReprint": "Reprint",
+  "@orderReprint": {},
+  "orderReceiptPreview": "Receipt Preview",
+  "@orderReceiptPreview": {},
+  "orderDraftReceiptPreview": "Draft Receipt Preview",
+  "@orderDraftReceiptPreview": {},
+  "orderReceiptPrintedOk": "Receipt printed successfully",
+  "@orderReceiptPrintedOk": {},
+  "checkoutDiscountOptional": "DISCOUNT (OPTIONAL)",
+  "@checkoutDiscountOptional": {},
+  "checkoutCustomerOptional": "CUSTOMER NAME (OPTIONAL)",
+  "@checkoutCustomerOptional": {},
+  "checkoutNameHint": "e.g. Ahmed",
+  "@checkoutNameHint": {},
+  "checkoutPaymentHeader": "PAYMENT",
+  "@checkoutPaymentHeader": {},
+  "checkoutSplitPayment": "Split payment",
+  "@checkoutSplitPayment": {},
+  "checkoutLoadingMethods": "Loading payment methods…",
+  "@checkoutLoadingMethods": {},
+  "checkoutNoMethodsConfigured": "No payment methods are configured for this organization. Add them from the dashboard, then try again.",
+  "@checkoutNoMethodsConfigured": {},
+  "checkoutMethodsLoadFailed": "Couldn't load payment methods",
+  "@checkoutMethodsLoadFailed": {},
+  "checkoutMethodsNeeded": "Orders need a payment method — check your connection and retry.",
+  "@checkoutMethodsNeeded": {},
+  "checkoutPreview": "Preview",
+  "@checkoutPreview": {},
+  "checkoutSelectMethod": "Select a payment method",
+  "@checkoutSelectMethod": {},
+  "checkoutNoDiscount": "None",
+  "@checkoutNoDiscount": {},
+  "checkoutTipOptional": "TIP (OPTIONAL)",
+  "@checkoutTipOptional": {},
+  "checkoutTipAmount": "Tip amount",
+  "@checkoutTipAmount": {},
+  "checkoutCashTendered": "Cash tendered",
+  "@checkoutCashTendered": {},
+  "checkoutExact": "Exact",
+  "@checkoutExact": {},
+  "checkoutChangeDue": "Change due",
+  "@checkoutChangeDue": {},
+  "checkoutShortBy": "Short by",
+  "@checkoutShortBy": {},
+  "checkoutSelectSplitMethods": "Select the methods the customer is paying with.",
+  "@checkoutSelectSplitMethods": {},
+  "checkoutRemaining": "{amount} remaining",
+  "@checkoutRemaining": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
+  "checkoutOver": "{amount} over",
+  "@checkoutOver": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
+  "checkoutBalanced": "Balanced",
+  "@checkoutBalanced": {},
+  "syncCenterTitle": "Sync Center",
+  "@syncCenterTitle": {},
+  "syncPausedSubtitle": "Paused — sign in to resume",
+  "@syncPausedSubtitle": {},
+  "syncOfflineQueued": "Offline — {count} queued",
+  "@syncOfflineQueued": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncSyncing": "Syncing…",
+  "@syncSyncing": {},
+  "syncNeedAttention": "{count} need attention",
+  "@syncNeedAttention": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncWaitingCount": "{count} waiting to sync",
+  "@syncWaitingCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncAllSyncedBody": "Every sale, shift and void on this device has reached the server. Pull down to check again.",
+  "@syncAllSyncedBody": {},
+  "syncNeedsAttentionHeader": "NEEDS ATTENTION",
+  "@syncNeedsAttentionHeader": {},
+  "syncWaitingHeader": "WAITING TO SYNC",
+  "@syncWaitingHeader": {},
+  "syncPausedTitle": "Session expired — sign in to resume syncing",
+  "@syncPausedTitle": {},
+  "syncPausedBody": "{count, plural, =1{1 queued item is safe on this device. Syncing is paused until you sign in again — the app will take you to the sign-in screen when needed, and the queue resumes automatically.} other{{count} queued items are safe on this device. Syncing is paused until you sign in again — the app will take you to the sign-in screen when needed, and the queue resumes automatically.}}",
+  "@syncPausedBody": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncOfflineBody": "{count, plural, =1{1 item queued. Everything keeps working and syncs automatically when you reconnect.} other{{count} items queued. Everything keeps working and syncs automatically when you reconnect.}}",
+  "@syncOfflineBody": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncSyncingBody": "{count, plural, =1{1 item remaining.} other{{count} items remaining.}}",
+  "@syncSyncingBody": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncStuckTitle": "{count, plural, =1{1 item needs attention} other{{count} items need attention}}",
+  "@syncStuckTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncStuckBody": "These stopped syncing after repeated failures. Retry or discard them below.",
+  "@syncStuckBody": {},
+  "syncWaitingTitle": "Waiting to sync",
+  "@syncWaitingTitle": {},
+  "syncWaitingBody": "{count, plural, =1{1 item will sync shortly.} other{{count} items will sync shortly.}}",
+  "@syncWaitingBody": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncShiftOpenChip": "{count} shift open",
+  "@syncShiftOpenChip": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncShiftCloseChip": "{count} shift close",
+  "@syncShiftCloseChip": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncVoidsChip": "{count, plural, =1{1 void} other{{count} voids}}",
+  "@syncVoidsChip": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncCashChip": "{count} cash",
+  "@syncCashChip": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncStuckChip": "{count} stuck",
+  "@syncStuckChip": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncFromAnotherSession": "From another session",
+  "@syncFromAnotherSession": {},
+  "syncOtherSessionBody": "{count, plural, =1{1 item — syncs when that user signs in on this device} other{{count} items — sync when that user signs in on this device}}",
+  "@syncOtherSessionBody": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncSyncingChip": "Syncing",
+  "@syncSyncingChip": {},
+  "syncWalkIn": "Walk-in",
+  "@syncWalkIn": {},
+  "syncOpeningCashDetail": "Opening cash {amount}",
+  "@syncOpeningCashDetail": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
+  "syncClosingCashDetail": "Closing cash {amount}",
+  "@syncClosingCashDetail": {
+    "placeholders": {
+      "amount": {}
+    }
+  },
+  "syncReason": "Reason: {reason}",
+  "@syncReason": {
+    "placeholders": {
+      "reason": {}
+    }
+  },
+  "syncWaitingFor": "Waiting for: {label}",
+  "@syncWaitingFor": {
+    "placeholders": {
+      "label": {}
+    }
+  },
+  "syncAfterAllOrders": "Syncs after all orders",
+  "@syncAfterAllOrders": {},
+  "syncFailedAttempts": "{count, plural, =1{1 failed attempt — will retry automatically} other{{count} failed attempts — will retry automatically}}",
+  "@syncFailedAttempts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncStoppedAfterFailures": "Stopped after repeated failures",
+  "@syncStoppedAfterFailures": {},
+  "syncDiscardConfirmTitle": "Discard this {label}?",
+  "@syncDiscardConfirmTitle": {
+    "placeholders": {
+      "label": {}
+    }
+  },
+  "syncDiscardConfirmBody": "It will be permanently removed from the sync queue and will never reach the server.",
+  "@syncDiscardConfirmBody": {},
+  "syncTypeOrder": "Order",
+  "@syncTypeOrder": {},
+  "syncTypeVoidOrder": "Void Order",
+  "@syncTypeVoidOrder": {},
+  "syncTypeCashMovement": "Cash Movement",
+  "@syncTypeCashMovement": {},
+  "syncTypeUnknown": "Unknown",
+  "@syncTypeUnknown": {},
+  "syncPendingOrder": "Pending Order",
+  "@syncPendingOrder": {},
+  "syncJustNow": "just now",
+  "@syncJustNow": {},
+  "syncMinutesAgo": "{minutes}m ago",
+  "@syncMinutesAgo": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "syncHoursAgo": "{hours}h ago",
+  "@syncHoursAgo": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "syncDaysAgo": "{days}d ago",
+  "@syncDaysAgo": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "syncSignInToSync": "Sign in to sync {count}",
+  "@syncSignInToSync": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncSyncingCount": "Syncing {count}…",
+  "@syncSyncingCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncOfflineSessionBanner": "Offline session — sales queue on this device. Sign in when online to sync.",
+  "@syncOfflineSessionBanner": {},
+  "syncOfflineBanner": "Offline — everything keeps working and syncs when you reconnect.",
+  "@syncOfflineBanner": {},
+  "syncSessionExpiredBanner": "{count, plural, =1{Session expired — sign in to resume syncing 1 queued item.} other{Session expired — sign in to resume syncing {count} queued items.}}",
+  "@syncSessionExpiredBanner": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsVersionCopied": "Version copied to clipboard",
+  "@settingsVersionCopied": {},
+  "settingsSignOutTitle": "Sign out?",
+  "@settingsSignOutTitle": {},
+  "settingsSignOutBody": "You will need your name and PIN to sign back in.",
+  "@settingsSignOutBody": {},
+  "settingsCloseShiftFirstBody": "Your shift is still open. Close it and count the drawer before signing out.",
+  "@settingsCloseShiftFirstBody": {},
+  "settingsGoCloseShift": "Go to close shift",
+  "@settingsGoCloseShift": {},
+  "settingsAccount": "Account",
+  "@settingsAccount": {},
+  "settingsAppearance": "Appearance",
+  "@settingsAppearance": {},
+  "settingsThemeSystem": "System",
+  "@settingsThemeSystem": {},
+  "settingsThemeLight": "Light",
+  "@settingsThemeLight": {},
+  "settingsThemeDark": "Dark",
+  "@settingsThemeDark": {},
+  "settingsLanguage": "Language",
+  "@settingsLanguage": {},
+  "settingsDiagnostics": "Diagnostics",
+  "@settingsDiagnostics": {},
+  "settingsAbout": "About",
+  "@settingsAbout": {},
+  "settingsWarningsLog": "Warnings log",
+  "@settingsWarningsLog": {},
+  "settingsNoWarnings": "No warnings recorded",
+  "@settingsNoWarnings": {},
+  "settingsEntriesCount": "{count, plural, =1{1 entry} other{{count} entries}}",
+  "@settingsEntriesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "settingsWarningsBody": "Cache and sync warnings will show up here when they happen.",
+  "@settingsWarningsBody": {},
+  "settingsDiagnosticsCopied": "Diagnostics copied to clipboard",
+  "@settingsDiagnosticsCopied": {},
+  "setupConnectDevice": "Connect Device",
+  "setupConnectSubtitle": "Sign in with your manager account to link this device to your branch.",
+  "setupEmail": "Email",
+  "setupPassword": "Password",
+  "setupContinue": "Continue",
+  "setupEnterCredentials": "Enter your email and password",
+  "setupSelectBranch": "Select Branch",
+  "setupSelectBranchSubtitle": "Choose the branch this device will serve.",
+  "setupNoBranches": "No active branches found.",
+  "settingsDeviceSection": "Device",
+  "settingsReconfigureDevice": "Reconfigure Device",
+  "settingsReconfigureShiftOpen": "Close the current shift before reconfiguring the device.",
+  "settingsReconfigureTitle": "Reconfigure Device?",
+  "settingsReconfigureBody": "This will sign you out and require a manager login to reconnect.",
+  "settingsReconfigureConfirm": "Reconfigure"
 }

@@ -1,25 +1,12 @@
-class InventoryItem {
-  final String id;
-  final String name;
-  final String unit;
-  final double currentStock;
+// Façade over the OpenAPI-generated wire models (packages/sufrix_api).
+// The app's `InventoryItem` is the spec's `BranchInventoryItem`.
+import 'package:sufrix_api/sufrix_api.dart';
 
-  const InventoryItem({
-    required this.id, required this.name,
-    required this.unit, required this.currentStock,
-  });
+export 'package:sufrix_api/sufrix_api.dart' show BranchInventoryItem;
 
-  factory InventoryItem.fromJson(Map<String, dynamic> j) => InventoryItem(
-    id:           j['id'],               // branch_inventory row id — used in close shift counts
-    name:         j['ingredient_name'],   // was j['name'] — now ingredient_name in new schema
-    unit:         j['unit'],
-    currentStock: double.tryParse(j['current_stock'].toString()) ?? 0,
-  );
+typedef InventoryItem = BranchInventoryItem;
 
-  Map<String, dynamic> toJson() => {
-    'id': id,
-    'ingredient_name': name,
-    'unit': unit,
-    'current_stock': currentStock,
-  };
+extension InventoryItemX on BranchInventoryItem {
+  /// Legacy app-side alias for the wire `ingredient_name`.
+  String get name => ingredientName;
 }

@@ -12,7 +12,6 @@ import '../utils/time_utils.dart';
 import 'auth_notifier.dart';
 import 'cart_storage.dart';
 import 'menu_notifier.dart' show DataFreshness;
-import 'payment_method_notifier.dart';
 
 class ShiftState {
   final bool               isLoading;
@@ -99,7 +98,17 @@ class ShiftNotifier extends Notifier<ShiftState> {
       state = state.copyWith(isLoading: true, clearError: true);
     }
 
-    if (!isOnline) return;
+    if (!isOnline) {
+      // No cache + offline used to leave isLoading=true forever.
+      if (local == null) {
+        state = state.copyWith(
+          isLoading: false,
+          freshness: DataFreshness.offline,
+          error: 'No connection and no cached shift data yet',
+        );
+      }
+      return;
+    }
 
     // ── Phase 2: background refresh ───────────────────────────────────────
     try {
@@ -158,6 +167,7 @@ class ShiftNotifier extends Notifier<ShiftState> {
       tellerName:  user.name,
       status:      'open',
       openingCash: openingCash,
+      openingCashWasEdited: false,
       openedAt:    now,
     );
 
@@ -188,15 +198,35 @@ class ShiftNotifier extends Notifier<ShiftState> {
     if (state.shift == null) return false;
     state = state.copyWith(isLoading: true, clearError: true);
 
-    final isOnline = ConnectivityService.instance.isOnline;
-    if (!isOnline) {
-      state = state.copyWith(
-          isLoading: false, error: 'Internet required to close shift');
-      return false;
-    }
-
     final shiftId   = state.shift!.id;
     final cartScope = cartStorageScope(state.shift);
+
+    final isOnline = ConnectivityService.instance.isOnline;
+    final offlineSession = ref.read(authProvider).isOfflineSession;
+    if (!isOnline || offlineSession) {
+      // Queue the close. The server close endpoint is idempotent and the
+      // drain only processes a shiftClose after every order/void for the
+      // shift has synced or died, so ordering is safe.
+      final now = TimeUtils.now();
+      await ref.read(offlineQueueProvider.notifier).enqueueShiftClose(
+        PendingShiftClose(
+          localId:         const Uuid().v4(),
+          createdAt:       now,
+          branchId:        branchId,
+          shiftId:         shiftId,
+          closingCash:     closingCash,
+          cashNote:        note,
+          inventoryCounts: inventoryCounts,
+          closedAt:        now,
+        ),
+      );
+      if (cartScope != null) {
+        await ref.read(storageServiceProvider).clearCartDataForScope(cartScope);
+      }
+      await ref.read(storageServiceProvider).removeShift(branchId);
+      state = state.copyWith(isLoading: false, clearShift: true, systemCash: 0);
+      return true;
+    }
 
     try {
       await ref.read(shiftRepositoryProvider).closeShift(
@@ -230,10 +260,30 @@ class ShiftNotifier extends Notifier<ShiftState> {
       final cash = await ref
           .read(shiftRepositoryProvider)
           .getSystemCash(shift.id, shift.openingCash);
-      state = state.copyWith(systemCash: cash, systemCashLoading: false);
+      // The server's expected-cash figure can't know about cash orders still
+      // sitting in the outbox — add them, or the drawer guidance drops every
+      // time a refresh lands while offline orders are queued.
+      state = state.copyWith(
+        systemCash: cash + _queuedCashForShift(shift.id),
+        systemCashLoading: false,
+      );
     } catch (_) {
       state = state.copyWith(systemCashLoading: false);
     }
+  }
+
+  /// Cash taken for orders that are still in the outbox for [shiftId].
+  /// Includes dead entries: the money is physically in the drawer whether or
+  /// not the sync succeeded.
+  int _queuedCashForShift(String shiftId) {
+    var sum = 0;
+    for (final e in ref.read(offlineQueueProvider).entries) {
+      if (e.type != PendingActionType.order.name) continue;
+      final p = e.payloadMap;
+      if (p['shift_id'] != shiftId) continue;
+      sum += (p['cash_amount'] as num?)?.toInt() ?? 0;
+    }
+    return sum;
   }
 
   Future<void> loadInventory(String branchId) async {

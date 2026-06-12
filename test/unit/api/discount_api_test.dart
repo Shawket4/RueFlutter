@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:sufrix_pos/core/api/client.dart';
 import 'package:sufrix_pos/core/api/discount_api.dart';
+import 'package:sufrix_pos/core/models/discount.dart';
 
 class MockDio extends Mock implements Dio {}
 class MockDioClient extends Mock implements DioClient {}
@@ -26,17 +27,23 @@ void main() {
           'id': 'd1',
           'org_id': 'org1',
           'name': 'Staff Discount',
+          'name_translations': <String, dynamic>{},
           'dtype': 'percentage',
           'value': 10,
           'is_active': true,
+          'created_at': '2023-01-01T00:00:00Z',
+          'updated_at': '2023-01-01T00:00:00Z',
         },
         {
           'id': 'd2',
           'org_id': 'org1',
           'name': 'Summer Promo',
+          'name_translations': <String, dynamic>{},
           'dtype': 'fixed',
           'value': 500,
           'is_active': false,
+          'created_at': '2023-01-01T00:00:00Z',
+          'updated_at': '2023-01-01T00:00:00Z',
         }
       ];
 

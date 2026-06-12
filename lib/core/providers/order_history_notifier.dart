@@ -3,6 +3,7 @@ import '../models/order.dart';
 import '../repositories/order_repository.dart';
 import '../services/connectivity_service.dart';
 import 'menu_notifier.dart' show DataFreshness;
+import 'shift_notifier.dart';
 
 class OrderHistoryState {
   final List<Order>   orders;
@@ -41,7 +42,23 @@ class OrderHistoryState {
 
 class OrderHistoryNotifier extends Notifier<OrderHistoryState> {
   @override
-  OrderHistoryState build() => const OrderHistoryState();
+  OrderHistoryState build() {
+    // Drop the previous shift's orders the moment the active shift changes —
+    // otherwise the history screen keeps showing Shift A after Shift B opens
+    // until something manually calls loadForShift.
+    ref.listen(shiftProvider, (prev, next) {
+      final prevId = prev?.shift?.id;
+      final nextId = next.shift?.id;
+      if (prevId == nextId) return;
+      if (nextId == null) {
+        state = const OrderHistoryState();
+      } else if (state.shiftId != null && state.shiftId != nextId) {
+        state = const OrderHistoryState();
+        loadForShift(nextId);
+      }
+    });
+    return const OrderHistoryState();
+  }
 
   /// Two-phase load:
   /// 1. Paint local cache instantly (zero-latency offline-safe first frame).
@@ -95,35 +112,40 @@ class OrderHistoryNotifier extends Notifier<OrderHistoryState> {
   Future<void> refresh(String shiftId) => loadForShift(shiftId, force: true);
 
   // ── Mutation helpers ─────────────────────────────────────────────────────
+  // Money paths await these: the order must be durably cached before the
+  // teller sees a receipt, or a crash makes a placed order invisible locally.
 
-  void addOrder(Order order) {
+  Future<void> addOrder(Order order) async {
     if (state.orders.any((o) => o.id == order.id)) return;
     final updated = [order, ...state.orders];
-    state = state.copyWith(orders: updated);
-    if (state.shiftId != null) {
-      ref.read(orderRepositoryProvider).saveOrdersToCache(state.shiftId!, updated);
-    }
+    state = state.copyWith(orders: updated, shiftId: state.shiftId ?? order.shiftId);
+    final shiftId = state.shiftId ?? order.shiftId;
+    await ref.read(orderRepositoryProvider).saveOrdersToCache(shiftId, updated);
   }
 
-  void replaceOrder(String localId, Order synced) {
+  Future<void> replaceOrder(String localId, Order synced) async {
     final idx = state.orders.indexWhere((o) => o.id == localId);
     if (idx >= 0) {
       final updated = List<Order>.of(state.orders)..[idx] = synced;
       state = state.copyWith(orders: updated);
       if (state.shiftId != null) {
-        ref.read(orderRepositoryProvider).saveOrdersToCache(state.shiftId!, updated);
+        await ref
+            .read(orderRepositoryProvider)
+            .saveOrdersToCache(state.shiftId!, updated);
       }
     } else {
-      addOrder(synced);
+      await addOrder(synced);
     }
   }
 
-  void updateOrder(Order updated) {
+  Future<void> updateOrder(Order updated) async {
     final newOrders =
         state.orders.map((o) => o.id == updated.id ? updated : o).toList();
     state = state.copyWith(orders: newOrders);
     if (state.shiftId != null) {
-      ref.read(orderRepositoryProvider).saveOrdersToCache(state.shiftId!, newOrders);
+      await ref
+          .read(orderRepositoryProvider)
+          .saveOrdersToCache(state.shiftId!, newOrders);
     }
   }
 

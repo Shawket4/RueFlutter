@@ -1,47 +1,59 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lottie/lottie.dart';
+import '../../../core/l10n/l10n.dart';
 import '../../../core/providers/cart_notifier.dart';
 import '../../../core/providers/draft_carts_notifier.dart';
-import '../../../core/models/cart.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatting.dart';
 import '../../../shared/widgets/app_button.dart';
-import '../../../shared/widgets/label_value.dart';
+import '../../../shared/widgets/confirm_sheet.dart';
+import '../../../shared/widgets/empty_state.dart';
 import '../../../shared/widgets/responsive_sheet.dart';
-import 'cart_row.dart';
 import '../checkout/checkout_sheet.dart';
+import 'cart_row.dart';
 import 'shared_widgets.dart';
 
+/// Compact amount for tab labels: "240" / "240.50" (egp() minus the prefix).
+String _tabAmount(int piastres) => egp(piastres).replaceFirst('EGP ', '');
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  SIDE CART PANEL — desktop & tablet-landscape
+// ─────────────────────────────────────────────────────────────────────────────
 class CartPanel extends ConsumerWidget {
   const CartPanel({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.tokens;
     final w = MediaQuery.of(context).size.width;
-    final cartW = (w * 0.26).clamp(280.0, 360.0);
-    final cart = ref.watch(cartProvider);
+    final cartW = (w * 0.26).clamp(300.0, 380.0);
+    // Only the fields this panel lays out — rows watch their own item, the
+    // footer watches the totals, so e.g. payment/discount edits don't
+    // rebuild the whole panel.
+    final (isEmpty, count, itemCount) = ref.watch(
+        cartProvider.select((c) => (c.isEmpty, c.count, c.items.length)));
 
     return Container(
       width: cartW,
-      decoration: const BoxDecoration(
-          color: Colors.white,
-          border: Border(left: BorderSide(color: AppColors.border))),
+      decoration: BoxDecoration(
+        color: t.surface,
+        border: BorderDirectional(start: BorderSide(color: t.border)),
+      ),
       child: Column(children: [
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: const BoxDecoration(
-              border: Border(bottom: BorderSide(color: AppColors.border))),
+          padding: const EdgeInsetsDirectional.symmetric(
+              horizontal: AppSpace.lg, vertical: 14),
+          decoration: BoxDecoration(
+              border: Border(bottom: BorderSide(color: t.border))),
           child: Row(children: [
-            Text('Order',
-                style: cairo(fontSize: 15, fontWeight: FontWeight.w800)),
-            if (!cart.isEmpty) ...[
-              const SizedBox(width: 8),
+            Text(l10n(context).orderCartTitle,
+                style: Theme.of(context).textTheme.titleMedium),
+            if (!isEmpty) ...[
+              const SizedBox(width: AppSpace.sm),
               AnimatedSwitcher(
                   duration: const Duration(milliseconds: 200),
-                  child: CountBadge(
-                      key: ValueKey(cart.count), count: cart.count)),
+                  child: CountBadge(key: ValueKey(count), count: count)),
             ],
             const Spacer(),
           ]),
@@ -50,267 +62,319 @@ class CartPanel extends ConsumerWidget {
         Expanded(
             child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 250),
-          child: cart.isEmpty
-              ? const _EmptyCart()
+          child: isEmpty
+              ? EmptyState(
+                  key: const ValueKey('empty'),
+                  icon: Icons.shopping_bag_outlined,
+                  title: l10n(context).orderCartEmpty,
+                  body: l10n(context).orderTapToAdd,
+                )
               : ListView.builder(
                   key: const ValueKey('items'),
-                  padding: EdgeInsets.zero,
-                  itemCount: cart.items.length,
+                  padding:
+                      const EdgeInsets.symmetric(vertical: AppSpace.xs),
+                  itemCount: itemCount,
                   itemBuilder: (_, i) => CartRow(index: i)),
         )),
         AnimatedSwitcher(
           duration: const Duration(milliseconds: 200),
-          child: cart.isEmpty ? const SizedBox.shrink() : const CartFooter(),
+          child: isEmpty ? const SizedBox.shrink() : const CartFooter(),
         ),
       ]),
     );
   }
 }
 
-class _EmptyCart extends StatelessWidget {
-  const _EmptyCart();
-  @override
-  Widget build(BuildContext context) => Center(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          SizedBox(
-              width: 110,
-              height: 110,
-              child: Lottie.asset('assets/lottie/empty_cart.json',
-                  fit: BoxFit.contain, repeat: true)),
-          const SizedBox(height: 8),
-          Text('Cart is empty',
-              style: cairo(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textSecondary)),
-          const SizedBox(height: 3),
-          Text('Tap any item to add it',
-              style: cairo(fontSize: 11, color: AppColors.textMuted)),
-        ]),
-      );
-}
-
+// ─────────────────────────────────────────────────────────────────────────────
+//  STICKY FOOTER — totals + checkout
+// ─────────────────────────────────────────────────────────────────────────────
 class CartFooter extends ConsumerWidget {
   const CartFooter({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final cart = ref.watch(cartProvider);
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
-      decoration: const BoxDecoration(
-          color: Colors.white,
-          border: Border(top: BorderSide(color: AppColors.border))),
-      child: Column(children: [
-        LabelValue('Subtotal', egp(cart.subtotal)),
-        if (cart.discountAmount > 0)
-          LabelValue('Discount', '− ${egp(cart.discountAmount)}',
-              valueColor: AppColors.success),
-        const Padding(
-          padding: EdgeInsets.symmetric(vertical: 6),
-          child: Divider(height: 1, color: AppColors.borderLight),
+    final t = context.tokens;
+    final s = l10n(context);
+    final (subtotal, discountAmount, total) = ref.watch(
+        cartProvider.select((c) => (c.subtotal, c.discountAmount, c.total)));
+
+    Widget line(String label, String value,
+        {Color? valueColor, double size = 13}) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 3),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(label, style: ui(size: size, color: t.textSecondary)),
+            Text(value,
+                style: money(
+                    size: size,
+                    weight: FontWeight.w600,
+                    color: valueColor ?? t.textPrimary)),
+          ],
         ),
-        Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Total',
-                  style: cairo(fontSize: 15, fontWeight: FontWeight.w700)),
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 200),
-                transitionBuilder: (child, anim) => SlideTransition(
-                    position: Tween<Offset>(
-                            begin: const Offset(0, -0.3), end: Offset.zero)
-                        .animate(anim),
-                    child: FadeTransition(opacity: anim, child: child)),
-                child: Text(egp(cart.total),
-                    key: ValueKey(cart.total),
-                    style: cairo(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.primary)),
-              ),
-            ]),
-        const SizedBox(height: 10),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsetsDirectional.fromSTEB(
+          AppSpace.lg, AppSpace.md, AppSpace.lg, 14),
+      decoration: BoxDecoration(
+        color: t.surface,
+        border: Border(top: BorderSide(color: t.border)),
+      ),
+      child: Column(children: [
+        line(s.orderSubtotal, egp(subtotal)),
+        if (discountAmount > 0)
+          line(s.orderDiscount, '− ${egp(discountAmount)}',
+              valueColor: t.success),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Divider(height: 1, color: t.borderLight),
+        ),
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          Text(s.orderTotal,
+              style: ui(
+                  size: 15, weight: FontWeight.w700, color: t.textPrimary)),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 200),
+            transitionBuilder: (child, anim) => SlideTransition(
+                position: Tween<Offset>(
+                        begin: const Offset(0, -0.3), end: Offset.zero)
+                    .animate(anim),
+                child: FadeTransition(opacity: anim, child: child)),
+            child: Text(egp(total),
+                key: ValueKey(total),
+                style: money(
+                    size: 18, weight: FontWeight.w800, color: t.accent)),
+          ),
+        ]),
+        const SizedBox(height: AppSpace.sm + 2),
         AppButton(
-            label: 'Checkout',
+            label: s.orderCheckout,
             width: double.infinity,
-            height: 48,
-            icon: Icons.arrow_forward_rounded,
+            height: 50,
+            icon: Icons.point_of_sale_rounded,
             onTap: () => CheckoutSheet.show(context)),
       ]),
     );
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  CART FAB — phone & tablet-portrait
+// ─────────────────────────────────────────────────────────────────────────────
 class MobileCartFab extends ConsumerWidget {
   const MobileCartFab({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final cart = ref.watch(cartProvider);
-    final drafts = ref.watch(draftCartsProvider);
+    final t = context.tokens;
+    final (isEmpty, count, total) = ref
+        .watch(cartProvider.select((c) => (c.isEmpty, c.count, c.total)));
+    final draftCount = ref.watch(draftCartsProvider.select((d) => d.length));
 
-    // Hide FAB only if BOTH active cart is empty AND there are no held drafts!
-    if (cart.isEmpty && drafts.isEmpty) return const SizedBox.shrink();
+    // Hide FAB only if BOTH active cart is empty AND there are no held drafts.
+    if (isEmpty && draftCount == 0) return const SizedBox.shrink();
 
-    final String label;
-    if (!cart.isEmpty) {
-      label = '${cart.count} items · ${egp(cart.total)}';
+    final Widget label;
+    if (!isEmpty) {
+      label = Text.rich(TextSpan(children: [
+        TextSpan(
+            text: '$count · ',
+            style:
+                ui(size: 13, weight: FontWeight.w700, color: t.textOnAccent)),
+        TextSpan(
+            text: egp(total),
+            style: money(
+                size: 13, weight: FontWeight.w700, color: t.textOnAccent)),
+      ]));
     } else {
-      label = 'Held Orders (${drafts.length})';
+      label = Text(l10n(context).orderHeldOrders(draftCount),
+          style: ui(size: 13, weight: FontWeight.w700, color: t.textOnAccent));
     }
 
     return FloatingActionButton.extended(
-      onPressed: () => _MobileCartSheet.show(context),
-      backgroundColor: AppColors.primary,
+      onPressed: () => MobileCartSheet.show(context),
+      backgroundColor: t.accent,
+      foregroundColor: t.textOnAccent,
       elevation: 4,
-      label: Text(label,
-          style: cairo(
-              fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white)),
-      icon: const Icon(Icons.shopping_bag_outlined,
-          size: 18, color: Colors.white),
+      label: label,
+      icon: Icon(Icons.shopping_bag_outlined,
+          size: 18, color: t.textOnAccent),
     );
   }
 }
 
-class _MobileCartSheet extends ConsumerWidget {
-  const _MobileCartSheet();
+// ─────────────────────────────────────────────────────────────────────────────
+//  CART SHEET — opened by the FAB
+// ─────────────────────────────────────────────────────────────────────────────
+class MobileCartSheet extends ConsumerWidget {
+  const MobileCartSheet({super.key});
 
-  static void show(BuildContext ctx) => ResponsiveSheet.show(
+  static Future<void> show(BuildContext ctx) => ResponsiveSheet.show(
         context: ctx,
-        builder: (_) => const _MobileCartSheet(),
+        builder: (_) => const MobileCartSheet(),
       );
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final cart = ref.watch(cartProvider);
+    final t = context.tokens;
+    final (isEmpty, count, itemCount) = ref.watch(
+        cartProvider.select((c) => (c.isEmpty, c.count, c.items.length)));
     return Container(
       constraints:
           BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
       decoration: BoxDecoration(
-          color: Colors.white, borderRadius: AppRadius.sheetRadius),
+          color: t.surfaceRaised, borderRadius: AppRadius.sheetRadius),
       child: Column(children: [
         Padding(
-          padding: const EdgeInsets.only(top: 12),
+          padding: const EdgeInsets.only(top: AppSpace.md),
           child: Center(
               child: Container(
                   width: 36,
                   height: 4,
                   decoration: BoxDecoration(
-                      color: AppColors.border,
+                      color: t.border,
                       borderRadius: BorderRadius.circular(2)))),
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+          padding: const EdgeInsetsDirectional.fromSTEB(
+              AppSpace.xl, AppSpace.md, AppSpace.xl, 0),
           child: Row(children: [
-            Text('Order',
-                style: cairo(fontSize: 17, fontWeight: FontWeight.w800)),
-            const SizedBox(width: 8),
-            CountBadge(count: cart.count),
+            Text(l10n(context).orderCartTitle,
+                style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(width: AppSpace.sm),
+            CountBadge(count: count),
             const Spacer(),
           ]),
         ),
-        const SizedBox(height: 10),
-        Container(height: 1, color: AppColors.border),
+        const SizedBox(height: AppSpace.sm + 2),
+        Divider(height: 1, color: t.border),
         const DraftTabsBar(),
         Expanded(
-          child: cart.isEmpty
-              ? Center(
-                  child: Text('Cart is empty',
-                      style: cairo(color: AppColors.textSecondary)))
-              : ListView.separated(
-                  padding: const EdgeInsets.all(12),
-                  itemCount: cart.items.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 6),
+          child: isEmpty
+              ? EmptyState(
+                  icon: Icons.shopping_bag_outlined,
+                  title: l10n(context).orderCartEmpty,
+                  body: l10n(context).orderTapToAdd,
+                )
+              : ListView.builder(
+                  padding:
+                      const EdgeInsets.symmetric(vertical: AppSpace.sm),
+                  itemCount: itemCount,
                   itemBuilder: (_, i) => CartRow(index: i)),
         ),
-        if (!cart.isEmpty) const CartFooter(),
+        if (!isEmpty) const CartFooter(),
       ]),
     );
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  DRAFT TABS — held orders ("name · count · subtotal")
+// ─────────────────────────────────────────────────────────────────────────────
 class DraftTabsBar extends ConsumerWidget {
   const DraftTabsBar({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final cart = ref.watch(cartProvider);
+    final t = context.tokens;
+    // Display-only slice of the active cart; the full cart is read inside
+    // callbacks so the tab bar doesn't rebuild on unrelated cart edits.
+    final active = ref.watch(cartProvider.select((c) => (
+          id: c.id,
+          name: c.displayName,
+          createdAt: c.createdAt,
+          isEmpty: c.isEmpty,
+          count: c.count,
+          total: c.total,
+        )));
     final drafts = ref.watch(draftCartsProvider);
 
-    if (drafts.isEmpty && cart.isEmpty) {
+    if (drafts.isEmpty && active.isEmpty) {
       return const SizedBox.shrink();
     }
 
-    // Convert active cart to a CartDraft for stable sorting
-    final activeDraft = CartDraft(
-      id: cart.id ?? 'order_1',
-      name: cart.displayName ?? 'Order 1',
-      cartState: cart,
-      createdAt: cart.createdAt ?? DateTime.now(),
-    );
+    // Merge the active cart with held drafts for stable createdAt sorting.
+    final activeId = active.id ?? 'order_1';
+    final allTabs = <({String id, String name, DateTime createdAt, CartDraft? draft})>[
+      (
+        id: activeId,
+        name: active.name ?? l10n(context).shellDefaultOrderName,
+        createdAt: active.createdAt ?? DateTime.now(),
+        draft: null,
+      ),
+      for (final d in drafts)
+        (id: d.id, name: d.name, createdAt: d.createdAt, draft: d),
+    ]..sort((a, b) => a.createdAt.compareTo(b.createdAt));
 
-    // Combine active tab and drafts, then sort by createdAt ascending
-    final List<CartDraft> allTabs = [activeDraft, ...drafts];
-    allTabs.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    String tabLabel(String name, {required bool isEmpty, required int count, required int total}) {
+      if (isEmpty) return name;
+      return '$name · $count · ${_tabAmount(total)}';
+    }
 
     return Container(
       height: 48,
       width: double.infinity,
-      decoration: const BoxDecoration(
-        color: AppColors.bg,
-        border: Border(bottom: BorderSide(color: AppColors.border)),
+      decoration: BoxDecoration(
+        color: t.surfaceAlt,
+        border: Border(bottom: BorderSide(color: t.border)),
       ),
       child: ListView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        padding: const EdgeInsetsDirectional.symmetric(
+            horizontal: 10, vertical: 8),
         children: [
-          ...allTabs.map((t) {
-            final isActive = t.id == activeDraft.id;
-            if (isActive) {
+          ...allTabs.map((tab) {
+            final d = tab.draft;
+            if (d == null) {
               return _TabWidget(
-                key: ValueKey('active_${t.id}'),
-                label: '${t.name} (Current)',
+                key: ValueKey('active_${tab.id}'),
+                label: tabLabel(tab.name,
+                    isEmpty: active.isEmpty,
+                    count: active.count,
+                    total: active.total),
                 isActive: true,
-                isEmpty: cart.isEmpty,
                 onTap: () {
-                  if (!cart.isEmpty) {
-                    _promptRenameActive(context, ref, cart.displayName);
+                  if (!active.isEmpty) {
+                    _promptRenameActive(context, ref, active.name);
                   }
                 },
-                onDelete: () => _confirmDeleteActiveTab(context, ref, cart),
-              );
-            } else {
-              return _TabWidget(
-                key: ValueKey('draft_${t.id}'),
-                label: t.name,
-                isActive: false,
-                isEmpty: false,
-                onTap: () {
-                  HapticFeedback.lightImpact();
-                  ref.read(draftCartsProvider.notifier).switchDraft(t.id, cart);
-                },
-                onLongPress: () => _promptRenameDraft(context, ref, t.id, t.name),
-                onDelete: () => _confirmDeleteDraft(context, ref, t.id, t.name),
+                onDelete: () => _confirmDeleteActiveTab(context, ref),
               );
             }
+            return _TabWidget(
+              key: ValueKey('draft_${d.id}'),
+              label: tabLabel(d.name,
+                  isEmpty: d.cartState.isEmpty,
+                  count: d.cartState.count,
+                  total: d.cartState.total),
+              isActive: false,
+              onTap: () async {
+                HapticFeedback.lightImpact();
+                await ref
+                    .read(draftCartsProvider.notifier)
+                    .switchDraft(d.id, ref.read(cartProvider));
+              },
+              onLongPress: () =>
+                  _promptRenameDraft(context, ref, d.id, d.name),
+              onDelete: () => _confirmDeleteDraft(context, ref, d.id, d.name),
+            );
           }),
 
-          // 3. Add Tab Button (+)
+          // Park current cart and start a fresh one.
           GestureDetector(
             onTap: () async {
               HapticFeedback.mediumImpact();
               final parked = await ref
                   .read(draftCartsProvider.notifier)
-                  .parkCurrentCart(cart);
+                  .parkCurrentCart(ref.read(cartProvider));
               if (!parked) {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(
-                        'Add items before holding this order',
-                        style: cairo(fontSize: 13),
-                      ),
+                      content: Text(l10n(context).orderAddItemsBeforeHold),
                       behavior: SnackBarBehavior.floating,
                     ),
                   );
@@ -322,14 +386,15 @@ class DraftTabsBar extends ConsumerWidget {
               }
             },
             child: Container(
-              margin: const EdgeInsets.only(left: 4),
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+              margin: const EdgeInsetsDirectional.only(start: 4),
+              padding:
+                  const EdgeInsetsDirectional.symmetric(horizontal: 12),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: t.surface,
                 borderRadius: BorderRadius.circular(AppRadius.xs),
-                border: Border.all(color: AppColors.border),
+                border: Border.all(color: t.border),
               ),
-              child: const Icon(Icons.add_rounded, size: 16, color: AppColors.primary),
+              child: Icon(Icons.add_rounded, size: 16, color: t.accent),
             ),
           ),
         ],
@@ -337,174 +402,73 @@ class DraftTabsBar extends ConsumerWidget {
     );
   }
 
-  void _confirmDeleteDraft(BuildContext context, WidgetRef ref, String id, String name) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
-        title: Text('Delete Held Order?', style: cairo(fontWeight: FontWeight.w700)),
-        content: Text('Are you sure you want to delete "$name"? All its items will be permanently removed.', style: cairo(fontSize: 13, color: AppColors.textSecondary)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text('Cancel', style: cairo(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              ref.read(draftCartsProvider.notifier).deleteDraft(id);
-            },
-            child: Text('Delete', style: cairo(color: AppColors.danger, fontWeight: FontWeight.w700)),
-          ),
-        ],
-      ),
+  Future<void> _confirmDeleteDraft(
+      BuildContext context, WidgetRef ref, String id, String name) async {
+    final s = l10n(context);
+    final ok = await ConfirmSheet.show(
+      context,
+      title: s.orderDeleteHeldTitle,
+      body: s.orderDeleteHeldBody(name),
+      confirmLabel: s.commonDelete,
+      destructive: true,
     );
+    if (ok) await ref.read(draftCartsProvider.notifier).deleteDraft(id);
   }
 
-  void _confirmDeleteActiveTab(BuildContext context, WidgetRef ref, CartState cart) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
-        title: Text('Delete Active Order?', style: cairo(fontWeight: FontWeight.w700)),
-        content: Text('Are you sure you want to delete this active order tab? All its items will be permanently removed.', style: cairo(fontSize: 13, color: AppColors.textSecondary)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text('Cancel', style: cairo(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(ctx);
-
-              final oldest =
-                  ref.read(draftCartsProvider.notifier).oldestHeldDraft();
-              if (oldest != null) {
-                await ref
-                    .read(draftCartsProvider.notifier)
-                    .deleteDraft(oldest.id);
-                ref
-                    .read(cartProvider.notifier)
-                    .replaceWith(oldest.cartState);
-              } else {
-                ref.read(cartProvider.notifier).startNewOrder(
-                      id: 'order_1',
-                      displayName: 'Order 1',
-                    );
-              }
-            },
-            child: Text('Delete Tab', style: cairo(color: AppColors.danger, fontWeight: FontWeight.w700)),
-          ),
-        ],
-      ),
+  Future<void> _confirmDeleteActiveTab(
+      BuildContext context, WidgetRef ref) async {
+    final s = l10n(context);
+    final ok = await ConfirmSheet.show(
+      context,
+      title: s.orderDeleteActiveTitle,
+      body: s.orderDeleteActiveBody,
+      confirmLabel: s.orderDeleteTab,
+      destructive: true,
     );
+    if (!ok) return;
+
+    final oldest = ref.read(draftCartsProvider.notifier).oldestHeldDraft();
+    if (oldest != null) {
+      await ref.read(draftCartsProvider.notifier).deleteDraft(oldest.id);
+      ref.read(cartProvider.notifier).replaceWith(oldest.cartState);
+    } else {
+      ref.read(cartProvider.notifier).startNewOrder(
+            id: 'order_1',
+            displayName: context.mounted
+                ? l10n(context).shellDefaultOrderName
+                : 'Order 1',
+          );
+    }
   }
 
-  void _promptRenameActive(BuildContext context, WidgetRef ref, String? currentName) {
-    final ctrl = TextEditingController(text: currentName ?? '');
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
-        title: Text('Rename Active Cart', style: cairo(fontWeight: FontWeight.w700)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Enter a custom name/label for this active cart:', style: cairo(fontSize: 13, color: AppColors.textSecondary)),
-            const SizedBox(height: 12),
-            TextField(
-              controller: ctrl,
-              autofocus: true,
-              decoration: InputDecoration(
-                hintText: 'e.g., Table 5, Sarah, Guest',
-                hintStyle: cairo(color: AppColors.textMuted, fontSize: 13),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: const BorderSide(color: AppColors.border),
-                  borderRadius: BorderRadius.circular(AppRadius.xs),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
-                  borderRadius: BorderRadius.circular(AppRadius.xs),
-                ),
-              ),
-              style: cairo(fontSize: 14),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text('Cancel', style: cairo(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              ref.read(cartProvider.notifier).renameDisplayName(ctrl.text);
-            },
-            child: Text('Save', style: cairo(color: AppColors.primary, fontWeight: FontWeight.w700)),
-          ),
-        ],
-      ),
+  Future<void> _promptRenameActive(
+      BuildContext context, WidgetRef ref, String? currentName) async {
+    final name = await _RenameSheet.show(
+      context,
+      title: l10n(context).orderRenameOrder,
+      initial: currentName ?? '',
     );
+    if (name != null && name.isNotEmpty) {
+      ref.read(cartProvider.notifier).renameDisplayName(name);
+    }
   }
 
-  void _promptRenameDraft(BuildContext context, WidgetRef ref, String draftId, String currentName) {
-    final ctrl = TextEditingController(text: currentName);
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
-        title: Text('Rename Draft Cart', style: cairo(fontWeight: FontWeight.w700)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Enter a custom name/label for this draft cart:', style: cairo(fontSize: 13, color: AppColors.textSecondary)),
-            const SizedBox(height: 12),
-            TextField(
-              controller: ctrl,
-              autofocus: true,
-              decoration: InputDecoration(
-                hintText: 'e.g., Table 5, Sarah, Guest',
-                hintStyle: cairo(color: AppColors.textMuted, fontSize: 13),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                enabledBorder: OutlineInputBorder(
-                  borderSide: const BorderSide(color: AppColors.border),
-                  borderRadius: BorderRadius.circular(AppRadius.xs),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
-                  borderRadius: BorderRadius.circular(AppRadius.xs),
-                ),
-              ),
-              style: cairo(fontSize: 14),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text('Cancel', style: cairo(color: AppColors.textSecondary, fontWeight: FontWeight.w600)),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              ref.read(draftCartsProvider.notifier).renameDraft(draftId, ctrl.text.trim());
-            },
-            child: Text('Save', style: cairo(color: AppColors.primary, fontWeight: FontWeight.w700)),
-          ),
-        ],
-      ),
+  Future<void> _promptRenameDraft(BuildContext context, WidgetRef ref,
+      String draftId, String currentName) async {
+    final name = await _RenameSheet.show(
+      context,
+      title: l10n(context).orderRenameHeldOrder,
+      initial: currentName,
     );
+    if (name != null && name.isNotEmpty) {
+      await ref.read(draftCartsProvider.notifier).renameDraft(draftId, name);
+    }
   }
 }
 
 class _TabWidget extends StatelessWidget {
   final String label;
   final bool isActive;
-  final bool isEmpty;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
   final VoidCallback? onDelete;
@@ -513,7 +477,6 @@ class _TabWidget extends StatelessWidget {
     super.key,
     required this.label,
     required this.isActive,
-    required this.isEmpty,
     required this.onTap,
     this.onLongPress,
     this.onDelete,
@@ -521,18 +484,19 @@ class _TabWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.tokens;
     return GestureDetector(
       onTap: onTap,
       onLongPress: onLongPress,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        margin: const EdgeInsets.only(right: 6),
-        padding: const EdgeInsets.symmetric(horizontal: 10),
+        margin: const EdgeInsetsDirectional.only(end: 6),
+        padding: const EdgeInsetsDirectional.symmetric(horizontal: 10),
         decoration: BoxDecoration(
-          color: isActive ? Colors.white : AppColors.border.withOpacity(0.25),
+          color: isActive ? t.surface : t.hoverOverlay,
           borderRadius: BorderRadius.circular(AppRadius.xs),
           border: Border.all(
-            color: isActive ? AppColors.primary : AppColors.border,
+            color: isActive ? t.accent : t.border,
             width: isActive ? 1.4 : 1,
           ),
         ),
@@ -540,17 +504,19 @@ class _TabWidget extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              isActive ? Icons.shopping_bag_rounded : Icons.shopping_bag_outlined,
+              isActive
+                  ? Icons.shopping_bag_rounded
+                  : Icons.shopping_bag_outlined,
               size: 13,
-              color: isActive ? AppColors.primary : AppColors.textSecondary,
+              color: isActive ? t.accent : t.textSecondary,
             ),
             const SizedBox(width: 6),
             Text(
               label,
-              style: cairo(
-                fontSize: 12,
-                fontWeight: isActive ? FontWeight.w700 : FontWeight.w600,
-                color: isActive ? AppColors.primary : AppColors.textSecondary,
+              style: money(
+                size: 12,
+                weight: isActive ? FontWeight.w700 : FontWeight.w600,
+                color: isActive ? t.accent : t.textSecondary,
               ),
             ),
             if (onDelete != null) ...[
@@ -560,13 +526,101 @@ class _TabWidget extends StatelessWidget {
                   HapticFeedback.lightImpact();
                   onDelete!();
                 },
-                child: const Icon(
+                child: Icon(
                   Icons.close_rounded,
                   size: 14,
-                  color: AppColors.textMuted,
+                  color: t.textMuted,
                 ),
               ),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  RENAME SHEET — small input sheet (ConfirmSheet has no text field)
+// ─────────────────────────────────────────────────────────────────────────────
+class _RenameSheet extends StatefulWidget {
+  final String title;
+  final String initial;
+  const _RenameSheet({required this.title, required this.initial});
+
+  static Future<String?> show(BuildContext context,
+          {required String title, required String initial}) =>
+      ResponsiveSheet.show<String>(
+        context: context,
+        builder: (_) => _RenameSheet(title: title, initial: initial),
+      );
+
+  @override
+  State<_RenameSheet> createState() => _RenameSheetState();
+}
+
+class _RenameSheetState extends State<_RenameSheet> {
+  late final TextEditingController _ctrl =
+      TextEditingController(text: widget.initial);
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  void _submit() => Navigator.pop(context, _ctrl.text.trim());
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    return Padding(
+      padding:
+          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Container(
+        margin: const EdgeInsets.all(AppSpace.md),
+        padding: const EdgeInsets.all(AppSpace.xl),
+        decoration: BoxDecoration(
+          color: t.surfaceRaised,
+          borderRadius: BorderRadius.circular(AppRadius.xl),
+          border: Border.all(color: t.border),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(widget.title,
+                style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: AppSpace.xs),
+            Text(l10n(context).orderRenameHint,
+                style: ui(size: 13, color: t.textSecondary)),
+            const SizedBox(height: AppSpace.lg),
+            TextField(
+              controller: _ctrl,
+              autofocus: true,
+              onSubmitted: (_) => _submit(),
+              decoration: InputDecoration(
+                hintText: l10n(context).orderRenamePlaceholder,
+              ),
+            ),
+            const SizedBox(height: AppSpace.lg),
+            Row(children: [
+              Expanded(
+                child: AppButton(
+                  label: l10n(context).cancelAction,
+                  variant: BtnVariant.outline,
+                  height: 46,
+                  onTap: () => Navigator.pop(context),
+                ),
+              ),
+              const SizedBox(width: AppSpace.md),
+              Expanded(
+                child: AppButton(
+                    label: l10n(context).commonSave,
+                    height: 46,
+                    onTap: _submit),
+              ),
+            ]),
           ],
         ),
       ),

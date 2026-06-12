@@ -3,24 +3,26 @@ import 'package:sufrix_pos/core/models/bundle.dart';
 import 'package:sufrix_pos/core/models/cart.dart';
 import 'package:sufrix_pos/core/models/menu.dart';
 
+import '../helpers/model_fixtures.dart';
+
 /// Offline bundle sale flow: snapshot capture → cart JSON → API payload shape.
 void main() {
   test('add bundle captures component snapshot for sync payload', () {
-    final bundle = Bundle(
+    final bundle = makeBundle(
       id: 'bundle-1',
       orgId: 'org-1',
       name: 'Breakfast Combo',
       price: 4500,
       status: BundleStatus.active,
       displayOrder: 1,
-      components: const [
-        BundleComponent(
+      components: [
+        makeBundleComponent(
           bundleId: 'bundle-1',
           itemId: 'latte',
           quantity: 1,
           position: 0,
         ),
-        BundleComponent(
+        makeBundleComponent(
           bundleId: 'bundle-1',
           itemId: 'croissant',
           quantity: 1,
@@ -29,21 +31,19 @@ void main() {
       ],
     );
 
-    const menuItems = [
-      MenuItem(
+    final menuItems = [
+      makeMenuItem(
         id: 'latte',
         orgId: 'org-1',
         name: 'Latte',
         basePrice: 3000,
-        isActive: true,
         displayOrder: 0,
       ),
-      MenuItem(
+      makeMenuItem(
         id: 'croissant',
         orgId: 'org-1',
         name: 'Croissant',
         basePrice: 2000,
-        isActive: true,
         displayOrder: 1,
       ),
     ];

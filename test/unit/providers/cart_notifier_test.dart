@@ -8,6 +8,8 @@ import 'package:sufrix_pos/core/providers/cart_notifier.dart';
 import 'package:sufrix_pos/core/providers/shift_notifier.dart';
 import 'package:sufrix_pos/core/storage/storage_service.dart';
 
+import '../../helpers/model_fixtures.dart';
+
 class MockStorageService extends Mock implements StorageService {}
 class MockShiftNotifier extends Notifier<ShiftState> implements ShiftNotifier {
   @override
@@ -18,6 +20,7 @@ class MockShiftNotifier extends Notifier<ShiftState> implements ShiftNotifier {
   @override Future<void> loadSystemCash() async {}
   @override Future<bool> openShift(String branchId, int openingCash) async => true;
   @override void updateShiftSynced(Shift shift) {}
+  @override void addLocalCash(int amount) {}
 }
 
 void main() {
@@ -50,7 +53,7 @@ void main() {
     test('add inserts item or increments quantity', () {
       final notifier = container.read(cartProvider.notifier);
       
-      final item = CartItem(menuItemId: 'm1', itemName: 'Burger', unitPrice: 100);
+      const item = CartItem(menuItemId: 'm1', itemName: 'Burger', unitPrice: 100);
       notifier.add(item);
       expect(container.read(cartProvider).items.length, 1);
       expect(container.read(cartProvider).items[0].quantity, 1);
@@ -61,14 +64,14 @@ void main() {
       expect(container.read(cartProvider).items[0].quantity, 2);
 
       // Add different item
-      final item2 = CartItem(menuItemId: 'm2', itemName: 'Fries', unitPrice: 50);
+      const item2 = CartItem(menuItemId: 'm2', itemName: 'Fries', unitPrice: 50);
       notifier.add(item2);
       expect(container.read(cartProvider).items.length, 2);
     });
 
     test('addBundle inserts bundle cart item', () {
       final notifier = container.read(cartProvider.notifier);
-      final bundle = Bundle(id: 'b1', orgId: 'o1', name: 'Combo', price: 100, status: BundleStatus.active, displayOrder: 1);
+      final bundle = makeBundle(id: 'b1', orgId: 'o1', name: 'Combo', price: 100, status: BundleStatus.active, displayOrder: 1);
       
       notifier.addBundle(bundle, []);
       final state = container.read(cartProvider);
@@ -79,8 +82,8 @@ void main() {
 
     test('removeAt and restoreLastRemoved', () {
       final notifier = container.read(cartProvider.notifier);
-      notifier.add(CartItem(menuItemId: 'm1', itemName: 'Burger', unitPrice: 100));
-      notifier.add(CartItem(menuItemId: 'm2', itemName: 'Fries', unitPrice: 50));
+      notifier.add(const CartItem(menuItemId: 'm1', itemName: 'Burger', unitPrice: 100));
+      notifier.add(const CartItem(menuItemId: 'm2', itemName: 'Fries', unitPrice: 50));
       
       expect(container.read(cartProvider).items.length, 2);
 
@@ -95,7 +98,7 @@ void main() {
 
     test('setQty updates qty or removes if 0', () {
       final notifier = container.read(cartProvider.notifier);
-      notifier.add(CartItem(menuItemId: 'm1', itemName: 'Burger', unitPrice: 100));
+      notifier.add(const CartItem(menuItemId: 'm1', itemName: 'Burger', unitPrice: 100));
 
       notifier.setQty(0, 5);
       expect(container.read(cartProvider).items[0].quantity, 5);
@@ -126,7 +129,7 @@ void main() {
 
     test('clear empties cart but keeps id and display name', () {
       final notifier = container.read(cartProvider.notifier);
-      notifier.add(CartItem(menuItemId: 'm1', itemName: 'Burger', unitPrice: 100));
+      notifier.add(const CartItem(menuItemId: 'm1', itemName: 'Burger', unitPrice: 100));
       notifier.clear();
       
       final state = container.read(cartProvider);

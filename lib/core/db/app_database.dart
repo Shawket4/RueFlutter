@@ -16,6 +16,15 @@ class AppDatabase {
   AppDatabase._();
   static final AppDatabase instance = AppDatabase._();
 
+  /// Test-only: wrap an already-open (typically in-memory FFI) database.
+  @visibleForTesting
+  AppDatabase.forTesting(Database db) : _db = db;
+
+  /// Test-only: create the current schema on [db] (same SQL as onCreate).
+  @visibleForTesting
+  static Future<void> createSchema(Database db) =>
+      instance._onCreate(db, 2);
+
   Database? _db;
 
   /// Lazily-opened [Database].
@@ -62,8 +71,9 @@ class AppDatabase {
     final path = await _dbPath();
     return openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
     );
   }
 
@@ -90,7 +100,9 @@ class AppDatabase {
         retry_count     INTEGER NOT NULL DEFAULT 0,
         last_error      TEXT,
         created_at      INTEGER NOT NULL,
-        next_attempt_at INTEGER NOT NULL
+        next_attempt_at INTEGER NOT NULL,
+        user_id         TEXT,
+        synced_at       INTEGER
       )
     ''');
     await db.execute(
@@ -104,5 +116,19 @@ class AppDatabase {
         last_synced_at INTEGER
       )
     ''');
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      // v2: scope outbox entries to the user who created them, and keep
+      // synced rows as a short-lived recovery log instead of deleting them.
+      await db.execute('ALTER TABLE outbox ADD COLUMN user_id TEXT');
+      await db.execute('ALTER TABLE outbox ADD COLUMN synced_at INTEGER');
+      // Rows stranded in_flight by a crash were invisible to dueForSync
+      // forever; surface them again.
+      await db.execute(
+        "UPDATE outbox SET status = 'pending' WHERE status = 'in_flight'",
+      );
+    }
   }
 }

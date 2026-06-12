@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:sufrix_pos/core/api/auth_api.dart';
 import 'package:sufrix_pos/core/api/client.dart';
-import 'package:sufrix_pos/core/models/user.dart';
 
 class MockDio extends Mock implements Dio {}
 class MockDioClient extends Mock implements DioClient {}
@@ -40,10 +39,12 @@ void main() {
             statusCode: 200,
           ));
 
-      final result = await authApi.loginWithPin(name: 'Test', pin: '1234');
-      
+      final result = await authApi.loginWithPin(
+          name: 'Test', pin: '1234', branchId: 'b1');
+
       expect(result, equals(mockData));
-      verify(() => mockDio.post('/auth/login', data: {'name': 'Test', 'pin': '1234'})).called(1);
+      verify(() => mockDio.post('/auth/login',
+          data: {'name': 'Test', 'pin': '1234', 'branch_id': 'b1'})).called(1);
     });
 
     test('me success', () async {

@@ -1,13 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:sufrix_pos/core/widgets/sufrix_logo.dart';
 
 void main() {
-  setUpAll(() {
-    GoogleFonts.config.allowRuntimeFetching = false;
-  });
-
   group('SufrixLogo Widgets', () {
     testWidgets('SufrixLogo renders correctly', (tester) async {
       await tester.pumpWidget(
@@ -20,28 +15,26 @@ void main() {
 
       expect(find.byType(SufrixLogo), findsOneWidget);
       expect(find.byType(CustomPaint), findsWidgets);
-      
+
       final container = tester.widget<Container>(find.byType(Container).first);
       expect(container.constraints?.maxWidth, 100);
       expect(container.constraints?.maxHeight, 100);
     });
 
     testWidgets('SufrixLongLogo renders correctly', (tester) async {
-      try {
-        await tester.pumpWidget(
-          const MaterialApp(
-            home: Scaffold(
-              body: SufrixLongLogo(height: 50),
-            ),
+      // The wordmark uses the bundled Cairo font — no runtime font fetch, so
+      // this renders fine in tests.
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: SufrixLongLogo(height: 50),
           ),
-        );
+        ),
+      );
 
-        expect(find.byType(SufrixLongLogo), findsOneWidget);
-        expect(find.byType(CustomPaint), findsWidgets);
-        expect(find.text('Sufrix'), findsOneWidget);
-      } catch (_) {
-        // Catch google fonts missing asset error in test
-      }
+      expect(find.byType(SufrixLongLogo), findsOneWidget);
+      expect(find.byType(CustomPaint), findsWidgets);
+      expect(find.text('Sufrix'), findsOneWidget);
     });
 
     test('SufrixSymbolPainter shouldRepaint logic', () {

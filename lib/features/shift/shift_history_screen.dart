@@ -1,20 +1,158 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import '../../core/repositories/order_repository.dart';
-import '../../core/repositories/shift_repository.dart';
-import 'shift_report_preview_sheet.dart';
-import '../order/widgets/receipt_preview_sheet.dart';
+
+import '../../core/l10n/l10n.dart';
 import '../../core/models/order.dart';
+import '../../core/models/payment_method.dart';
 import '../../core/models/shift.dart';
 import '../../core/providers/auth_notifier.dart';
+import '../../core/providers/payment_method_notifier.dart';
+import '../../core/repositories/order_repository.dart';
+import '../../core/repositories/shift_repository.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatting.dart';
-import '../../shared/widgets/error_banner.dart';
-import '../../core/providers/payment_method_notifier.dart';
+import '../../shared/widgets/app_top_bar.dart';
+import '../../shared/widgets/empty_state.dart';
+import '../../shared/widgets/status_chip.dart';
+import '../../shared/widgets/surface_card.dart';
+import '../order/widgets/receipt_preview_sheet.dart';
+import 'shift_report_preview_sheet.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  SCREEN
+//  EPHEMERAL STATE — private autoDispose providers (reset when screen unmounts,
+//  same lifetime the old State objects had).
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _HistoryState {
+  final List<Shift> shifts;
+  final bool loading;
+  final String? error;
+  const _HistoryState({this.shifts = const [], this.loading = true, this.error});
+}
+
+final _historyProvider =
+    NotifierProvider.autoDispose<_HistoryController, _HistoryState>(
+        _HistoryController.new);
+
+class _HistoryController extends AutoDisposeNotifier<_HistoryState> {
+  bool _disposed = false;
+
+  @override
+  _HistoryState build() {
+    ref.onDispose(() => _disposed = true);
+    return const _HistoryState();
+  }
+
+  void noBranch(String message) =>
+      state = _HistoryState(shifts: state.shifts, loading: false, error: message);
+
+  Future<void> load(String branchId) async {
+    state = _HistoryState(shifts: state.shifts, loading: true);
+    try {
+      final local = ref.read(shiftRepositoryProvider).loadShiftsLocal(branchId);
+      if (local != null && local.isNotEmpty && !_disposed) {
+        state = _HistoryState(shifts: local, loading: false);
+      }
+      final fresh =
+          await ref.read(shiftRepositoryProvider).fetchShiftsFresh(branchId);
+      if (!_disposed) {
+        state = _HistoryState(shifts: fresh, loading: false);
+      }
+    } catch (e) {
+      if (!_disposed) {
+        state = _HistoryState(
+          shifts: state.shifts,
+          loading: false,
+          error: state.shifts.isEmpty ? e.toString() : null,
+        );
+      }
+    }
+  }
+}
+
+/// Per-row expansion state, keyed by shift id so it survives row rebuilds but
+/// resets when the row leaves the viewport (matching the old State lifetime).
+class _RowState {
+  final bool expanded;
+  final bool loadingOrders;
+  final bool printing;
+  final List<Order> orders;
+  final String? ordersError;
+  const _RowState({
+    this.expanded = false,
+    this.loadingOrders = false,
+    this.printing = false,
+    this.orders = const [],
+    this.ordersError,
+  });
+
+  _RowState copyWith({
+    bool? expanded,
+    bool? loadingOrders,
+    bool? printing,
+    List<Order>? orders,
+  }) =>
+      _RowState(
+        expanded: expanded ?? this.expanded,
+        loadingOrders: loadingOrders ?? this.loadingOrders,
+        printing: printing ?? this.printing,
+        orders: orders ?? this.orders,
+        ordersError: ordersError,
+      );
+}
+
+final _rowProvider = NotifierProvider.autoDispose
+    .family<_RowController, _RowState, String>(_RowController.new);
+
+class _RowController extends AutoDisposeFamilyNotifier<_RowState, String> {
+  bool _disposed = false;
+
+  @override
+  _RowState build(String arg) {
+    ref.onDispose(() => _disposed = true);
+    return const _RowState();
+  }
+
+  Future<void> toggleOrders() async {
+    if (state.orders.isNotEmpty || state.expanded) {
+      state = state.copyWith(expanded: !state.expanded);
+      return;
+    }
+    state = state.copyWith(expanded: true, loadingOrders: true);
+    try {
+      final local = ref.read(orderRepositoryProvider).loadOrdersLocal(arg);
+      if (local != null && local.isNotEmpty && !_disposed) {
+        state = state.copyWith(orders: local, loadingOrders: false);
+      }
+      final fresh =
+          await ref.read(orderRepositoryProvider).fetchOrdersFresh(arg);
+      if (!_disposed) {
+        state = state.copyWith(orders: fresh, loadingOrders: false);
+      }
+    } catch (e) {
+      if (!_disposed) {
+        state = _RowState(
+          expanded: state.expanded,
+          printing: state.printing,
+          orders: state.orders,
+          loadingOrders: false,
+          ordersError: state.orders.isEmpty ? e.toString() : null,
+        );
+      }
+    }
+  }
+
+  void setPrinting(bool value) {
+    if (!_disposed) state = state.copyWith(printing: value);
+  }
+}
+
+/// Spinner on the per-order print button, keyed by order id.
+final _orderPrintingProvider =
+    StateProvider.autoDispose.family<bool, String>((ref, orderId) => false);
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  SCREEN — lives inside the navigation shell (Shifts tab).
 // ─────────────────────────────────────────────────────────────────────────────
 
 class ShiftHistoryScreen extends ConsumerStatefulWidget {
@@ -24,173 +162,100 @@ class ShiftHistoryScreen extends ConsumerStatefulWidget {
 }
 
 class _ShiftHistoryScreenState extends ConsumerState<ShiftHistoryScreen> {
-  List<Shift> _shifts = [];
-  bool _loading = true;
-  String? _error;
-
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
-  Future<void> _load() async {
+  void _load() {
+    if (!mounted) return;
     final branchId = ref.read(authProvider).user?.branchId;
     if (branchId == null) {
-      setState(() {
-        _loading = false;
-        _error = 'No branch assigned';
-      });
+      ref
+          .read(_historyProvider.notifier)
+          .noBranch(l10n(context).shiftErrorNoBranchAssigned);
       return;
     }
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-    try {
-      final local = ref.read(shiftRepositoryProvider).loadShiftsLocal(branchId);
-      if (local != null && local.isNotEmpty && mounted) {
-        setState(() {
-          _shifts = local;
-          _loading = false;
-        });
-      }
-      final fresh =
-          await ref.read(shiftRepositoryProvider).fetchShiftsFresh(branchId);
-      if (mounted)
-        setState(() {
-          _shifts = fresh;
-          _loading = false;
-        });
-    } catch (e) {
-      if (mounted)
-        setState(() {
-          _error = _shifts.isEmpty ? e.toString() : null;
-          _loading = false;
-        });
-    }
+    ref.read(_historyProvider.notifier).load(branchId);
   }
 
   @override
   Widget build(BuildContext context) {
-    final top = MediaQuery.of(context).padding.top;
+    final t = context.tokens;
 
     return Scaffold(
-      backgroundColor: AppColors.bg,
       body: Column(children: [
-        // ── Top bar ──────────────────────────────────────────────────
-        _TopBar(
-          paddingTop: top,
-          onBack: () => context.pop(),
-          onRefresh: _load,
+        AppTopBar(
+          title: l10n(context).shiftHistoryTitle,
+          subtitle: l10n(context).shiftHistorySubtitle,
+          actions: [
+            IconButton(
+              onPressed: _load,
+              tooltip: l10n(context).commonRefresh,
+              icon: Icon(Icons.refresh_rounded, size: 20, color: t.textPrimary),
+            ),
+          ],
         ),
-
-        // ── Content ──────────────────────────────────────────────────
-        Expanded(
-          child: _loading && _shifts.isEmpty
-              ? const Center(
-                  child: CircularProgressIndicator(color: AppColors.primary))
-              : _error != null
-                  ? Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: ErrorBanner(message: _error!, onRetry: _load),
-                    )
-                  : _shifts.isEmpty
-                      ? Center(
-                          child: Text('No shifts found',
-                              style: cairo(
-                                  fontSize: 15,
-                                  color: AppColors.textSecondary)),
-                        )
-                      : Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(AppRadius.lg),
-                              border: Border.all(color: AppColors.borderLight),
-                              boxShadow: AppShadows.card,
-                            ),
-                            child: Column(children: [
-                              _TableHeader(),
-                              const Divider(
-                                  height: 1, color: AppColors.borderLight),
-                              Expanded(
-                                child: ListView.builder(
-                                  padding: EdgeInsets.zero,
-                                  itemCount: _shifts.length,
-                                  itemBuilder: (_, i) =>
-                                      _ShiftRow(shift: _shifts[i], isEven: i.isEven),
-                                ),
-                              ),
-                            ]),
-                          ),
-                        ),
-        ),
+        Expanded(child: _buildBody()),
       ]),
     );
   }
-}
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  TOP BAR
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _TopBar extends StatelessWidget {
-  final double paddingTop;
-  final VoidCallback onBack;
-  final VoidCallback onRefresh;
-  const _TopBar(
-      {required this.paddingTop,
-      required this.onBack,
-      required this.onRefresh});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: Colors.white,
-      padding: EdgeInsets.fromLTRB(16, paddingTop + 10, 16, 12),
-      child: Row(children: [
-        _IconBtn(icon: Icons.arrow_back_rounded, onTap: onBack),
-        const SizedBox(width: 14),
-        Text('Past Shifts',
-            style: cairo(fontSize: 18, fontWeight: FontWeight.w700)),
-        const Spacer(),
-        _IconBtn(icon: Icons.refresh_rounded, onTap: onRefresh),
-      ]),
-    );
-  }
-}
-
-class _IconBtn extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-  const _IconBtn({required this.icon, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) => GestureDetector(
-        onTap: onTap,
-        child: Container(
-          width: 38,
-          height: 38,
-          decoration: BoxDecoration(
-            color: AppColors.bg,
-            borderRadius: BorderRadius.circular(AppRadius.sm),
-            border: Border.all(color: AppColors.border),
-          ),
-          alignment: Alignment.center,
-          child: Icon(icon, size: 18, color: AppColors.textPrimary),
+  Widget _buildBody() {
+    final history = ref.watch(_historyProvider);
+    if (history.loading && history.shifts.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (history.error != null) {
+      return ErrorState(message: history.error!, onRetry: _load);
+    }
+    if (history.shifts.isEmpty) {
+      return EmptyState(
+        icon: Icons.schedule_rounded,
+        title: l10n(context).shiftNoShiftsYet,
+        body: l10n(context).shiftShiftsAppearHere,
+      );
+    }
+    // Width-driven, not device-class-driven: a landscape phone is wide
+    // enough for the table, a split-screen tablet is not.
+    return LayoutBuilder(builder: (context, constraints) {
+      final compact = constraints.maxWidth < 680;
+      return Padding(
+        padding: const EdgeInsets.all(AppSpace.lg),
+        child: SurfaceCard(
+          padding: EdgeInsets.zero,
+          radius: AppRadius.lg,
+          clipBehavior: Clip.antiAlias,
+          child: Column(children: [
+            if (!compact) ...[
+              const _TableHeader(),
+              Divider(height: 1, color: context.tokens.borderLight),
+            ],
+            Expanded(
+              child: ListView.builder(
+                padding: EdgeInsets.zero,
+                itemCount: history.shifts.length,
+                itemBuilder: (_, i) => _ShiftRow(
+                    shift: history.shifts[i],
+                    isEven: i.isEven,
+                    compact: compact),
+              ),
+            ),
+          ]),
         ),
       );
+    });
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  TABLE HEADER
+//  TABLE LAYOUT (tablet / desktop)
 // ─────────────────────────────────────────────────────────────────────────────
 
 // Shared column layout — single source of truth for header + rows.
 class _Cols {
-  static const double statusW = 10 + 16; // dot + right gap
+  static const double statusW = 10 + 16; // dot + gap
   static const int tellerF = 2;
   static const int openedF = 2;
   static const int closedF = 2;
@@ -203,523 +268,443 @@ class _TableHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.tokens;
+    final s = l10n(context);
+
+    Widget th(String label, {bool end = false}) => Align(
+          alignment:
+              end ? AlignmentDirectional.centerEnd : AlignmentDirectional.centerStart,
+          child: Text(label,
+              style: ui(
+                  size: 11,
+                  weight: FontWeight.w600,
+                  color: t.textMuted,
+                  letterSpacing: 0.4)),
+        );
+
     return Container(
       height: 42,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: const BoxDecoration(
-        color: AppColors.bg,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
-      ),
+      padding: const EdgeInsetsDirectional.symmetric(horizontal: AppSpace.lg),
+      color: t.surfaceAlt,
       child: Row(children: [
-        SizedBox(width: _Cols.statusW, child: _th('')),
-        Expanded(flex: _Cols.tellerF, child: _th('Teller')),
-        Expanded(flex: _Cols.openedF, child: _th('Opened')),
-        Expanded(flex: _Cols.closedF, child: _th('Closed')),
+        SizedBox(width: _Cols.statusW, child: th('')),
+        Expanded(flex: _Cols.tellerF, child: th(s.commonTeller)),
+        Expanded(flex: _Cols.openedF, child: th(s.shiftColOpened)),
+        Expanded(flex: _Cols.closedF, child: th(s.shiftColClosed)),
         SizedBox(
             width: _Cols.declaredW,
-            child: _th('Declared cash', alignRight: true)),
+            child: th(s.shiftDeclaredCash, end: true)),
         const SizedBox(width: _Cols.chevW),
       ]),
     );
   }
-
-  Widget _th(String label, {bool alignRight = false}) => Align(
-        alignment: alignRight ? Alignment.centerRight : Alignment.centerLeft,
-        child: Text(label,
-            style: cairo(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textMuted,
-                letterSpacing: 0.4)),
-      );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  SHIFT ROW  (expandable)
+//  SHIFT ROW  (expandable — same affordance as order history rows)
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _ShiftRow extends ConsumerStatefulWidget {
+class _ShiftRow extends ConsumerWidget {
   final Shift shift;
   final bool isEven;
-  const _ShiftRow({required this.shift, required this.isEven});
-  @override
-  ConsumerState<_ShiftRow> createState() => _ShiftRowState();
-}
 
-class _ShiftRowState extends ConsumerState<_ShiftRow> {
-  bool _expanded = false;
-  bool _loadingOrders = false;
-  bool _printing = false;
-  List<Order> _orders = [];
-  String? _ordersError;
+  /// Stacked two-line layout below the table breakpoint (width-driven).
+  final bool compact;
+  const _ShiftRow(
+      {required this.shift, required this.isEven, required this.compact});
 
-  Future<void> _toggleOrders() async {
-    if (_orders.isNotEmpty || _expanded) {
-      setState(() => _expanded = !_expanded);
-      return;
-    }
-    setState(() {
-      _loadingOrders = true;
-      _expanded = true;
-    });
-    try {
-      final local =
-          ref.read(orderRepositoryProvider).loadOrdersLocal(widget.shift.id);
-      if (local != null && local.isNotEmpty && mounted) {
-        setState(() {
-          _orders = local;
-          _loadingOrders = false;
-        });
-      }
-      final fresh = await ref
-          .read(orderRepositoryProvider)
-          .fetchOrdersFresh(widget.shift.id);
-      if (mounted)
-        setState(() {
-          _orders = fresh;
-          _loadingOrders = false;
-        });
-    } catch (e) {
-      if (mounted)
-        setState(() {
-          _ordersError = _orders.isEmpty ? e.toString() : null;
-          _loadingOrders = false;
-        });
-    }
-  }
-
-  Future<void> _printReport() async {
-    setState(() => _printing = true);
+  Future<void> _printReport(BuildContext context, WidgetRef ref) async {
+    final ctl = ref.read(_rowProvider(shift.id).notifier);
+    ctl.setPrinting(true);
     try {
       final report =
-          await ref.read(shiftRepositoryProvider).getReport(widget.shift.id);
-      if (mounted) {
-        setState(() => _printing = false);
+          await ref.read(shiftRepositoryProvider).getReport(shift.id);
+      ctl.setPrinting(false);
+      if (context.mounted) {
         await ShiftReportPreviewSheet.show(context, report);
       }
     } catch (e) {
-      if (mounted) {
-        setState(() => _printing = false);
+      ctl.setPrinting(false);
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Failed to load report: $e'),
-            backgroundColor: AppColors.danger));
+            content: Text(l10n(context).commonFailedLoadReport('$e')),
+            backgroundColor: context.tokens.danger));
       }
     }
   }
 
-  Color get _statusColor => switch (widget.shift.status) {
-        'open' => AppColors.success,
-        'force_closed' => AppColors.danger,
-        _ => AppColors.textSecondary,
+  ChipTone get _statusTone => switch (shift.status) {
+        'open' => ChipTone.success,
+        'force_closed' => ChipTone.danger,
+        _ => ChipTone.neutral,
       };
 
-  String get _statusLabel => switch (widget.shift.status) {
-        'open' => 'Open',
-        'closed' => 'Closed',
-        'force_closed' => 'Force closed',
-        _ => widget.shift.status.replaceAll('_', ' '),
+  String _statusLabel(AppLocalizations s) => switch (shift.status) {
+        'open' => s.shiftStatusOpen,
+        'closed' => s.shiftStatusClosed,
+        'force_closed' => s.shiftStatusForceClosed,
+        _ => shift.status.replaceAll('_', ' '),
+      };
+
+  Color _statusColor(BuildContext context) => switch (shift.status) {
+        'open' => context.tokens.success,
+        'force_closed' => context.tokens.danger,
+        _ => context.tokens.textMuted,
       };
 
   @override
-  Widget build(BuildContext context) {
-    final s = widget.shift;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.tokens;
+    final s = shift;
+    final phone = compact;
+    final row = ref.watch(_rowProvider(shift.id));
 
     return Column(mainAxisSize: MainAxisSize.min, children: [
       // ── Main row ────────────────────────────────────────────────
       GestureDetector(
-        onTap: _toggleOrders,
+        onTap: () => ref.read(_rowProvider(shift.id).notifier).toggleOrders(),
         behavior: HitTestBehavior.opaque,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
-          height: 56,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          color: _expanded ? AppColors.primary.withOpacity(0.04) : widget.isEven ? Colors.white : AppColors.bg,
-          child: Row(children: [
-            // Status dot
-            SizedBox(
-              width: _Cols.statusW,
-              child: Container(
-                width: 8,
-                height: 8,
-                decoration:
-                    BoxDecoration(color: _statusColor, shape: BoxShape.circle),
-              ),
-            ),
-            // Teller
-            Expanded(
-              flex: _Cols.tellerF,
-              child: Text(s.tellerName,
-                  style: cairo(fontSize: 14, fontWeight: FontWeight.w600)),
-            ),
-            // Opened
-            Expanded(
-              flex: _Cols.openedF,
-              child: Text(dateTime(s.openedAt),
-                  style: cairo(fontSize: 13, color: AppColors.textSecondary)),
-            ),
-            // Closed
-            Expanded(
-              flex: _Cols.closedF,
-              child: s.closedAt != null
-                  ? Text(dateTime(s.closedAt!),
-                      style:
-                          cairo(fontSize: 13, color: AppColors.textSecondary))
-                  : Text('—',
-                      style: cairo(fontSize: 13, color: AppColors.textMuted)),
-            ),
-            // Declared cash
-            SizedBox(
-              width: _Cols.declaredW,
-              child: Text(
-                  s.closingCashDeclared != null
-                      ? egp(s.closingCashDeclared!)
-                      : '—',
-                  textAlign: TextAlign.right,
-                  style: cairo(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: s.closingCashDeclared != null
-                          ? AppColors.textPrimary
-                          : AppColors.textMuted)),
-            ),
-            // Chevron
-            SizedBox(
-              width: _Cols.chevW,
-              child: Center(
-                child: AnimatedRotation(
-                  duration: const Duration(milliseconds: 180),
-                  turns: _expanded ? 0.5 : 0,
-                  child: const Icon(Icons.keyboard_arrow_down_rounded,
-                      size: 20, color: AppColors.textMuted),
-                ),
-              ),
-            ),
-          ]),
+          height: phone ? 64 : 56,
+          padding:
+              const EdgeInsetsDirectional.symmetric(horizontal: AppSpace.lg),
+          color: row.expanded
+              ? t.hoverOverlay
+              : isEven
+                  ? Colors.transparent
+                  : t.surfaceAlt,
+          child: phone ? _phoneRow(context, t, s, row) : _tableRow(context, t, s, row),
         ),
       ),
 
       // ── Expanded panel ───────────────────────────────────────────
-      if (_expanded)
-        Container(
-          color: AppColors.bg,
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // ── Shift meta ─────────────────────────────────
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-                  child: Row(children: [
-                    _StatusPill(_statusLabel, _statusColor),
-                    if (s.openingCash > 0) ...[
-                      const SizedBox(width: 10),
-                      _MetaChip(
-                        icon: Icons.account_balance_wallet_outlined,
-                        label: 'Opening ${egp(s.openingCash)}',
-                      ),
-                    ],
-                    const Spacer(),
-                    // Print report button
-                    _printing
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2, color: AppColors.primary))
-                        : _ActionBtn(
-                            icon: Icons.print_rounded,
-                            label: 'Print report',
-                            color: AppColors.primary,
-                            onTap: _printReport,
-                          ),
-                  ]),
-                ),
-
-                const Divider(height: 1, color: AppColors.borderLight),
-
-                // ── Orders section ────────────────────────────
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 10, 14, 4),
-                  child: Text('Orders in this shift',
-                      style: cairo(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textMuted,
-                          letterSpacing: 0.7)),
-                ),
-
-                if (_loadingOrders)
-                  const Padding(
-                    padding: EdgeInsets.all(20),
-                    child: Center(
-                      child: SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: AppColors.primary),
-                      ),
-                    ),
-                  )
-                else if (_ordersError != null)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(14, 4, 14, 14),
-                    child: Text(_ordersError!,
-                        style: cairo(fontSize: 12, color: AppColors.danger)),
-                  )
-                else if (_orders.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(14, 4, 14, 14),
-                    child: Text('No orders in this shift',
-                        style: cairo(fontSize: 13, color: AppColors.textMuted)),
-                  )
-                else
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(14, 6, 14, 14),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: AppColors.bg,
-                        borderRadius: BorderRadius.circular(AppRadius.sm),
-                        border: Border.all(color: AppColors.borderLight),
-                      ),
-                      child: Column(
-                        children: List.generate(_orders.length, (i) {
-                          return Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                _PastOrderRow(order: _orders[i]),
-                                if (i < _orders.length - 1)
-                                  const Divider(
-                                      height: 1,
-                                      color: AppColors.borderLight,
-                                      indent: 14,
-                                      endIndent: 14),
-                              ]);
-                        }),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ),
+      if (row.expanded) _expandedPanel(context, ref, t, s, row),
     ]);
   }
+
+  Widget _statusDot(BuildContext context) => SizedBox(
+        width: _Cols.statusW,
+        child: Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+                color: _statusColor(context), shape: BoxShape.circle),
+          ),
+        ),
+      );
+
+  Widget _chevron(AppTokens t, _RowState row) => SizedBox(
+        width: _Cols.chevW,
+        child: Center(
+          child: AnimatedRotation(
+            duration: const Duration(milliseconds: 180),
+            turns: row.expanded ? 0.5 : 0,
+            child: Icon(Icons.keyboard_arrow_down_rounded,
+                size: 20, color: t.textMuted),
+          ),
+        ),
+      );
+
+  Widget _declaredCash(AppTokens t, Shift s) => Text(
+        s.closingCashDeclared != null ? egp(s.closingCashDeclared!) : '—',
+        textAlign: TextAlign.end,
+        style: money(
+            size: 14,
+            weight: FontWeight.w600,
+            color:
+                s.closingCashDeclared != null ? t.textPrimary : t.textMuted),
+      );
+
+  Widget _tableRow(BuildContext context, AppTokens t, Shift s, _RowState row) =>
+      Row(children: [
+        _statusDot(context),
+        Expanded(
+          flex: _Cols.tellerF,
+          child: Text(s.tellerName,
+              overflow: TextOverflow.ellipsis,
+              style: ui(size: 14, weight: FontWeight.w600, color: t.textPrimary)),
+        ),
+        Expanded(
+          flex: _Cols.openedF,
+          child: Text(dateTime(s.openedAt),
+              style: ui(size: 13, color: t.textSecondary)),
+        ),
+        Expanded(
+          flex: _Cols.closedF,
+          child: s.closedAt != null
+              ? Text(dateTime(s.closedAt!),
+                  style: ui(size: 13, color: t.textSecondary))
+              : Text('—', style: ui(size: 13, color: t.textMuted)),
+        ),
+        SizedBox(width: _Cols.declaredW, child: _declaredCash(t, s)),
+        _chevron(t, row),
+      ]);
+
+  Widget _phoneRow(BuildContext context, AppTokens t, Shift s, _RowState row) =>
+      Row(children: [
+        _statusDot(context),
+        Expanded(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(s.tellerName,
+                  overflow: TextOverflow.ellipsis,
+                  style: ui(
+                      size: 14, weight: FontWeight.w600, color: t.textPrimary)),
+              const SizedBox(height: 2),
+              Text(
+                s.closedAt != null
+                    ? '${dateTime(s.openedAt)} → ${dateTime(s.closedAt!)}'
+                    : l10n(context).shiftOpenedOn(dateTime(s.openedAt)),
+                overflow: TextOverflow.ellipsis,
+                style: ui(size: 11, color: t.textSecondary),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: AppSpace.sm),
+        _declaredCash(t, s),
+        _chevron(t, row),
+      ]);
+
+  Widget _expandedPanel(BuildContext context, WidgetRef ref, AppTokens t,
+          Shift s, _RowState row) =>
+      Container(
+        color: t.surfaceAlt,
+        padding: const EdgeInsetsDirectional.fromSTEB(
+            AppSpace.lg, AppSpace.md, AppSpace.lg, AppSpace.md + 2),
+        child: SurfaceCard(
+          padding: EdgeInsets.zero,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── Shift meta ─────────────────────────────────
+              Padding(
+                padding: const EdgeInsetsDirectional.fromSTEB(14, 12, 14, 12),
+                child: Row(children: [
+                  StatusChip(
+                      label: _statusLabel(l10n(context)), tone: _statusTone),
+                  if (s.openingCash > 0) ...[
+                    const SizedBox(width: AppSpace.sm + 2),
+                    StatusChip(
+                      label: l10n(context)
+                          .shiftOpeningChip(egp(s.openingCash)),
+                      tone: ChipTone.neutral,
+                      icon: Icons.account_balance_wallet_outlined,
+                    ),
+                  ],
+                  const Spacer(),
+                  StatusChip(
+                    label: row.printing
+                        ? l10n(context).commonLoading
+                        : l10n(context).commonPrintReport,
+                    tone: ChipTone.info,
+                    icon: row.printing
+                        ? Icons.sync_rounded
+                        : Icons.print_rounded,
+                    spinning: row.printing,
+                    onTap:
+                        row.printing ? null : () => _printReport(context, ref),
+                  ),
+                ]),
+              ),
+
+              Divider(height: 1, color: t.borderLight),
+
+              // ── Orders section ────────────────────────────
+              Padding(
+                padding: const EdgeInsetsDirectional.fromSTEB(14, 10, 14, 4),
+                child: Text(l10n(context).shiftOrdersInShift,
+                    style: ui(
+                        size: 10,
+                        weight: FontWeight.w700,
+                        color: t.textMuted,
+                        letterSpacing: 0.7)),
+              ),
+
+              if (row.loadingOrders)
+                const Padding(
+                  padding: EdgeInsets.all(AppSpace.lg + 4),
+                  child: Center(
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ),
+                )
+              else if (row.ordersError != null)
+                Padding(
+                  padding: const EdgeInsetsDirectional.fromSTEB(14, 4, 14, 14),
+                  child: Text(row.ordersError!,
+                      style: ui(size: 12, color: t.danger)),
+                )
+              else if (row.orders.isEmpty)
+                Padding(
+                  padding: const EdgeInsetsDirectional.fromSTEB(14, 4, 14, 14),
+                  child: Text(l10n(context).shiftNoOrdersInShift,
+                      style: ui(size: 13, color: t.textMuted)),
+                )
+              else
+                Padding(
+                  padding: const EdgeInsetsDirectional.fromSTEB(14, 6, 14, 14),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: t.surfaceAlt,
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                      border: Border.all(color: t.borderLight),
+                    ),
+                    child: Column(
+                      children: List.generate(row.orders.length, (i) {
+                        return Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _PastOrderRow(order: row.orders[i]),
+                              if (i < row.orders.length - 1)
+                                Divider(
+                                    height: 1,
+                                    color: t.borderLight,
+                                    indent: 14,
+                                    endIndent: 14),
+                            ]);
+                      }),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  PAST ORDER ROW
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _PastOrderRow extends ConsumerStatefulWidget {
+class _PastOrderRow extends ConsumerWidget {
   final Order order;
   const _PastOrderRow({required this.order});
-  @override
-  ConsumerState<_PastOrderRow> createState() => _PastOrderRowState();
-}
 
-class _PastOrderRowState extends ConsumerState<_PastOrderRow> {
-  bool _printing = false;
-
-  Future<void> _print() async {
-    setState(() => _printing = true);
+  Future<void> _print(BuildContext context, WidgetRef ref) async {
+    ref.read(_orderPrintingProvider(order.id).notifier).state = true;
     try {
-      Order full = widget.order;
+      Order full = order;
       if (full.items.isEmpty) {
         try {
-          full = await ref.read(orderRepositoryProvider).getOrder(widget.order.id);
+          full = await ref.read(orderRepositoryProvider).getOrder(order.id);
         } catch (_) {}
       }
-      if (mounted) await ReceiptPreviewSheet.show(context, full);
+      if (context.mounted) await ReceiptPreviewSheet.show(context, full);
     } finally {
-      if (mounted) setState(() => _printing = false);
+      if (context.mounted) {
+        ref.read(_orderPrintingProvider(order.id).notifier).state = false;
+      }
     }
   }
 
   @override
-  Widget build(BuildContext context) {
-    final o = widget.order;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.tokens;
+    final o = order;
     final isVoided = o.status == 'voided';
     final isPending = o.status == 'pending_sync';
+    final printing = ref.watch(_orderPrintingProvider(o.id));
+
+    final methods = ref.watch(paymentMethodProvider.select((s) => s.items));
+    final pm =
+        methods.where((m) => m.wireFormat == o.paymentMethod).firstOrNull;
+    final methodText = pm != null
+        ? pm.label(Localizations.localeOf(context).languageCode)
+        : o.paymentMethod;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+      padding:
+          const EdgeInsetsDirectional.symmetric(horizontal: 14, vertical: 11),
       child: Row(children: [
         // Order number bubble
         Container(
           width: 34,
           height: 34,
           decoration: BoxDecoration(
-            color: isVoided
-                ? AppColors.borderLight
-                : AppColors.primary.withOpacity(0.07),
+            color: isVoided ? t.borderLight : t.navyBg,
             borderRadius: BorderRadius.circular(9),
           ),
           alignment: Alignment.center,
           child: Text(
             o.orderNumber > 0 ? '#${o.orderNumber}' : '#?',
-            style: cairo(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: isVoided ? AppColors.textMuted : AppColors.primary),
+            style: ui(
+                size: 11,
+                weight: FontWeight.w700,
+                color: isVoided ? t.textMuted : t.navy),
           ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: AppSpace.md),
 
-        // Time + customer
+        // Time + customer + payment method
         Expanded(
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
               Text(timeShort(o.createdAt),
-                  style: cairo(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.textSecondary)),
+                  style: ui(size: 13, color: t.textSecondary)),
               if (isVoided) ...[
                 const SizedBox(width: 6),
-                _StatusPill('Voided', AppColors.danger),
+                StatusChip(
+                    label: l10n(context).commonVoided,
+                    tone: ChipTone.danger),
               ],
               if (isPending) ...[
                 const SizedBox(width: 6),
-                _StatusPill('Pending sync', AppColors.warning),
+                StatusChip(
+                    label: l10n(context).commonPendingSync,
+                    tone: ChipTone.warning),
               ],
             ]),
             if (o.customerName != null && o.customerName!.isNotEmpty) ...[
               const SizedBox(height: 2),
-              Text(o.customerName!,
-                  style: cairo(fontSize: 12, color: AppColors.textMuted)),
+              Text(o.customerName!, style: ui(size: 12, color: t.textMuted)),
             ],
             const SizedBox(height: 2),
-            Text(
-              (() {
-                final methods = ref.watch(paymentMethodProvider).items;
-                final pm = methods.where((m) => m.wireFormat == o.paymentMethod).firstOrNull;
-                return pm != null ? pm.label('en') : o.paymentMethod;
-              })(),
-              style: cairo(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.primary),
-            ),
+            Text(methodText,
+                style: ui(size: 11, weight: FontWeight.w600, color: t.navy)),
           ]),
         ),
 
         // Amount
         Text(egp(o.totalAmount),
-            style: cairo(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: isVoided ? AppColors.textMuted : AppColors.textPrimary,
+            style: money(
+              size: 14,
+              weight: FontWeight.w600,
+              color: isVoided ? t.textMuted : t.textPrimary,
+            ).copyWith(
                 decoration: isVoided ? TextDecoration.lineThrough : null)),
-        const SizedBox(width: 12),
+        const SizedBox(width: AppSpace.md),
 
         // Print button
-        _printing
+        printing
             ? const SizedBox(
                 width: 24,
                 height: 24,
-                child: CircularProgressIndicator(
-                    strokeWidth: 2, color: AppColors.primary))
-            : GestureDetector(
-                onTap: _print,
+                child: CircularProgressIndicator(strokeWidth: 2))
+            : AnimatedPressScale(
+                onTap: () => _print(context, ref),
                 child: Container(
                   width: 32,
                   height: 32,
                   decoration: BoxDecoration(
-                      color: AppColors.bg,
+                      color: t.surfaceAlt,
                       borderRadius: BorderRadius.circular(7),
-                      border: Border.all(color: AppColors.border)),
+                      border: Border.all(color: t.border)),
                   alignment: Alignment.center,
-                  child: const Icon(Icons.print_rounded,
-                      size: 14, color: AppColors.textSecondary),
+                  child: Icon(Icons.print_rounded,
+                      size: 14, color: t.textSecondary),
                 ),
               ),
       ]),
     );
   }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-//  SMALL WIDGETS
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _StatusPill extends StatelessWidget {
-  final String label;
-  final Color color;
-  const _StatusPill(this.label, this.color);
-
-  @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.09),
-          borderRadius: BorderRadius.circular(4),
-        ),
-        child: Text(label,
-            style: cairo(
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-                color: color,
-                letterSpacing: 0.2)),
-      );
-}
-
-class _MetaChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  const _MetaChip({required this.icon, required this.label});
-
-  @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          color: AppColors.bg,
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: AppColors.borderLight),
-        ),
-        child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(icon, size: 13, color: AppColors.textMuted),
-          const SizedBox(width: 5),
-          Text(label,
-              style: cairo(fontSize: 12, color: AppColors.textSecondary)),
-        ]),
-      );
-}
-
-class _ActionBtn extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  final VoidCallback onTap;
-  const _ActionBtn({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) => GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.07),
-            borderRadius: BorderRadius.circular(7),
-          ),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Icon(icon, size: 13, color: color),
-            const SizedBox(width: 5),
-            Text(label,
-                style: cairo(
-                    fontSize: 12, fontWeight: FontWeight.w600, color: color)),
-          ]),
-        ),
-      );
 }

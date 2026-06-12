@@ -3,75 +3,55 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sufrix_pos/features/order/helpers/category_style.dart';
 
 void main() {
-  group('CatStyle', () {
-    test('returns correct style for matcha', () {
-      final style = CatStyle.of('Matcha Latte');
-      expect(style.icon, Icons.eco_rounded);
-      expect(style.iconColor, const Color(0xFF2E7D32));
+  group('CatStyle icon mapping', () {
+    final cases = <String, IconData>{
+      'Matcha Latte': Icons.eco_rounded,
+      // 'iced' and 'latte' both match; the coffee family wins (chain order).
+      'Iced Latte': Icons.coffee_rounded,
+      'Espresso': Icons.coffee_rounded,
+      'Hot Chocolate': Icons.coffee_rounded,
+      'Croissant': Icons.bakery_dining_rounded,
+      'Chicken Sandwich': Icons.lunch_dining_rounded,
+      'Ice Cream': Icons.icecream_rounded,
+      'Lemonade': Icons.local_drink_rounded,
+      'Green Tea': Icons.emoji_food_beverage_rounded,
+      'Sparkling Water': Icons.water_drop_rounded,
+      'Iced Something': Icons.ac_unit_rounded,
+      'Unknown Item': Icons.local_cafe_rounded,
+    };
+
+    cases.forEach((name, icon) {
+      test('"$name" → $icon', () {
+        expect(CatStyle.of(name).icon, icon);
+        // Dark variant keeps the same icon.
+        expect(CatStyle.of(name, brightness: Brightness.dark).icon, icon);
+      });
+    });
+  });
+
+  group('CatStyle brightness variants', () {
+    test('light backgrounds are light, dark backgrounds are dark', () {
+      for (final name in ['Espresso', 'Matcha', 'Lemonade', 'Unknown']) {
+        final light = CatStyle.of(name);
+        final dark = CatStyle.of(name, brightness: Brightness.dark);
+        expect(light.bgTop.computeLuminance(), greaterThan(0.5),
+            reason: '$name light bgTop should be light');
+        expect(dark.bgTop.computeLuminance(), lessThan(0.2),
+            reason: '$name dark bgTop should be dark');
+        // Icon colour must contrast against its own background.
+        expect(light.iconColor.computeLuminance(),
+            lessThan(light.bgTop.computeLuminance()));
+        expect(dark.iconColor.computeLuminance(),
+            greaterThan(dark.bgTop.computeLuminance()));
+      }
     });
 
-    test('returns correct style for coffee variants', () {
-      final styleLatte = CatStyle.of('Iced Latte');
-      // Wait, 'iced' and 'latte' both match. 'latte' comes first in the if-else chain.
-      expect(styleLatte.icon, Icons.coffee_rounded);
-      expect(styleLatte.iconColor, const Color(0xFF5D4037));
-
-      final styleEspresso = CatStyle.of('Espresso');
-      expect(styleEspresso.icon, Icons.coffee_rounded);
-    });
-
-    test('returns correct style for chocolate', () {
-      final style = CatStyle.of('Hot Chocolate');
-      expect(style.icon, Icons.coffee_rounded);
-      expect(style.iconColor, const Color(0xFF6D4C41));
-    });
-
-    test('returns correct style for bakery', () {
-      final style = CatStyle.of('Croissant');
-      expect(style.icon, Icons.bakery_dining_rounded);
-      expect(style.iconColor, const Color(0xFFE65100));
-    });
-
-    test('returns correct style for sandwich', () {
-      final style = CatStyle.of('Chicken Sandwich');
-      expect(style.icon, Icons.lunch_dining_rounded);
-      expect(style.iconColor, const Color(0xFFE64A19));
-    });
-
-    test('returns correct style for ice cream', () {
-      final style = CatStyle.of('Ice Cream');
-      expect(style.icon, Icons.icecream_rounded);
-      expect(style.iconColor, const Color(0xFF7B1FA2));
-    });
-
-    test('returns correct style for juice', () {
-      final style = CatStyle.of('Lemonade');
-      expect(style.icon, Icons.local_drink_rounded);
-      expect(style.iconColor, const Color(0xFFF57F17));
-    });
-
-    test('returns correct style for tea', () {
-      final style = CatStyle.of('Green Tea');
-      expect(style.icon, Icons.emoji_food_beverage_rounded);
-      expect(style.iconColor, const Color(0xFF388E3C));
-    });
-
-    test('returns correct style for water', () {
-      final style = CatStyle.of('Sparkling Water');
-      expect(style.icon, Icons.water_drop_rounded);
-      expect(style.iconColor, const Color(0xFF1565C0));
-    });
-
-    test('returns correct style for iced drinks not caught by others', () {
-      final style = CatStyle.of('Iced Something');
-      expect(style.icon, Icons.ac_unit_rounded);
-      expect(style.iconColor, const Color(0xFF0277BD));
-    });
-
-    test('returns default style for unknown', () {
-      final style = CatStyle.of('Unknown Item');
-      expect(style.icon, Icons.local_cafe_rounded);
-      expect(style.iconColor, const Color(0xFF795548));
+    test('distinct categories get distinct accents', () {
+      final a = CatStyle.of('Matcha').accent;
+      final b = CatStyle.of('Espresso').accent;
+      final c = CatStyle.of('Sparkling Water').accent;
+      expect(a, isNot(b));
+      expect(b, isNot(c));
     });
   });
 }

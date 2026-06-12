@@ -119,6 +119,7 @@ class MenuRepository {
   Future<List<AddonItem>> fetchAddonsFresh(String orgId) async {
     final addons = await _api.addonItems(orgId);
     await _storage.saveAddons(orgId, addons.map((a) => a.toJson()).toList());
+    await _bumpSyncMeta('addons:$orgId');
     return addons;
   }
 

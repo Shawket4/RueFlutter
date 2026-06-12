@@ -60,13 +60,13 @@ void main() {
   group('MenuImage Widget', () {
     testWidgets('renders placeholder when loading', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
+        const MaterialApp(
           home: Scaffold(
             body: MenuImage(
               url: 'http://example.com/image.png',
               width: 100,
               height: 100,
-              placeholder: const Text('Loading...'),
+              placeholder: Text('Loading...'),
             ),
           ),
         ),

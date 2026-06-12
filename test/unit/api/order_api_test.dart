@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:sufrix_pos/core/api/client.dart';
 import 'package:sufrix_pos/core/api/order_api.dart';
-import 'package:sufrix_pos/core/models/cart.dart';
 import 'package:sufrix_pos/core/models/order.dart';
 
 class MockDio extends Mock implements Dio {}
@@ -93,15 +92,21 @@ void main() {
     });
 
     test('list paginates correctly and returns list of Orders', () async {
-      when(() => mockDio.get('/orders', queryParameters: {'shift_id': 's1', 'per_page': 500, 'page': 1}))
-          .thenAnswer((_) async => Response(
-                requestOptions: RequestOptions(path: '/orders'),
-                data: {
-                  'data': [mockOrderJson],
-                  'total_pages': 1,
-                },
-                statusCode: 200,
-              ));
+      // include_items: orders come back with embedded line items so the
+      // offline cache is complete without per-order detail fetches.
+      when(() => mockDio.get('/orders', queryParameters: {
+            'per_page': 500,
+            'include_items': true,
+            'shift_id': 's1',
+            'page': 1,
+          })).thenAnswer((_) async => Response(
+            requestOptions: RequestOptions(path: '/orders'),
+            data: {
+              'data': [mockOrderJson],
+              'total_pages': 1,
+            },
+            statusCode: 200,
+          ));
 
       final orders = await orderApi.list(shiftId: 's1');
       expect(orders.length, 1);

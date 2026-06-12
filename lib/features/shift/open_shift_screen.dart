@@ -1,14 +1,59 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
+import '../../core/l10n/l10n.dart';
 import '../../core/providers/auth_notifier.dart';
 import '../../core/providers/shift_notifier.dart';
+import '../../core/services/connectivity_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatting.dart';
+import '../../core/utils/responsive.dart';
+import '../../shared/widgets/amount_field.dart';
 import '../../shared/widgets/app_button.dart';
-import '../../shared/widgets/card_container.dart';
-import '../../shared/widgets/top_bar.dart';
+import '../../shared/widgets/app_top_bar.dart';
+import '../../shared/widgets/confirm_sheet.dart';
+import '../../shared/widgets/offline_banner.dart';
+import '../../shared/widgets/surface_card.dart';
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  EPHEMERAL STATE — autoDispose provider (resets when the screen unmounts).
+//  The amount controller stays in the State.
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _OpenShiftFormState {
+  final bool loading;
+  final String? error;
+  const _OpenShiftFormState({this.loading = false, this.error});
+}
+
+final _openShiftFormProvider = NotifierProvider.autoDispose<
+    _OpenShiftFormController, _OpenShiftFormState>(_OpenShiftFormController.new);
+
+class _OpenShiftFormController extends AutoDisposeNotifier<_OpenShiftFormState> {
+  bool _disposed = false;
+
+  @override
+  _OpenShiftFormState build() {
+    ref.onDispose(() => _disposed = true);
+    return const _OpenShiftFormState();
+  }
+
+  void setError(String message) {
+    if (_disposed) return;
+    state = _OpenShiftFormState(loading: state.loading, error: message);
+  }
+
+  void start() {
+    if (_disposed) return;
+    state = const _OpenShiftFormState(loading: true);
+  }
+
+  void fail(String message) {
+    if (_disposed) return;
+    state = _OpenShiftFormState(loading: false, error: message);
+  }
+}
 
 class OpenShiftScreen extends ConsumerStatefulWidget {
   const OpenShiftScreen({super.key});
@@ -19,8 +64,6 @@ class OpenShiftScreen extends ConsumerStatefulWidget {
 
 class _OpenShiftScreenState extends ConsumerState<OpenShiftScreen> {
   final _ctrl = TextEditingController();
-  bool _loading = false;
-  String? _error;
 
   @override
   void initState() {
@@ -37,197 +80,223 @@ class _OpenShiftScreenState extends ConsumerState<OpenShiftScreen> {
     super.dispose();
   }
 
-  Future<void> _open() async {
-    final raw = double.tryParse(_ctrl.text);
-    if (raw == null || raw < 0) {
-      setState(() => _error = 'Enter a valid cash amount');
+  Future<void> _submit() async {
+    final s = l10n(context);
+    final ctl = ref.read(_openShiftFormProvider.notifier);
+    final piastres = AmountField.parsePiastres(_ctrl.text);
+    if (piastres == null || piastres < 0) {
+      ctl.setError(s.shiftErrorValidCash);
       return;
     }
     final branchId = ref.read(authProvider).user?.branchId;
     if (branchId == null) {
-      setState(() => _error = 'No branch assigned to your account');
+      ctl.setError(s.shiftErrorNoBranch);
       return;
     }
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+
+    // ── Confirmation step ──────────────────────────────────────────────────
+    final isOnline = ConnectivityService.instance.isOnline;
+    final confirmed = await ConfirmSheet.show(
+      context,
+      title: s.shiftOpen,
+      body: isOnline
+          ? s.shiftOpenConfirmBody(egp(piastres))
+          : '${s.shiftOpenConfirmBody(egp(piastres))}\n\n'
+              '${s.shiftOpenOfflineNote}',
+      confirmLabel: s.shiftOpen,
+      icon: Icons.point_of_sale_rounded,
+    );
+    if (!confirmed || !mounted) return;
+
+    ctl.start();
 
     final ok = await ref
         .read(shiftProvider.notifier)
-        .openShift(branchId, (raw * 100).round());
+        .openShift(branchId, piastres);
 
-    if (mounted) {
-      if (ok) {
-        context.go('/order');
-      } else {
-        setState(() {
-          _error = ref.read(shiftProvider).error ?? 'Failed to open shift';
-          _loading = false;
-        });
-      }
+    if (!mounted) return;
+    if (ok) {
+      context.go('/order');
+    } else {
+      ctl.fail(ref.read(shiftProvider).error ?? l10n(context).shiftOpenFailed);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Task 3.7
-    final isTablet = MediaQuery.of(context).size.shortestSide >= 600;
+    final t = context.tokens;
     final suggested =
         ref.watch(shiftProvider.select((s) => s.suggestedOpeningCash));
+    final isOnline = ref.watch(isOnlineProvider);
+    final form = ref.watch(_openShiftFormProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: t.bg,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          TopBar(
-            title: 'Open Shift',
+          AppTopBar(
+            title: l10n(context).shiftOpen,
+            subtitle: l10n(context).shiftOpenSubtitle,
             onBack: () => context.go('/home'),
           ),
           Expanded(
             child: SingleChildScrollView(
               child: Center(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: isTablet ? 500 : 480),
-            child: Padding(
-              padding: EdgeInsets.all(isTablet ? 32 : 20),
-              child: CardContainer(
-                elevated: true,
-                padding: EdgeInsets.all(isTablet ? 36 : 28),
-                child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(children: [
-                        Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                                color: AppColors.primary.withOpacity(0.09),
-                                borderRadius:
-                                    BorderRadius.circular(AppRadius.sm)),
-                            child: const Icon(Icons.play_arrow_rounded,
-                                color: AppColors.primary, size: 22)),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Open New Shift',
-                                    style: cairo(
-                                        fontSize: isTablet ? 18 : 16,
-                                        fontWeight: FontWeight.w800)),
-                                Text('Enter the opening cash amount',
-                                    style: cairo(
-                                        fontSize: 12,
-                                        color: AppColors.textMuted)),
-                              ]),
-                        ),
-                      ]),
-  
-                      const SizedBox(height: 28),
-  
-                      if (suggested > 0)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 18),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 14, vertical: 11),
-                            decoration: BoxDecoration(
-                                color: AppColors.primary.withOpacity(0.05),
-                                borderRadius: BorderRadius.circular(AppRadius.sm),
-                                border: Border.all(
-                                    color: AppColors.primary.withOpacity(0.14))),
-                            child: Row(children: [
-                              const Icon(Icons.info_outline_rounded,
-                                  size: 15, color: AppColors.primary),
-                              const SizedBox(width: 8),
-                              Text('Suggested from last close: ${egp(suggested)}',
-                                  style: cairo(
-                                      fontSize: 12,
-                                      color: AppColors.primary,
-                                      fontWeight: FontWeight.w500)),
-                            ]),
-                          ),
-                        ),
-  
-                      Text('OPENING CASH',
-                          style: cairo(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.textMuted,
-                              letterSpacing: 1.2)),
-                      const SizedBox(height: 10),
-  
-                      TextField(
-                        controller: _ctrl,
-                        autofocus: true,
-                        keyboardType:
-                            const TextInputType.numberWithOptions(decimal: true),
-                        inputFormatters: [
-                          FilteringTextInputFormatter.allow(
-                              RegExp(r'^\d+\.?\d{0,2}'))
-                        ],
-                        style: cairo(
-                            fontSize: isTablet ? 34 : 30,
-                            fontWeight: FontWeight.w800),
-                        decoration: InputDecoration(
-                          prefixText: 'EGP  ',
-                          prefixStyle: cairo(
-                              fontSize: isTablet ? 22 : 19,
-                              color: AppColors.textSecondary,
-                              fontWeight: FontWeight.w500),
-                          hintText: '0',
-                          hintStyle: cairo(
-                              fontSize: isTablet ? 34 : 30,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.border),
-                          border: InputBorder.none,
-                          enabledBorder: InputBorder.none,
-                          focusedBorder: InputBorder.none,
-                        ),
-                      ),
-  
-                      const Divider(color: AppColors.borderLight, height: 24),
-                      const SizedBox(height: 4),
-  
-                      AnimatedSize(
-                        duration: const Duration(milliseconds: 200),
-                        curve: Curves.easeOut,
-                        child: _error != null
-                            ? Padding(
-                                padding: const EdgeInsets.only(bottom: 14),
-                                child: Row(children: [
-                                  const Icon(Icons.error_outline_rounded,
-                                      size: 14, color: AppColors.danger),
-                                  const SizedBox(width: 6),
-                                  Flexible(
-                                      child: Text(_error!,
-                                          style: cairo(
-                                              fontSize: 13,
-                                              color: AppColors.danger))),
-                                ]))
-                            : const SizedBox.shrink(),
-                      ),
-  
-                      // Task 2.1: Removed the !isOnline gate on the onTap for offline-open to work seamlessly.
-                      AppButton(
-                        label: 'Open Shift',
-                        loading: _loading,
-                        width: double.infinity,
-                        icon: Icons.play_arrow_rounded,
-                        onTap: _loading ? null : _open,
-                      ),
-                    ]),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 480),
+                  child: Padding(
+                    padding: EdgeInsets.all(
+                        context.responsive(phone: 20, tablet: 32)),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const OfflineBanner(),
+                        _buildCard(context, t, suggested, isOnline, form),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ),
           ),
-        ),
+        ],
       ),
-    ), // Ends Expanded
-    ], // Ends Column children
-    ), // Ends Column
-    ); // Ends Scaffold
+    );
+  }
+
+  Widget _buildCard(BuildContext context, AppTokens t, int suggested,
+      bool isOnline, _OpenShiftFormState form) {
+    final s = l10n(context);
+    return SurfaceCard(
+      padding: EdgeInsets.all(
+          context.responsive(phone: AppSpace.xl, tablet: AppSpace.xxl)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Header ─────────────────────────────────────────────────────
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: t.accentBg,
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                ),
+                child:
+                    Icon(Icons.point_of_sale_rounded, color: t.accent, size: 22),
+              ),
+              const SizedBox(width: AppSpace.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(s.shiftOpenCardTitle,
+                        style: Theme.of(context).textTheme.titleLarge),
+                    const SizedBox(height: 2),
+                    Text(s.shiftOpenCardBody,
+                        style: ui(size: 12, color: t.textSecondary)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpace.xl),
+
+          // ── Opening cash ───────────────────────────────────────────────
+          AmountField(
+            controller: _ctrl,
+            label: s.shiftOpeningCash,
+            hint: '0.00',
+            autofocus: true,
+          ),
+          if (suggested > 0) ...[
+            const SizedBox(height: AppSpace.md),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpace.md, vertical: AppSpace.sm + 2),
+              decoration: BoxDecoration(
+                color: t.surfaceAlt,
+                borderRadius: BorderRadius.circular(AppRadius.xs),
+                border: Border.all(color: t.borderLight),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.history_rounded, size: 15, color: t.textMuted),
+                  const SizedBox(width: AppSpace.sm),
+                  Expanded(
+                    child: Text(s.shiftSuggestedFromLastClose,
+                        style: ui(size: 12, color: t.textSecondary)),
+                  ),
+                  Text(egp(suggested),
+                      style: money(size: 13, color: t.textSecondary)),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: AppSpace.xl),
+
+          // ── Error (from the shift notifier / validation) ───────────────
+          AnimatedSize(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOut,
+            alignment: Alignment.topCenter,
+            child: form.error == null
+                ? const SizedBox.shrink()
+                : Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.only(bottom: AppSpace.lg),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpace.md, vertical: AppSpace.sm + 2),
+                    decoration: BoxDecoration(
+                      color: t.dangerBg,
+                      borderRadius: BorderRadius.circular(AppRadius.xs),
+                      border: Border.all(color: t.danger.withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.error_outline_rounded,
+                            size: 16, color: t.danger),
+                        const SizedBox(width: AppSpace.sm),
+                        Expanded(
+                          child: Text(form.error!,
+                              style: ui(
+                                  size: 13,
+                                  weight: FontWeight.w600,
+                                  color: t.danger)),
+                        ),
+                      ],
+                    ),
+                  ),
+          ),
+
+          AppButton(
+            label: s.shiftOpen,
+            loading: form.loading,
+            width: double.infinity,
+            icon: Icons.play_arrow_rounded,
+            onTap: form.loading ? null : _submit,
+          ),
+          if (!isOnline) ...[
+            const SizedBox(height: AppSpace.md),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.wifi_off_rounded, size: 14, color: t.warning),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(s.shiftOpenedOfflineFooter,
+                      style: ui(
+                          size: 12,
+                          weight: FontWeight.w600,
+                          color: t.warning)),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
   }
 }

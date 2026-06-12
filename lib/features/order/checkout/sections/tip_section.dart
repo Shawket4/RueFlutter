@@ -1,124 +1,129 @@
 import 'package:flutter/material.dart';
+import '../../../../core/l10n/l10n.dart';
+import '../../../../core/models/payment_method.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/formatting.dart';
-import '../../../../core/models/payment_method.dart';
-import '../../widgets/shared_widgets.dart';
+import '../../../../shared/widgets/amount_field.dart';
+import '../../../../shared/widgets/status_chip.dart';
 
+/// Optional tip: amount + the method the tip was paid with.
+///
+/// The live tip badge rebuilds via a [ListenableBuilder] on the controller —
+/// typing here never rebuilds the parent checkout sheet. Only a tip-method
+/// tap calls back up (the parent needs it for validation and drawer math).
 class TipSection extends StatelessWidget {
   final TextEditingController tipCtrl;
   final String tipPaymentMethod;
-  final int? parsedTip;
-  final void Function(String) onMethodChanged;
-  final VoidCallback onAmountChanged;
+  final ValueChanged<String> onMethodChanged;
   final List<PaymentMethod> methods;
 
   const TipSection({
     super.key,
     required this.tipCtrl,
     required this.tipPaymentMethod,
-    required this.parsedTip,
     required this.onMethodChanged,
-    required this.onAmountChanged,
     required this.methods,
   });
 
   @override
-  Widget build(BuildContext context) => AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.bg,
-          borderRadius: BorderRadius.circular(AppRadius.md),
-          border: Border.all(
-              color: parsedTip != null
-                  ? AppColors.primary.withOpacity(0.3)
-                  : AppColors.border),
-        ),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    return Container(
+      padding: const EdgeInsets.all(AppSpace.lg),
+      decoration: BoxDecoration(
+        color: t.surfaceAlt,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: t.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           Row(children: [
-            const Icon(Icons.volunteer_activism_rounded,
-                size: 14, color: AppColors.textMuted),
-            const SizedBox(width: 6),
-            const FieldLabel('TIP (OPTIONAL)'),
-            const Spacer(),
-            if (parsedTip != null)
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 150),
-                child: Container(
-                  key: ValueKey(parsedTip),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                      color: AppColors.success.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(10)),
-                  child: Text(egp(parsedTip!),
-                      style: cairo(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.success)),
-                ),
-              ),
-          ]),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: methods.where((m) => m.wireFormat != 'mixed').map((method) {
-              final sel = tipPaymentMethod == method.wireFormat;
-              final color = method.color;
-              return GestureDetector(
-                onTap: () => onMethodChanged(method.wireFormat),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 140),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
-                  decoration: BoxDecoration(
-                    color: sel ? color : Colors.white,
-                    borderRadius: BorderRadius.circular(AppRadius.xs),
-                    border: Border.all(
-                        color: sel ? color : AppColors.border,
-                        width: sel ? 1.5 : 1),
-                  ),
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    if (sel) ...[
-                      const Icon(Icons.check_rounded,
-                          size: 11, color: Colors.white),
-                      const SizedBox(width: 4)
-                    ],
-                    Text(method.label('en'),
-                        style: cairo(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color:
-                                sel ? Colors.white : AppColors.textSecondary)),
-                  ]),
-                ),
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: tipCtrl,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            onChanged: (_) => onAmountChanged(),
-            style: cairo(fontSize: 22, fontWeight: FontWeight.w700),
-            decoration: InputDecoration(
-              prefixText: 'EGP  ',
-              prefixStyle: cairo(
-                  fontSize: 16,
-                  color: AppColors.textSecondary,
-                  fontWeight: FontWeight.w500),
-              hintText: '0',
-              hintStyle: cairo(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.border),
-              border: InputBorder.none,
-              enabledBorder: InputBorder.none,
-              focusedBorder: InputBorder.none,
-              isDense: true,
+            Icon(Icons.volunteer_activism_rounded,
+                size: 14, color: t.textMuted),
+            const SizedBox(width: AppSpace.sm),
+            Expanded(
+              child: Text(l10n(context).checkoutTipOptional,
+                  style: ui(
+                      size: 12,
+                      weight: FontWeight.w700,
+                      color: t.textMuted,
+                      letterSpacing: 0.6)),
             ),
+            ListenableBuilder(
+              listenable: tipCtrl,
+              builder: (context, _) {
+                final tip = AmountField.parsePiastres(tipCtrl.text);
+                if (tip == null || tip <= 0) return const SizedBox.shrink();
+                return StatusChip(
+                    label: egp(tip),
+                    tone: ChipTone.success,
+                    icon: Icons.add_rounded);
+              },
+            ),
+          ]),
+          const SizedBox(height: AppSpace.md),
+          Wrap(
+            spacing: AppSpace.sm - 2,
+            runSpacing: AppSpace.sm - 2,
+            children: methods
+                .where((m) => m.wireFormat != 'mixed')
+                .map((method) => _TipMethodChip(
+                      method: method,
+                      selected: tipPaymentMethod == method.wireFormat,
+                      onTap: () => onMethodChanged(method.wireFormat),
+                    ))
+                .toList(),
           ),
+          const SizedBox(height: AppSpace.md),
+          AmountField(
+              controller: tipCtrl, label: l10n(context).checkoutTipAmount),
+        ],
+      ),
+    );
+  }
+}
+
+class _TipMethodChip extends StatelessWidget {
+  final PaymentMethod method;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _TipMethodChip({
+    required this.method,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    return AnimatedPressScale(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 140),
+        padding: const EdgeInsetsDirectional.symmetric(
+            horizontal: 11, vertical: 7),
+        decoration: BoxDecoration(
+          color: selected ? method.uiColor : t.surface,
+          borderRadius: BorderRadius.circular(AppRadius.xs),
+          border: Border.all(
+              color: selected ? method.uiColor : t.border,
+              width: selected ? 1.5 : 1),
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          if (selected) ...[
+            // White on the method's own brand color in both themes.
+            const Icon(Icons.check_rounded, size: 11, color: Colors.white),
+            const SizedBox(width: AppSpace.xs),
+          ],
+          Text(method.label(Localizations.localeOf(context).languageCode),
+              style: ui(
+                  size: 12,
+                  weight: FontWeight.w600,
+                  color: selected ? Colors.white : t.textSecondary)),
         ]),
-      );
+      ),
+    );
+  }
 }

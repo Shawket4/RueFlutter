@@ -200,18 +200,38 @@ class MenuNotifier extends Notifier<MenuState> {
       state = state.copyWith(isLoading: true, clearError: true);
     }
 
-    if (!isOnline) return; // offline — local is the best we have
+    if (!isOnline) {
+      // Offline — local is the best we have. With no cache at all the old
+      // code left isLoading=true forever (infinite skeleton); say why instead.
+      if (localMenu == null) {
+        state = state.copyWith(
+          isLoading: false,
+          freshness: DataFreshness.offline,
+          error:
+              'No connection and no cached menu yet — connect this device once to set it up',
+        );
+      }
+      return;
+    }
 
     // ── Phase 2: background refresh ───────────────────────────────────────
     try {
-      final staleMenu = await repo.isStale('menu:$orgId');
+      final staleMenu    = await repo.isStale('menu:$orgId');
+      final staleBundles = await repo.isStale('bundles:$orgId');
+      final staleAddons  = await repo.isStale('addons:$orgId');
       final results = await Future.wait([
         if (staleMenu || force || localMenu == null)
           repo.fetchMenuFresh(orgId)
         else
           Future.value(localMenu),
-        repo.fetchBundlesFresh(orgId),
-        repo.fetchAddonsFresh(orgId),
+        if (staleBundles || force || localBundles == null)
+          repo.fetchBundlesFresh(orgId)
+        else
+          Future.value(localBundles),
+        if (staleAddons || force || localAddons == null)
+          repo.fetchAddonsFresh(orgId)
+        else
+          Future.value(localAddons),
       ]);
 
       final freshMenu    = results[0] as ({List<Category> categories, List<MenuItem> items});

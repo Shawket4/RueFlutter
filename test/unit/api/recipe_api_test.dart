@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:sufrix_pos/core/api/client.dart';
 import 'package:sufrix_pos/core/api/recipe_api.dart';
-import 'package:sufrix_pos/core/models/cart.dart';
 import 'package:sufrix_pos/core/storage/storage_service.dart';
 
 class MockDio extends Mock implements Dio {}

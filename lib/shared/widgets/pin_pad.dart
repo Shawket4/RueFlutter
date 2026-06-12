@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/responsive.dart';
 
+/// PIN entry: progress dots + a 3×4 numeric keypad.
+///
+/// Token-aware (light/dark), RTL-safe (symmetric layout, auto-mirrored
+/// backspace icon) with comfortable tap targets and tactile press feedback.
 class PinPad extends StatelessWidget {
   final String pin;
   final int maxLength;
@@ -25,10 +30,11 @@ class PinPad extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isTablet = MediaQuery.of(context).size.shortestSide >= 600;
-    final keySize = isTablet ? 76.0 : 68.0;
+    final t = context.tokens;
+    final keySize = context.responsive(phone: 64, tablet: 76);
 
     return Column(mainAxisSize: MainAxisSize.min, children: [
+      // ── Progress dots ──────────────────────────────────────────────────
       Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: List.generate(maxLength, (i) {
@@ -36,42 +42,59 @@ class PinPad extends StatelessWidget {
           return AnimatedContainer(
             duration: const Duration(milliseconds: 180),
             curve: Curves.easeOutBack,
-            margin: const EdgeInsets.symmetric(horizontal: 8),
+            margin: const EdgeInsets.symmetric(horizontal: AppSpace.sm),
             width: filled ? 14 : 12,
             height: filled ? 14 : 12,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: filled ? AppColors.primary : Colors.transparent,
+              color: filled ? t.accent : Colors.transparent,
               border: Border.all(
-                color: filled ? AppColors.primary : AppColors.border,
+                color: filled ? t.accent : t.border,
                 width: 2,
               ),
-              boxShadow: filled ? AppShadows.primaryGlow() : [],
+              boxShadow: filled
+                  ? [
+                      BoxShadow(
+                        color: t.accent.withOpacity(0.3),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
+                      ),
+                    ]
+                  : const [],
             ),
           );
         }),
       ),
-      const SizedBox(height: 32),
+      const SizedBox(height: AppSpace.xxl),
 
+      // ── Keypad ─────────────────────────────────────────────────────────
       ..._rows.map((row) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.only(bottom: AppSpace.md),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: row.map((k) {
                 if (k.isEmpty) {
-                  return SizedBox(
-                      width: keySize + 14, // 14 to account for horizontal padding of keys
-                      height: keySize,
-                      child: const SizedBox.shrink());
+                  // Spacer cell matching key + horizontal padding.
+                  return SizedBox(width: keySize + 14, height: keySize);
                 }
+                final isBack = k == '⌫';
                 return _Key(
-                  label: k,
                   size: keySize,
                   onTap: () {
-                    HapticFeedback.lightImpact(); // Task 3.4
-                    k == '⌫' ? onBackspace() : onDigit(k);
+                    HapticFeedback.lightImpact();
+                    isBack ? onBackspace() : onDigit(k);
                   },
-                  isBack: k == '⌫',
+                  child: isBack
+                      ? Icon(Icons.backspace_outlined,
+                          size: 22, color: t.textSecondary)
+                      : Text(
+                          k,
+                          style: ui(
+                            size: 22,
+                            weight: FontWeight.w600,
+                            color: t.textPrimary,
+                          ),
+                        ),
                 );
               }).toList(),
             ),
@@ -80,95 +103,34 @@ class PinPad extends StatelessWidget {
   }
 }
 
-class _Key extends StatefulWidget {
-  final String label;
+class _Key extends StatelessWidget {
   final double size;
   final VoidCallback onTap;
-  final bool isBack;
+  final Widget child;
 
-  const _Key({
-    required this.label,
-    required this.size,
-    required this.onTap,
-    this.isBack = false,
-  });
+  const _Key({required this.size, required this.onTap, required this.child});
 
   @override
-  State<_Key> createState() => _KeyState();
-}
-
-class _KeyState extends State<_Key> with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
-  late final Animation<double> _scale;
-  bool _pressed = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 80));
-    _scale = Tween<double>(begin: 1.0, end: 0.90)
-        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => GestureDetector(
-        onTapDown: (_) {
-          setState(() => _pressed = true);
-          _ctrl.forward();
-        },
-        onTapUp: (_) {
-          setState(() => _pressed = false);
-          _ctrl.reverse();
-          widget.onTap();
-        },
-        onTapCancel: () {
-          setState(() => _pressed = false);
-          _ctrl.reverse();
-        },
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 7),
-          child: ScaleTransition(
-            scale: _scale,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 80),
-              width: widget.size,
-              height: widget.size,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: _pressed
-                    ? AppColors.primary.withOpacity(0.06)
-                    : AppColors.surface,
-                border: Border.all(
-                  color: _pressed
-                      ? AppColors.primary.withOpacity(0.3)
-                      : AppColors.border,
-                  width: 1.5,
-                ),
-                boxShadow: _pressed ? [] : AppShadows.card,
-              ),
-              alignment: Alignment.center,
-              child: widget.isBack
-                  ? const Icon(Icons.backspace_outlined,
-                      size: 20, color: AppColors.textSecondary)
-                  : Text(
-                      widget.label,
-                      style: cairo(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w600,
-                        color: _pressed
-                            ? AppColors.primary
-                            : AppColors.textPrimary,
-                      ),
-                    ),
-            ),
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 7),
+      child: AnimatedPressScale(
+        scaleDown: 0.92,
+        onTap: onTap,
+        child: Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: t.surface,
+            border: Border.all(color: t.border, width: 1.5),
+            boxShadow: AppShadows.of(t),
           ),
+          alignment: Alignment.center,
+          child: child,
         ),
-      );
+      ),
+    );
+  }
 }

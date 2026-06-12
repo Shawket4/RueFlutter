@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:sufrix_pos/core/api/client.dart';
 import 'package:sufrix_pos/core/api/shift_api.dart';
-import 'package:sufrix_pos/core/models/shift.dart';
+import 'package:sufrix_pos/core/models/shift_report.dart';
 
 class MockDio extends Mock implements Dio {}
 class MockDioClient extends Mock implements DioClient {}
@@ -20,6 +20,7 @@ void main() {
     'teller_name': 'Teller',
     'status': 'open',
     'opening_cash': 1000,
+    'opening_cash_was_edited': false,
     'closing_cash_declared': null,
     'closing_cash_system': null,
     'cash_discrepancy': null,
@@ -133,6 +134,7 @@ void main() {
                   'net_payments': 0,
                   'cash_movements_in': 0,
                   'cash_movements_out': 0,
+                  'cash_movements_net': 0,
                   'voided_amount': 0,
                   'printed_at': '2023-01-01T16:00:00Z',
                 },

@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sufrix_pos/core/models/bundle.dart';
 import 'package:sufrix_pos/core/models/cart.dart';
 
 void main() {

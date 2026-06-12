@@ -1,41 +1,49 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sufrix_pos/core/models/inventory.dart';
 
+import '../../helpers/model_fixtures.dart';
+
 void main() {
   group('InventoryItem', () {
-    test('fromJson parses correctly', () {
-      final json = {
-        'id': 'inv1',
-        'ingredient_name': 'Coffee Beans',
-        'unit': 'g',
-        'current_stock': 1500.5,
-      };
+    final wire = {
+      'id': 'inv1',
+      'branch_id': 'br1',
+      'org_ingredient_id': 'ing1',
+      'ingredient_name': 'Coffee Beans',
+      'unit': 'g',
+      'cost_per_unit': 0.5,
+      'current_stock': 1500.5,
+      'reorder_threshold': 100.0,
+      'below_reorder': false,
+      'created_at': '2026-01-01T00:00:00.000Z',
+      'updated_at': '2026-01-01T00:00:00.000Z',
+    };
 
-      final item = InventoryItem.fromJson(json);
+    test('fromJson parses correctly', () {
+      final item = InventoryItem.fromJson(wire);
 
       expect(item.id, 'inv1');
       expect(item.name, 'Coffee Beans');
+      expect(item.ingredientName, 'Coffee Beans');
       expect(item.unit, 'g');
       expect(item.currentStock, 1500.5);
     });
 
-    test('fromJson handles current_stock as string', () {
-      final json = {
-        'id': 'inv2',
-        'ingredient_name': 'Milk',
-        'unit': 'ml',
+    test('fromJson handles current_stock as string (backend BigDecimal)', () {
+      final item = InventoryItem.fromJson({
+        ...wire,
         'current_stock': '2000',
-      };
-
-      final item = InventoryItem.fromJson(json);
+        'reorder_threshold': '10.5',
+      });
 
       expect(item.currentStock, 2000.0);
+      expect(item.reorderThreshold, 10.5);
     });
 
-    test('toJson serializes correctly', () {
-      const item = InventoryItem(
+    test('toJson keeps wire key names', () {
+      final item = makeInventoryItem(
         id: 'inv1',
-        name: 'Coffee Beans',
+        ingredientName: 'Coffee Beans',
         unit: 'g',
         currentStock: 1500.5,
       );

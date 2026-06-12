@@ -107,6 +107,12 @@ class MenuImage extends StatelessWidget {
       image: CachedNetworkImageProvider(
         url,
         cacheManager: MenuImageCacheManager(),
+        // Menu photos arrive at camera resolution; decode bounded to what a
+        // grid card can ever display (~200dp @3x) instead of multi-MB
+        // bitmaps — the main source of scroll jank and memory churn on
+        // phones.
+        maxWidth: 600,
+        maxHeight: 600,
       ),
       width: width,
       height: height,

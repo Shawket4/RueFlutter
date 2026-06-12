@@ -155,7 +155,7 @@ class DraftCartsNotifier extends Notifier<List<CartDraft>> {
     return true;
   }
 
-  void switchDraft(String draftId, CartState current) {
+  Future<void> switchDraft(String draftId, CartState current) async {
     final idx = state.indexWhere((d) => d.id == draftId);
     if (idx < 0) return;
     final target = state[idx];
@@ -171,12 +171,14 @@ class DraftCartsNotifier extends Notifier<List<CartDraft>> {
     updated.add(parked);
 
     state = updated;
-    _saveDrafts();
+    // Awaited: a crash between the in-memory switch and the storage write
+    // would otherwise resurrect the pre-switch draft list on restart.
+    await _saveDrafts();
 
     ref.read(cartProvider.notifier).replaceWith(target.cartState);
   }
 
-  void renameDraft(String draftId, String newName) {
+  Future<void> renameDraft(String draftId, String newName) async {
     final trimmed = newName.trim();
     state = state.map((d) {
       if (d.id == draftId) {
@@ -190,7 +192,7 @@ class DraftCartsNotifier extends Notifier<List<CartDraft>> {
       }
       return d;
     }).toList();
-    _saveDrafts();
+    await _saveDrafts();
   }
 
   Future<void> deleteDraft(String draftId) async {

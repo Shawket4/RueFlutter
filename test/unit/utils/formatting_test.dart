@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:intl/intl.dart';
 import 'package:sufrix_pos/core/utils/formatting.dart';
 
 void main() {

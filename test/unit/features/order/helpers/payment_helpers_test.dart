@@ -3,22 +3,48 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:sufrix_pos/core/theme/app_theme.dart';
 import 'package:sufrix_pos/features/order/helpers/payment_helpers.dart';
 
+import '../../../../helpers/model_fixtures.dart';
+
 void main() {
+  final cash = makePaymentMethod(
+    id: 'pm_cash',
+    orgId: 'org1',
+    name: 'cash',
+    labelTranslations: {'en': 'Cash', 'ar': 'نقدي'},
+    color: '#22C55E',
+    icon: 'money',
+    isCash: true,
+    isActive: true,
+    displayOrder: 1,
+  );
+  final card = makePaymentMethod(
+    id: 'pm_card',
+    orgId: 'org1',
+    name: 'card',
+    labelTranslations: {'en': 'Card', 'ar': 'بطاقة'},
+    color: '#7C3AED',
+    icon: 'credit_card',
+    isCash: false,
+    isActive: true,
+    displayOrder: 2,
+  );
+  final methods = [cash, card];
+
   group('Payment Helpers', () {
     test('methodColor returns correct color', () {
-      expect(methodColor('cash'), PaymentMethod.cash.color);
-      expect(methodColor('card'), PaymentMethod.card.color);
-      expect(methodColor('unknown'), PaymentMethod.cash.color); // Defaults to cash
+      expect(methodColor(methods, 'cash'), cash.uiColor);
+      expect(methodColor(methods, 'card'), card.uiColor);
+      expect(methodColor(methods, 'unknown'), paymentMethodMixed().uiColor); // Defaults to mixed
     });
 
     test('methodLabel returns correct label', () {
-      expect(methodLabel('cash'), 'Cash');
-      expect(methodLabel('card'), 'Card');
+      expect(methodLabel(methods, 'en', 'cash'), 'Cash');
+      expect(methodLabel(methods, 'en', 'card'), 'Card');
     });
 
     test('isCashMethod returns correct boolean', () {
-      expect(isCashMethod('cash'), true);
-      expect(isCashMethod('card'), false);
+      expect(isCashMethod(methods, 'cash'), true);
+      expect(isCashMethod(methods, 'card'), false);
     });
 
     test('addonTypeColor returns correct color', () {

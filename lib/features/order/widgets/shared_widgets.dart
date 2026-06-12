@@ -9,10 +9,10 @@ class SectionLabel extends StatelessWidget {
   const SectionLabel(this.label, {super.key});
   @override
   Widget build(BuildContext context) => Text(label.toUpperCase(),
-      style: cairo(
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
-          color: AppColors.textSecondary,
+      style: ui(
+          size: 10,
+          weight: FontWeight.w700,
+          color: context.tokens.textSecondary,
           letterSpacing: 0.7));
 }
 
@@ -25,14 +25,15 @@ class Pill extends StatelessWidget {
   const Pill(this.text, this.color, {super.key});
   @override
   Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      padding:
+          const EdgeInsetsDirectional.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withOpacity(0.12),
           borderRadius: BorderRadius.circular(AppRadius.xs)),
       child: Text(text,
-          style: cairo(
-              fontSize: 9,
-              fontWeight: FontWeight.w700,
+          style: ui(
+              size: 9,
+              weight: FontWeight.w700,
               color: color,
               letterSpacing: 0.3)));
 }
@@ -44,16 +45,17 @@ class CountBadge extends StatelessWidget {
   final int count;
   const CountBadge({super.key, required this.count});
   @override
-  Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-          color: AppColors.primary.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(20)),
-      child: Text('$count',
-          style: cairo(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: AppColors.primary)));
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    return Container(
+        padding:
+            const EdgeInsetsDirectional.symmetric(horizontal: 8, vertical: 2),
+        decoration: BoxDecoration(
+            color: t.accentBg,
+            borderRadius: BorderRadius.circular(AppRadius.pill)),
+        child: Text('$count',
+            style: ui(size: 11, weight: FontWeight.w700, color: t.accent)));
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -80,27 +82,29 @@ class SelectableChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent = accentColor ?? AppColors.primary;
+    final t = context.tokens;
+    final accent = accentColor ?? t.accent;
     final isDisabled = !enabled && !selected;
 
     return GestureDetector(
         onTap: isDisabled ? null : onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: const EdgeInsetsDirectional.symmetric(
+              horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
               color: selected
-                  ? accent
+                  ? accent.withOpacity(0.14)
                   : isDisabled
-                      ? AppColors.bg.withOpacity(0.6)
-                      : AppColors.bg,
+                      ? t.surfaceAlt.withOpacity(0.6)
+                      : t.surfaceAlt,
               borderRadius: BorderRadius.circular(AppRadius.xs),
               border: Border.all(
                   color: selected
                       ? accent
                       : isDisabled
-                          ? AppColors.border.withOpacity(0.5)
-                          : AppColors.border,
+                          ? t.border.withOpacity(0.5)
+                          : t.border,
                   width: selected ? 1.5 : 1)),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             if (checkbox) ...[
@@ -110,36 +114,33 @@ class SelectableChip extends StatelessWidget {
                       : Icons.check_box_outline_blank_rounded,
                   size: 14,
                   color: selected
-                      ? Colors.white
+                      ? accent
                       : isDisabled
-                          ? AppColors.border
-                          : AppColors.textMuted),
+                          ? t.border
+                          : t.textMuted),
               const SizedBox(width: 6),
             ],
             Text(label,
-                style: cairo(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
+                style: ui(
+                    size: 13,
+                    weight: FontWeight.w600,
                     color: selected
-                        ? Colors.white
+                        ? accent
                         : isDisabled
-                            ? AppColors.textMuted
-                            : AppColors.textPrimary)),
+                            ? t.textMuted
+                            : t.textPrimary)),
             if (sublabel != null) ...[
               const SizedBox(width: 6),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                padding: const EdgeInsetsDirectional.symmetric(
+                    horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                     color: selected
-                        ? Colors.white.withOpacity(0.2)
+                        ? accent.withOpacity(0.18)
                         : accent.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(4)),
                 child: Text(sublabel!,
-                    style: cairo(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        color: selected ? Colors.white : accent)),
+                    style: money(size: 10, weight: FontWeight.w700, color: accent)),
               ),
             ],
           ]),
@@ -161,7 +162,7 @@ class QtyBtn extends StatelessWidget {
           width: 40,
           height: 40,
           alignment: Alignment.center,
-          child: Icon(icon, size: 18, color: AppColors.textPrimary)));
+          child: Icon(icon, size: 18, color: context.tokens.textPrimary)));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -172,17 +173,20 @@ class InlineBtn extends StatelessWidget {
   final VoidCallback onTap;
   const InlineBtn({super.key, required this.icon, required this.onTap});
   @override
-  Widget build(BuildContext context) => GestureDetector(
-      onTap: onTap,
-      child: Container(
-          width: 26,
-          height: 26,
-          decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(AppRadius.xs),
-              border: Border.all(color: AppColors.border)),
-          alignment: Alignment.center,
-          child: Icon(icon, size: 13, color: AppColors.textPrimary)));
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    return GestureDetector(
+        onTap: onTap,
+        child: Container(
+            width: 26,
+            height: 26,
+            decoration: BoxDecoration(
+                color: t.surface,
+                borderRadius: BorderRadius.circular(AppRadius.xs),
+                border: Border.all(color: t.border)),
+            alignment: Alignment.center,
+            child: Icon(icon, size: 13, color: t.textPrimary)));
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -193,17 +197,20 @@ class SmallIconBtn extends StatelessWidget {
   final VoidCallback onTap;
   const SmallIconBtn({super.key, required this.icon, required this.onTap});
   @override
-  Widget build(BuildContext context) => GestureDetector(
-      onTap: onTap,
-      child: Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-              color: AppColors.bg,
-              borderRadius: BorderRadius.circular(AppRadius.xs),
-              border: Border.all(color: AppColors.border)),
-          alignment: Alignment.center,
-          child: Icon(icon, size: 18, color: AppColors.textPrimary)));
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    return GestureDetector(
+        onTap: onTap,
+        child: Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+                color: t.surfaceAlt,
+                borderRadius: BorderRadius.circular(AppRadius.xs),
+                border: Border.all(color: t.border)),
+            alignment: Alignment.center,
+            child: Icon(icon, size: 18, color: t.textPrimary)));
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -214,35 +221,23 @@ class FieldLabel extends StatelessWidget {
   const FieldLabel(this.text, {super.key});
   @override
   Widget build(BuildContext context) => Text(text,
-      style: cairo(
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
-          color: AppColors.textMuted,
+      style: ui(
+          size: 10,
+          weight: FontWeight.w700,
+          color: context.tokens.textMuted,
           letterSpacing: 1.2));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  ERROR STATE
+//  SKELETON HELPERS
 // ─────────────────────────────────────────────────────────────────────────────
-class ErrorState extends StatelessWidget {
-  final String message;
-  final VoidCallback onRetry;
-  const ErrorState({super.key, required this.message, required this.onRetry});
-  @override
-  Widget build(BuildContext context) => Center(
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          const Icon(Icons.wifi_off_rounded, size: 40, color: AppColors.border),
-          const SizedBox(height: 12),
-          Text(message,
-              style: cairo(fontSize: 13, color: AppColors.textSecondary)),
-          const SizedBox(height: 16),
-          TextButton(onPressed: onRetry, child: const Text('Retry')),
-        ]),
-      );
-}
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  SKELETON CONSTANTS
-// ─────────────────────────────────────────────────────────────────────────────
+// Legacy light-theme constants — still consumed by not-yet-migrated sheets.
 const skeletonBase = Color(0xFFEEF0F4);
 const skeletonHighlight = Color(0xFFE4E7ED);
+
+/// Token-aware skeleton color pair for the current theme.
+(Color, Color) skeletonColors(BuildContext context) {
+  final t = context.tokens;
+  return (t.surfaceAlt, t.borderLight);
+}

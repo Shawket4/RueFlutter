@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/l10n/l10n.dart';
 import '../../core/theme/app_theme.dart';
 
 class ErrorBanner extends StatelessWidget {
@@ -27,7 +28,7 @@ class ErrorBanner extends StatelessWidget {
               onPressed: onRetry,
               style: TextButton.styleFrom(
                   padding: const EdgeInsets.symmetric(horizontal: 12)),
-              child: Text('Retry',
+              child: Text(l10n(context).retryAction,
                   style: cairo(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,

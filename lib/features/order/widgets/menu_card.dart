@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/menu.dart';
 import '../../../core/services/menu_image_cache.dart';
 import '../../../core/theme/app_theme.dart';
@@ -8,13 +7,17 @@ import '../helpers/category_style.dart';
 import 'item_detail_sheet.dart';
 import 'shared_widgets.dart';
 
-class MenuCard extends ConsumerWidget {
+/// Stateless on purpose — the card renders purely from [item]; no provider
+/// state is read here, so grid rebuilds don't pay the Consumer overhead.
+class MenuCard extends StatelessWidget {
   final MenuItem item;
   const MenuCard({super.key, required this.item});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final style = CatStyle.of(item.name);
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    final style =
+        CatStyle.of(item.name, brightness: Theme.of(context).brightness);
     final hasImage = item.imageUrl != null && item.imageUrl!.isNotEmpty;
 
     return AnimatedPressScale(
@@ -22,15 +25,10 @@ class MenuCard extends ConsumerWidget {
       scaleDown: 0.97,
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: t.surface,
           borderRadius: BorderRadius.circular(AppRadius.sm),
-          border: Border.all(color: AppColors.borderLight),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.black.withOpacity(0.04),
-                blurRadius: 6,
-                offset: const Offset(0, 2)),
-          ],
+          border: Border.all(color: t.borderLight),
+          boxShadow: AppShadows.of(t),
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -46,32 +44,33 @@ class MenuCard extends ConsumerWidget {
                   : MissingItemCard(item: item, style: style),
             ),
             Container(
-              color: Colors.white,
-              padding: const EdgeInsets.fromLTRB(10, 7, 10, 8),
+              color: t.surface,
+              padding: const EdgeInsetsDirectional.fromSTEB(10, 7, 10, 8),
               child: Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Container(
                         width: 3,
                         height: 22,
-                        margin: const EdgeInsets.only(right: 8),
+                        margin: const EdgeInsetsDirectional.only(end: 8),
                         decoration: BoxDecoration(
                             color: style.accent,
                             borderRadius: BorderRadius.circular(2))),
                     Expanded(
                         child: Text(normaliseName(item.name),
-                            style: cairo(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
+                            style: ui(
+                                size: 12,
+                                weight: FontWeight.w600,
+                                color: t.textPrimary,
                                 height: 1.25),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis)),
                     const SizedBox(width: 6),
                     Text(egp(item.basePrice),
-                        style: cairo(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.textSecondary)),
+                        style: money(
+                            size: 11,
+                            weight: FontWeight.w700,
+                            color: t.textSecondary)),
                   ]),
             ),
           ]),
@@ -104,19 +103,20 @@ class MissingItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.tokens;
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFFFBFAF7), Color(0xFFEEEBE6)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+          colors: [style.bgTop, style.bgBottom],
+          begin: AlignmentDirectional.topStart,
+          end: AlignmentDirectional.bottomEnd,
         ),
       ),
       child: Stack(
         fit: StackFit.expand,
         children: [
-          Positioned(
-            right: -36,
+          PositionedDirectional(
+            end: -36,
             bottom: -36,
             child: Container(
               width: 140,
@@ -124,7 +124,7 @@ class MissingItemCard extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: style.accent.withOpacity(0.12),
+                  color: style.accent.withOpacity(0.15),
                   width: 2,
                 ),
               ),
@@ -133,28 +133,28 @@ class MissingItemCard extends StatelessWidget {
           Center(
             child: Text(
               _monogram,
-              style: cairo(
-                fontSize: 48,
-                fontWeight: FontWeight.w200,
-                color: style.accent.withOpacity(0.5),
-                letterSpacing: 1.5,
+              style: ui(
+                size: 48,
+                weight: FontWeight.w200,
+                color: style.iconColor.withOpacity(0.55),
                 height: 1,
+                letterSpacing: 1.5,
               ),
             ),
           ),
-          Positioned(
+          PositionedDirectional(
             top: 10,
-            left: 10,
+            start: 10,
             child: Container(
               padding: const EdgeInsets.all(5),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.7),
+                color: t.surface.withOpacity(0.7),
               ),
               child: Icon(
                 style.icon,
                 size: 11,
-                color: style.accent.withOpacity(0.6),
+                color: style.iconColor.withOpacity(0.8),
               ),
             ),
           ),
@@ -190,44 +190,47 @@ class _MenuCardSkeletonState extends State<MenuCardSkeleton>
   }
 
   @override
-  Widget build(BuildContext context) => AnimatedBuilder(
-        animation: _anim,
-        builder: (_, __) {
-          final c =
-              Color.lerp(skeletonBase, skeletonHighlight, _anim.value)!;
-          return Container(
-            decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(AppRadius.sm),
-                border: Border.all(color: AppColors.borderLight)),
-            child: Column(children: [
-              Expanded(
-                  child: ClipRRect(
-                      borderRadius: const BorderRadius.vertical(
-                          top: Radius.circular(AppRadius.sm)),
-                      child: Container(color: c))),
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                child: Row(children: [
-                  Expanded(
-                      child: Container(
-                          height: 10,
-                          decoration: BoxDecoration(
-                              color: c,
-                              borderRadius: BorderRadius.circular(4)))),
-                  const SizedBox(width: 12),
-                  Container(
-                      width: 40,
-                      height: 10,
-                      decoration: BoxDecoration(
-                          color: c, borderRadius: BorderRadius.circular(4))),
-                ]),
-              ),
-            ]),
-          );
-        },
-      );
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    final (base, highlight) = skeletonColors(context);
+    return AnimatedBuilder(
+      animation: _anim,
+      builder: (_, __) {
+        final c = Color.lerp(base, highlight, _anim.value)!;
+        return Container(
+          decoration: BoxDecoration(
+              color: t.surface,
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+              border: Border.all(color: t.borderLight)),
+          child: Column(children: [
+            Expanded(
+                child: ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(AppRadius.sm)),
+                    child: Container(color: c))),
+            Padding(
+              padding:
+                  const EdgeInsetsDirectional.symmetric(horizontal: 12, vertical: 10),
+              child: Row(children: [
+                Expanded(
+                    child: Container(
+                        height: 10,
+                        decoration: BoxDecoration(
+                            color: c,
+                            borderRadius: BorderRadius.circular(4)))),
+                const SizedBox(width: 12),
+                Container(
+                    width: 40,
+                    height: 10,
+                    decoration: BoxDecoration(
+                        color: c, borderRadius: BorderRadius.circular(4))),
+              ]),
+            ),
+          ]),
+        );
+      },
+    );
+  }
 }
 
 class ImageSkeleton extends StatefulWidget {
@@ -257,8 +260,11 @@ class _ImageSkeletonState extends State<ImageSkeleton>
   }
 
   @override
-  Widget build(BuildContext context) => AnimatedBuilder(
-      animation: _anim,
-      builder: (_, __) => Container(
-          color: Color.lerp(skeletonBase, skeletonHighlight, _anim.value)));
+  Widget build(BuildContext context) {
+    final (base, highlight) = skeletonColors(context);
+    return AnimatedBuilder(
+        animation: _anim,
+        builder: (_, __) =>
+            Container(color: Color.lerp(base, highlight, _anim.value)));
+  }
 }

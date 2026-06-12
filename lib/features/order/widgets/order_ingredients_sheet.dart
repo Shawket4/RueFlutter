@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
+import '../../../core/l10n/l10n.dart';
 import '../../../core/models/order.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatting.dart';
+import '../../../shared/widgets/empty_state.dart';
+import '../../../shared/widgets/status_chip.dart';
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  ORDER INGREDIENTS SHEET — inventory deductions recorded for an order line
+// ─────────────────────────────────────────────────────────────────────────────
 class OrderIngredientsSheet extends StatelessWidget {
   final OrderItem item;
 
@@ -13,10 +19,10 @@ class OrderIngredientsSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final mq = MediaQuery.of(context);
-    final maxH = mq.size.height * 0.75;
+    final t = context.tokens;
+    final maxH = MediaQuery.of(context).size.height * 0.75;
 
-    // Group deductions
+    // Group deductions by source component.
     final Map<String, List<InventoryDeduction>> grouped = {};
     for (final d in item.deductions) {
       String groupName = '';
@@ -29,197 +35,163 @@ class OrderIngredientsSheet extends StatelessWidget {
       grouped.putIfAbsent(prettyName, () => []).add(d);
     }
 
-    return Container(
-      constraints: BoxConstraints(maxHeight: maxH),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: AppRadius.sheetRadius,
-        boxShadow: const [
-          BoxShadow(
-            color: Colors.black26,
-            blurRadius: 20,
-            offset: Offset(0, -4),
-          )
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Header
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 12, 12, 8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Center(
-                        child: Container(
-                          width: 40,
-                          height: 4,
-                          margin: const EdgeInsets.only(bottom: 12),
-                          decoration: BoxDecoration(
-                            color: AppColors.border,
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                      ),
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withOpacity(0.1),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.science_rounded,
-                              size: 16,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              'Ingredient Use',
-                              style: cairo(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w800,
-                                height: 1.2,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 2),
-                      Padding(
-                        padding: const EdgeInsets.only(left: 36),
-                        child: Text(
-                          normaliseName(item.itemName),
-                          style: cairo(
-                            fontSize: 13,
-                            color: AppColors.textSecondary,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Align(
-                  alignment: Alignment.topRight,
-                  child: IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close_rounded,
-                        color: AppColors.textMuted),
-                    style: IconButton.styleFrom(
-                      backgroundColor: AppColors.bg,
-                      minimumSize: const Size(36, 36),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+    // Mirrors ResponsiveSheet's centering: the caller opens this with a raw
+    // showModalBottomSheet, so the width cap for tablets lives here.
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: 600, maxHeight: maxH),
+        child: Container(
+          decoration: BoxDecoration(
+            color: t.surfaceRaised,
+            borderRadius: AppRadius.sheetRadius,
           ),
-          const Divider(height: 1, color: AppColors.border),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const _DragHandle(),
 
-          // Body listing deductions
-          Flexible(
-            child: item.deductions.isEmpty
-                ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24.0),
+              // ── Header ────────────────────────────────────────────────────
+              Padding(
+                padding: const EdgeInsetsDirectional.fromSTEB(
+                    AppSpace.lg, 0, AppSpace.lg, AppSpace.md),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                          color: t.navyBg, shape: BoxShape.circle),
+                      child:
+                          Icon(Icons.science_rounded, size: 16, color: t.navy),
+                    ),
+                    const SizedBox(width: AppSpace.md),
+                    Expanded(
                       child: Column(
-                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(Icons.inbox_rounded,
-                              size: 40, color: AppColors.border),
-                          const SizedBox(height: 12),
                           Text(
-                            'No ingredient deductions recorded.',
-                            style: cairo(
-                                fontSize: 14, color: AppColors.textMuted),
+                            l10n(context).orderIngredientUse,
+                            style: Theme.of(context).textTheme.titleLarge,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            normaliseName(item.itemName),
+                            style: ui(
+                                size: 12.5,
+                                weight: FontWeight.w600,
+                                color: t.textSecondary),
                           ),
                         ],
                       ),
                     ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-                    itemCount: grouped.length,
-                    itemBuilder: (context, index) {
-                      final groupTitle = grouped.keys.elementAt(index);
-                      final deductions = grouped[groupTitle]!;
+                    const SizedBox(width: AppSpace.sm),
+                    _CloseBtn(onTap: () => Navigator.pop(context)),
+                  ],
+                ),
+              ),
+              Container(height: 1, color: t.border),
 
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
+              // ── Body ──────────────────────────────────────────────────────
+              Flexible(
+                child: item.deductions.isEmpty
+                    ? SingleChildScrollView(
+                        child: EmptyState(
+                          icon: Icons.inventory_2_outlined,
+                          title: l10n(context).orderNoDeductions,
+                          body: l10n(context).orderNoDeductionsBody,
+                        ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsetsDirectional.fromSTEB(
+                            AppSpace.lg,
+                            AppSpace.lg,
+                            AppSpace.lg,
+                            AppSpace.xxl),
+                        itemCount: grouped.length,
+                        itemBuilder: (context, index) {
+                          final groupTitle = grouped.keys.elementAt(index);
+                          final deductions = grouped[groupTitle]!;
+
+                          return Padding(
+                            padding:
+                                const EdgeInsets.only(bottom: AppSpace.lg),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Icon(
-                                  item.isBundleLine
-                                      ? Icons.restaurant_menu_rounded
-                                      : Icons.local_cafe_rounded,
-                                  size: 16,
-                                  color: AppColors.primary,
+                                Row(
+                                  children: [
+                                    Icon(
+                                      item.isBundleLine
+                                          ? Icons.restaurant_menu_rounded
+                                          : Icons.local_cafe_rounded,
+                                      size: 16,
+                                      color: t.navy,
+                                    ),
+                                    const SizedBox(width: AppSpace.sm),
+                                    Expanded(
+                                      child: Text(
+                                        groupTitle,
+                                        style: ui(
+                                            size: 14,
+                                            weight: FontWeight.w700,
+                                            color: t.textPrimary),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  groupTitle,
-                                  style: cairo(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w800,
-                                    color: AppColors.textPrimary,
+                                const SizedBox(height: AppSpace.sm),
+                                ...deductions.map(
+                                  (d) => Padding(
+                                    padding: const EdgeInsets.only(
+                                        bottom: AppSpace.sm),
+                                    child: _DeductionRow(deduction: d),
                                   ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 8),
-                            ...deductions.map(
-                              (d) => Padding(
-                                padding: const EdgeInsets.only(bottom: 8),
-                                child: _DeductionCard(deduction: d),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
+                          );
+                        },
+                      ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 }
 
-class _DeductionCard extends StatelessWidget {
+// ─────────────────────────────────────────────────────────────────────────────
+//  DEDUCTION ROW
+// ─────────────────────────────────────────────────────────────────────────────
+class _DeductionRow extends StatelessWidget {
   final InventoryDeduction deduction;
 
-  const _DeductionCard({required this.deduction});
+  const _DeductionRow({required this.deduction});
 
   @override
   Widget build(BuildContext context) {
+    final t = context.tokens;
+    final s = l10n(context);
     final sourceLabel = _getSourceLabel(deduction.source);
     final isBase = sourceLabel == 'base';
-    final Color badgeColor =
-        isBase ? AppColors.primary : AppColors.textSecondary;
-    final Color bgColor =
-        isBase ? AppColors.primary.withOpacity(0.04) : Colors.white;
-    final Color borderColor =
-        isBase ? AppColors.primary.withOpacity(0.15) : AppColors.border;
+    final displayLabel = switch (sourceLabel) {
+      'base' => s.orderSourceBase,
+      'combo item' => s.orderSourceComboItem,
+      'addon' => s.orderSourceAddon,
+      _ => sourceLabel,
+    };
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpace.md, vertical: AppSpace.md),
       decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: borderColor),
+        color: isBase ? t.navyBg : t.surface,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(color: isBase ? t.navy.withOpacity(0.25) : t.border),
       ),
       child: Row(
         children: [
@@ -227,9 +199,9 @@ class _DeductionCard extends StatelessWidget {
             width: 56,
             padding: const EdgeInsets.symmetric(vertical: 6),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: t.surfaceRaised,
               borderRadius: BorderRadius.circular(AppRadius.xs),
-              border: Border.all(color: AppColors.borderLight),
+              border: Border.all(color: t.borderLight),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -238,66 +210,46 @@ class _DeductionCard extends StatelessWidget {
                   deduction.quantity % 1 == 0
                       ? deduction.quantity.toInt().toString()
                       : deduction.quantity.toStringAsFixed(1),
-                  style: cairo(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.textPrimary,
-                    height: 1.1,
-                  ),
+                  style: ui(
+                      size: 14,
+                      weight: FontWeight.w700,
+                      color: t.textPrimary,
+                      height: 1.1),
                 ),
                 Text(
                   deduction.unit,
-                  style: cairo(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textMuted,
-                  ),
+                  style: ui(
+                      size: 10, weight: FontWeight.w600, color: t.textMuted),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: AppSpace.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   normaliseName(deduction.ingredientName),
-                  style: cairo(
-                    fontSize: 13.5,
-                    fontWeight: isBase ? FontWeight.w700 : FontWeight.w600,
-                    color: AppColors.textPrimary,
-                  ),
+                  style: ui(
+                      size: 13.5,
+                      weight: isBase ? FontWeight.w700 : FontWeight.w600,
+                      color: t.textPrimary),
                 ),
                 if (deduction.category.isNotEmpty) ...[
                   const SizedBox(height: 2),
                   Text(
                     normaliseName(deduction.category),
-                    style: cairo(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.textSecondary,
-                    ),
+                    style: ui(size: 10.5, color: t.textSecondary),
                   ),
                 ],
               ],
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: badgeColor.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: badgeColor.withOpacity(0.15)),
-            ),
-            child: Text(
-              sourceLabel,
-              style: cairo(
-                fontSize: 9,
-                fontWeight: FontWeight.w700,
-                color: badgeColor,
-              ),
-            ),
+          const SizedBox(width: AppSpace.sm),
+          StatusChip(
+            label: displayLabel.toUpperCase(),
+            tone: isBase ? ChipTone.info : ChipTone.neutral,
           ),
         ],
       ),
@@ -321,5 +273,51 @@ class _DeductionCard extends StatelessWidget {
       return 'addon';
     }
     return normaliseName(source);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  SMALL PARTS
+// ─────────────────────────────────────────────────────────────────────────────
+class _DragHandle extends StatelessWidget {
+  const _DragHandle();
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding:
+            const EdgeInsets.only(top: AppSpace.md, bottom: AppSpace.md),
+        child: Center(
+          child: Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: context.tokens.border,
+              borderRadius: BorderRadius.circular(AppRadius.pill),
+            ),
+          ),
+        ),
+      );
+}
+
+class _CloseBtn extends StatelessWidget {
+  final VoidCallback onTap;
+  const _CloseBtn({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    return AnimatedPressScale(
+      onTap: onTap,
+      child: Container(
+        width: 34,
+        height: 34,
+        decoration: BoxDecoration(
+          color: t.surfaceAlt,
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+          border: Border.all(color: t.border),
+        ),
+        child: Icon(Icons.close_rounded, size: 18, color: t.textSecondary),
+      ),
+    );
   }
 }

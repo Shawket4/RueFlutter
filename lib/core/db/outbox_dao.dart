@@ -10,12 +10,14 @@ class OutboxEntry {
   final String localId;
   final String type;
   final String payload; // JSON of PendingAction.toJson()
-  final String status; // pending|in_flight|failed|dead
+  final String status; // pending|in_flight|dead|synced
   final String? dependsOn; // localId of prerequisite action
   final int retryCount;
   final String? lastError;
   final int createdAt; // epoch ms
   final int nextAttemptAt; // epoch ms; 0 = ready now
+  final String? userId; // user who enqueued the action
+  final int? syncedAt; // epoch ms; set when status becomes 'synced'
 
   const OutboxEntry({
     required this.localId,
@@ -27,6 +29,8 @@ class OutboxEntry {
     this.lastError,
     required this.createdAt,
     required this.nextAttemptAt,
+    this.userId,
+    this.syncedAt,
   });
 
   Map<String, dynamic> toMap() => {
@@ -39,6 +43,8 @@ class OutboxEntry {
         'last_error': lastError,
         'created_at': createdAt,
         'next_attempt_at': nextAttemptAt,
+        'user_id': userId,
+        'synced_at': syncedAt,
       };
 
   factory OutboxEntry.fromMap(Map<String, dynamic> m) => OutboxEntry(
@@ -51,12 +57,15 @@ class OutboxEntry {
         lastError: m['last_error'] as String?,
         createdAt: m['created_at'] as int,
         nextAttemptAt: m['next_attempt_at'] as int,
+        userId: m['user_id'] as String?,
+        syncedAt: m['synced_at'] as int?,
       );
 
   /// Convenience: build an [OutboxEntry] directly from [PendingAction.toJson()].
   factory OutboxEntry.fromActionJson(
     Map<String, dynamic> actionJson, {
     String? dependsOn,
+    String? userId,
   }) {
     final now = DateTime.now().millisecondsSinceEpoch;
     final createdAtMs = () {
@@ -76,6 +85,7 @@ class OutboxEntry {
       lastError: null,
       createdAt: createdAtMs,
       nextAttemptAt: 0,
+      userId: userId,
     );
   }
 
@@ -88,6 +98,7 @@ class OutboxEntry {
     int? retryCount,
     String? lastError,
     int? nextAttemptAt,
+    int? syncedAt,
   }) =>
       OutboxEntry(
         localId: localId,
@@ -99,6 +110,8 @@ class OutboxEntry {
         lastError: lastError ?? this.lastError,
         createdAt: createdAt,
         nextAttemptAt: nextAttemptAt ?? this.nextAttemptAt,
+        userId: userId,
+        syncedAt: syncedAt ?? this.syncedAt,
       );
 }
 
@@ -132,12 +145,20 @@ class OutboxDao {
     );
   }
 
-  /// Deletes the row — the action has been applied successfully.
-  Future<void> markSynced(String localId) async {
+  /// The action has been applied successfully. The row is kept as a
+  /// short-lived recovery log (purged by [purgeSyncedOlderThan]) so a crash
+  /// between server ack and local cache writes never loses the record.
+  Future<void> markSynced(String localId, int syncedAtMs) async {
     final db = await _db;
-    await db.delete('outbox', where: 'local_id = ?', whereArgs: [localId]);
+    await db.update(
+      'outbox',
+      {'status': 'synced', 'synced_at': syncedAtMs},
+      where: 'local_id = ?',
+      whereArgs: [localId],
+    );
   }
 
+  /// Counted failure: increments retry_count.
   Future<void> markRetry(
       String localId, String error, int nextAttemptAtMs) async {
     final db = await _db;
@@ -151,6 +172,18 @@ class OutboxDao {
       WHERE local_id = ?
       ''',
       [error, nextAttemptAtMs, localId],
+    );
+  }
+
+  /// Transient network failure: reschedules WITHOUT consuming the retry
+  /// budget — connectivity blips must never push an entry toward 'dead'.
+  Future<void> markRetryNoCount(String localId, int nextAttemptAtMs) async {
+    final db = await _db;
+    await db.update(
+      'outbox',
+      {'status': 'pending', 'next_attempt_at': nextAttemptAtMs},
+      where: 'local_id = ?',
+      whereArgs: [localId],
     );
   }
 
@@ -180,37 +213,91 @@ class OutboxDao {
     await db.delete('outbox', where: 'local_id = ?', whereArgs: [localId]);
   }
 
-  // ── Read ─────────────────────────────────────────────────────────────────
-
-  /// All rows — used to hydrate notifier state on startup.
-  Future<List<OutboxEntry>> loadAll() async {
+  /// Crash recovery: rows left 'in_flight' by a kill mid-drain would
+  /// otherwise be invisible to [dueForSync] forever.
+  Future<void> recoverInFlight() async {
     final db = await _db;
-    final rows = await db.query('outbox', orderBy: 'created_at ASC');
-    return rows.map(OutboxEntry.fromMap).toList();
+    await db.update(
+      'outbox',
+      {'status': 'pending'},
+      where: 'status = ?',
+      whereArgs: ['in_flight'],
+    );
   }
 
-  /// Rows that are [pending] and ready to be attempted (next_attempt_at ≤ now),
-  /// ordered oldest-first to preserve causal ordering.
-  Future<List<OutboxEntry>> dueForSync(int nowMs) async {
+  /// Drops synced recovery-log rows older than [cutoffMs].
+  Future<void> purgeSyncedOlderThan(int cutoffMs) async {
+    final db = await _db;
+    await db.delete(
+      'outbox',
+      where: "status = 'synced' AND synced_at IS NOT NULL AND synced_at < ?",
+      whereArgs: [cutoffMs],
+    );
+  }
+
+  // ── Read ─────────────────────────────────────────────────────────────────
+
+  /// All non-synced rows — used to hydrate notifier state on startup.
+  Future<List<OutboxEntry>> loadAll() async {
     final db = await _db;
     final rows = await db.query(
       'outbox',
-      where: 'status = ? AND next_attempt_at <= ?',
-      whereArgs: ['pending', nowMs],
+      where: "status != 'synced'",
       orderBy: 'created_at ASC',
     );
     return rows.map(OutboxEntry.fromMap).toList();
   }
 
-  /// True if a non-synced row with [localId] still exists in the table.
-  Future<bool> existsLive(String localId) async {
+  /// Rows that are pending and ready to be attempted (next_attempt_at ≤ now),
+  /// ordered oldest-first to preserve causal ordering.
+  ///
+  /// When [userId] is given, entries enqueued by a different user are
+  /// excluded — the backend attributes actions to the JWT holder, so syncing
+  /// another teller's queue would mis-attribute their orders. Legacy rows
+  /// with NULL user_id are always included.
+  Future<List<OutboxEntry>> dueForSync(int nowMs, {String? userId}) async {
+    final db = await _db;
+    final where = StringBuffer('status = ? AND next_attempt_at <= ?');
+    final args = <Object?>['pending', nowMs];
+    if (userId != null) {
+      where.write(' AND (user_id IS NULL OR user_id = ?)');
+      args.add(userId);
+    }
+    final rows = await db.query(
+      'outbox',
+      where: where.toString(),
+      whereArgs: args,
+      orderBy: 'created_at ASC',
+    );
+    return rows.map(OutboxEntry.fromMap).toList();
+  }
+
+  /// Current status of a row, or null if it no longer exists (discarded).
+  Future<String?> statusOf(String localId) async {
     final db = await _db;
     final rows = await db.query(
       'outbox',
-      columns: ['local_id'],
+      columns: ['status'],
       where: 'local_id = ?',
       whereArgs: [localId],
       limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    return rows.first['status'] as String?;
+  }
+
+  /// True while any order/void is still pending or in flight. A shift close
+  /// must not reach the server before the shift's sales have.
+  Future<bool> hasLiveOrdersOrVoids() async {
+    final db = await _db;
+    final rows = await db.rawQuery(
+      '''
+      SELECT 1 FROM outbox
+      WHERE status IN ('pending', 'in_flight')
+        AND type IN (?, ?)
+      LIMIT 1
+      ''',
+      ['order', 'voidOrder'],
     );
     return rows.isNotEmpty;
   }

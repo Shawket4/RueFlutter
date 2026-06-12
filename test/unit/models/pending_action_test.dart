@@ -55,6 +55,7 @@ void main() {
         'shift_id': 's1',
         'payment_method': 'cash',
         'customer_name': 'John',
+        'notes': null,
         'discount_type': null,
         'discount_value': null,
         'discount_id': null,
@@ -62,6 +63,7 @@ void main() {
         'tip_amount': 50,
         'tip_payment_method': 'cash',
         'ordered_at': now.toIso8601String(),
+        'cash_amount': 1550,
         'items': []
       };
 
@@ -70,6 +72,7 @@ void main() {
       expect(action.paymentMethod, 'cash');
       expect(action.customerName, 'John');
       expect(action.amountTendered, 1500);
+      expect(action.cashAmount, 1550);
 
       expect(action.toJson(), json);
     });

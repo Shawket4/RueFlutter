@@ -1,0 +1,10 @@
+# Generated package — analysis and lints are intentionally disabled.
+# This file is re-written by tool/generate_api.sh after every regeneration
+# (the generator wipes this directory).
+analyzer:
+  errors:
+    todo: ignore
+  exclude:
+    - '**'
+linter:
+  rules: []

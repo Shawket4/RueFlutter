@@ -15,6 +15,7 @@ void main() {
         tellerId: 't1',
         tellerName: 'John',
         status: 'open',
+        openingCashWasEdited: false,
         openingCash: 100,
         openedAt: DateTime.now(),
       );

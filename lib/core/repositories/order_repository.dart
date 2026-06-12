@@ -104,9 +104,8 @@ class OrderRepository {
 
   // ── Cache write helpers (called by OrderHistoryNotifier) ─────────────────
 
-  void saveOrdersToCache(String shiftId, List<Order> current) {
-    _storage.saveOrders(shiftId, current.map((o) => o.toJson()).toList());
-  }
+  Future<void> saveOrdersToCache(String shiftId, List<Order> current) =>
+      _storage.saveOrders(shiftId, current.map((o) => o.toJson()).toList());
 
   List<Order>? loadCachedOrders(String shiftId) => loadOrdersLocal(shiftId);
 

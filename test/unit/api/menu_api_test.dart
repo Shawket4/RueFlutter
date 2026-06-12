@@ -26,7 +26,17 @@ void main() {
           .thenAnswer((_) async => Response(
                 requestOptions: RequestOptions(path: '/categories'),
                 data: [
-                  {'id': 'c1', 'name': 'Drinks', 'icon': 'local_cafe', 'display_order': 1, 'is_active': true}
+                  {
+                    'id': 'c1',
+                    'org_id': 'org1',
+                    'name': 'Drinks',
+                    'name_translations': <String, dynamic>{},
+                    'icon': 'local_cafe',
+                    'display_order': 1,
+                    'is_active': true,
+                    'created_at': '2023-01-01T00:00:00Z',
+                    'updated_at': '2023-01-01T00:00:00Z',
+                  }
                 ],
                 statusCode: 200,
               ));
@@ -45,10 +55,18 @@ void main() {
                     'id': 'm1',
                     'org_id': 'org1',
                     'name': 'Espresso',
+                    'name_translations': <String, dynamic>{},
+                    'description_translations': <String, dynamic>{},
                     'category_id': 'c1',
                     'base_price': 2000,
                     'is_active': true,
-                    'display_order': 1
+                    'display_order': 1,
+                    'sizes': <Object>[],
+                    'addon_slots': <Object>[],
+                    'optional_fields': <Object>[],
+                    'recipes': <Object>[],
+                    'created_at': '2023-01-01T00:00:00Z',
+                    'updated_at': '2023-01-01T00:00:00Z',
                   }
                 ],
                 statusCode: 200,
@@ -68,10 +86,18 @@ void main() {
                   'id': 'm1',
                   'org_id': 'org1',
                   'name': 'Espresso',
+                  'name_translations': <String, dynamic>{},
+                  'description_translations': <String, dynamic>{},
                   'category_id': 'c1',
                   'base_price': 2000,
                   'is_active': true,
-                  'display_order': 1
+                  'display_order': 1,
+                  'sizes': <Object>[],
+                  'addon_slots': <Object>[],
+                  'optional_fields': <Object>[],
+                  'recipes': <Object>[],
+                  'created_at': '2023-01-01T00:00:00Z',
+                  'updated_at': '2023-01-01T00:00:00Z',
                 },
                 statusCode: 200,
               ));
@@ -87,10 +113,15 @@ void main() {
                 data: [
                   {
                     'id': 'a1',
+                    'org_id': 'org1',
                     'name': 'Extra Shot',
+                    'name_translations': <String, dynamic>{},
                     'addon_type': 'coffee',
                     'default_price': 500,
                     'is_active': true,
+                    'display_order': 1,
+                    'created_at': '2023-01-01T00:00:00Z',
+                    'updated_at': '2023-01-01T00:00:00Z',
                   }
                 ],
                 statusCode: 200,
@@ -112,19 +143,31 @@ void main() {
                       'id': 'b1',
                       'org_id': 'org1',
                       'name': 'Breakfast Combo',
+                      'name_translations': <String, dynamic>{},
+                      'description_translations': <String, dynamic>{},
                       'price': 5000,
                       'status': 'active',
+                      'branch_ids': <Object>[],
                       'components': [],
-                      'display_order': 1
+                      'computed_cost': 0,
+                      'display_order': 1,
+                      'created_at': '2023-01-01T00:00:00Z',
+                      'updated_at': '2023-01-01T00:00:00Z',
                     },
                     {
                       'id': 'b2',
                       'org_id': 'org1',
                       'name': 'Lunch Combo',
+                      'name_translations': <String, dynamic>{},
+                      'description_translations': <String, dynamic>{},
                       'price': 8000,
                       'status': 'draft',
+                      'branch_ids': <Object>[],
                       'components': [],
-                      'display_order': 2
+                      'computed_cost': 0,
+                      'display_order': 2,
+                      'created_at': '2023-01-01T00:00:00Z',
+                      'updated_at': '2023-01-01T00:00:00Z',
                     }
                   ]
                 },

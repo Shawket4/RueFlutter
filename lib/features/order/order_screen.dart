@@ -1,11 +1,14 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/l10n/l10n.dart';
 import '../../core/models/shift.dart';
 import '../../core/providers/auth_notifier.dart';
-import '../../core/providers/menu_notifier.dart';
+import '../../core/providers/cart_notifier.dart';
 import '../../core/providers/discount_notifier.dart';
+import '../../core/providers/menu_notifier.dart';
 import '../../core/providers/order_history_notifier.dart';
 import '../../core/providers/payment_method_notifier.dart';
 import '../../core/providers/shift_notifier.dart';
@@ -15,14 +18,29 @@ import '../../core/services/offline_queue.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatting.dart';
 import '../../core/utils/responsive.dart';
+import '../../shared/widgets/offline_banner.dart';
 import '../../shared/widgets/sync_status_chip.dart';
-import 'widgets/top_bar.dart';
+import '../shift/cash_movement_sheet.dart';
+import 'checkout/checkout_sheet.dart';
+import 'widgets/action_drawer.dart';
+import 'widgets/cart_panel.dart';
 import 'widgets/category_rail.dart';
 import 'widgets/menu_grid.dart';
-import 'widgets/cart_panel.dart';
-import 'widgets/action_drawer.dart';
-import '../shift/cash_movement_sheet.dart';
+import 'widgets/top_bar.dart';
 
+/// Debounced search query the grid filters on. The raw text lives in the
+/// screen's TextEditingController; this holds the trimmed, lowercased value.
+/// autoDispose: clears when the order screen leaves the tree.
+final _searchQueryProvider = StateProvider.autoDispose<String>((_) => '');
+
+/// The selling screen — the navigation hub of the app. The bottom action bar
+/// carries shift stats, sync state and every shift-level destination; other
+/// screens are pushed on top of this one.
+///
+/// Layout:
+///   desktop & tablet-landscape → category rail · grid · cart panel
+///   tablet-portrait            → category rail · grid · cart FAB/sheet
+///   phone                      → category strip · grid · cart FAB/sheet
 class OrderScreen extends ConsumerStatefulWidget {
   const OrderScreen({super.key});
   @override
@@ -31,7 +49,7 @@ class OrderScreen extends ConsumerStatefulWidget {
 
 class _OrderScreenState extends ConsumerState<OrderScreen> {
   final _searchCtrl = TextEditingController();
-  String _query = '';
+  final _searchFocus = FocusNode();
   Timer? _debounce;
   StreamSubscription<bool>? _connectivitySub;
 
@@ -42,12 +60,14 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
       _prefetch();
     });
 
-    // Search debounce.
+    // Search debounce (180 ms) — the Timer stays here; the query lives in
+    // [_searchQueryProvider].
     _searchCtrl.addListener(() {
       if (_debounce?.isActive ?? false) _debounce!.cancel();
       _debounce = Timer(const Duration(milliseconds: 180), () {
         if (mounted) {
-          setState(() => _query = _searchCtrl.text.trim().toLowerCase());
+          ref.read(_searchQueryProvider.notifier).state =
+              _searchCtrl.text.trim().toLowerCase();
         }
       });
     });
@@ -56,14 +76,47 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
     _connectivitySub = ConnectivityService.instance.stream.listen((online) {
       if (online && mounted) _prefetch();
     });
+
+    // Desktop keyboard shortcuts.
+    HardwareKeyboard.instance.addHandler(_handleKey);
   }
 
   @override
   void dispose() {
+    HardwareKeyboard.instance.removeHandler(_handleKey);
     _searchCtrl.dispose();
+    _searchFocus.dispose();
     _debounce?.cancel();
     _connectivitySub?.cancel();
     super.dispose();
+  }
+
+  /// Desktop shortcuts: '/' or Ctrl+F focuses search; Enter opens checkout
+  /// when the cart has items. Inactive while a sheet/dialog is on top.
+  bool _handleKey(KeyEvent event) {
+    if (event is! KeyDownEvent) return false;
+    if (!mounted || !context.isDesktop) return false;
+    final route = ModalRoute.of(context);
+    if (route != null && !route.isCurrent) return false;
+
+    final key = event.logicalKey;
+    final hw = HardwareKeyboard.instance;
+    final ctrlF = key == LogicalKeyboardKey.keyF &&
+        (hw.isControlPressed || hw.isMetaPressed);
+    if (ctrlF || (key == LogicalKeyboardKey.slash && !_searchFocus.hasFocus)) {
+      _searchFocus.requestFocus();
+      return true;
+    }
+
+    if (key == LogicalKeyboardKey.enter ||
+        key == LogicalKeyboardKey.numpadEnter) {
+      final cart = ref.read(cartProvider);
+      if (!cart.isEmpty) {
+        CheckoutSheet.show(context);
+        return true;
+      }
+    }
+    return false;
   }
 
   /// Bounded concurrent prefetch — same logic that was in HomeScreen._load().
@@ -107,41 +160,41 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDesktop = context.isDesktop;
-    final isTablet = context.isTablet;
+    final t = context.tokens;
+    final query = ref.watch(_searchQueryProvider);
+    final isLandscape =
+        MediaQuery.of(context).orientation == Orientation.landscape;
+    final showCartPanel =
+        context.isDesktop || (context.isTablet && isLandscape);
+    final showRail = !context.isPhone;
 
     return Scaffold(
-      backgroundColor: AppColors.bg,
-      floatingActionButton:
-          isTablet || isDesktop ? null : const MobileCartFab(),
+      backgroundColor: t.bg,
+      floatingActionButton: showCartPanel ? null : const MobileCartFab(),
       body: SafeArea(
         child: Column(children: [
-          TopBar(ctrl: _searchCtrl, query: _query),
+          TopBar(ctrl: _searchCtrl, query: query, searchFocus: _searchFocus),
+          const OfflineBanner(
+              margin: EdgeInsetsDirectional.fromSTEB(10, 6, 10, 0)),
           Expanded(
-            child: isDesktop
-                ? Row(children: [
-                    if (_query.isEmpty) const CategoryRail(),
-                    Expanded(child: _contentArea()),
-                    const CartPanel(),
-                  ])
-                : isTablet
-                    ? Row(children: [
-                        if (_query.isEmpty) const CategoryRail(),
-                        Expanded(child: _contentArea()),
-                        const CartPanel(),
-                      ])
-                    : Row(children: [
-                        if (_query.isEmpty) const CategoryRail(),
-                        Expanded(child: _contentArea()),
-                      ]),
+            child: Row(children: [
+              if (showRail && query.isEmpty) const CategoryRail(),
+              Expanded(
+                child: Column(children: [
+                  if (!showRail && query.isEmpty) const CategoryStrip(),
+                  Expanded(child: _contentArea(query)),
+                ]),
+              ),
+              if (showCartPanel) const CartPanel(),
+            ]),
           ),
-          const _BottomBar(),
+          const _BottomActionBar(),
         ]),
       ),
     );
   }
 
-  Widget _contentArea() => AnimatedSwitcher(
+  Widget _contentArea(String query) => AnimatedSwitcher(
         duration: const Duration(milliseconds: 220),
         switchInCurve: Curves.easeOut,
         switchOutCurve: Curves.easeIn,
@@ -154,37 +207,47 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
             child: child,
           ),
         ),
-        child: _query.isNotEmpty
-            ? SearchResults(key: ValueKey(_query), query: _query)
+        child: query.isNotEmpty
+            ? SearchResults(key: ValueKey(query), query: query)
             : const MenuGrid(key: ValueKey('grid')),
       );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  BOTTOM BAR
+//  BOTTOM ACTION BAR — sync state · shift stats ··· all shift destinations
+//
+//  tablet/desktop → icon+label buttons for every action
+//  phone          → stats + Sync + Past Orders + More (rest in ActionDrawer)
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _BottomBar extends ConsumerWidget {
-  const _BottomBar();
+class _BottomActionBar extends ConsumerWidget {
+  const _BottomActionBar();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final history = ref.watch(orderHistoryProvider);
-    final shiftSt = ref.watch(shiftProvider);
-    final sync = ref.watch(offlineQueueProvider);
-
-    final active = history.orders.where((o) => o.status != 'voided').toList();
-    final orderCount = active.length;
-    final salesTotal = active.fold(0, (s, o) => s + o.totalAmount);
+    final t = context.tokens;
+    final s = l10n(context);
+    final compact = context.isPhone;
+    // Narrow watches — only the fields this bar renders.
+    final badgeCount = ref.watch(
+        offlineQueueProvider.select((q) => q.totalCount + q.stuckCount));
+    final badgeDanger =
+        ref.watch(offlineQueueProvider.select((q) => q.hasStuck));
+    final isOnline = ref.watch(isOnlineProvider);
+    final shift = ref.watch(shiftProvider.select((s) => s.shift));
 
     return Container(
-      height: 44,
+      width: double.infinity,
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: const Border(top: BorderSide(color: AppColors.border)),
-        boxShadow: AppShadows.toolbar,
+        color: t.surface,
+        border: Border(top: BorderSide(color: t.border)),
+        boxShadow: [
+          BoxShadow(
+              color: t.shadow, blurRadius: 12, offset: const Offset(0, -2)),
+        ],
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 12),
+      padding: const EdgeInsetsDirectional.fromSTEB(
+          AppSpace.md, AppSpace.sm - 2, AppSpace.md, AppSpace.sm - 2),
       child: LayoutBuilder(builder: (context, constraints) {
         return SingleChildScrollView(
           scrollDirection: Axis.horizontal,
@@ -193,77 +256,63 @@ class _BottomBar extends ConsumerWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
+                const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Sync status chip (compact).
-                    const SyncStatusChip(),
-                    const SizedBox(width: 10),
-
-                    // Stats pill.
-                    if (shiftSt.hasOpenShift)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: AppColors.bg,
-                          borderRadius: BorderRadius.circular(AppRadius.pill),
-                          border: Border.all(color: AppColors.borderLight),
-                        ),
-                        child: Text(
-                          '${egp(salesTotal)} · $orderCount order${orderCount == 1 ? '' : 's'}',
-                          style: cairo(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.textSecondary),
-                        ),
-                      ),
-
-                    // Pending sync count.
-                    if (sync.orderCount > 0) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: AppColors.warning.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(AppRadius.pill),
-                        ),
-                        child: Row(mainAxisSize: MainAxisSize.min, children: [
-                          const Icon(Icons.cloud_upload_outlined,
-                              size: 12, color: AppColors.warning),
-                          const SizedBox(width: 4),
-                          Text('${sync.orderCount}',
-                              style: cairo(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.warning)),
-                        ]),
-                      ),
-                    ],
+                    // Queue / connectivity state (hides itself when idle).
+                    SyncStatusChip(),
+                    SizedBox(width: AppSpace.sm),
+                    // At-a-glance shift stats.
+                    _ShiftStatsPill(),
                   ],
                 ),
-
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Always-visible action buttons.
-                    _BarIconBtn(
+                    _BarAction(
                       icon: Icons.receipt_long_rounded,
-                      tooltip: 'Past Orders',
+                      label: s.shellPastOrders,
+                      compact: compact,
                       onTap: () => context.push('/order-history'),
                     ),
-                    _BarIconBtn(
-                      icon: Icons.payments_outlined,
-                      tooltip: 'Cash In/Out',
-                      onTap: () {
-                        final shift = ref.read(shiftProvider).shift;
-                        if (shift != null) {
-                          CashMovementSheet.show(context, shiftId: shift.id);
-                        }
-                      },
+                    _BarAction(
+                      icon: Icons.sync_rounded,
+                      label: s.shellSync,
+                      compact: compact,
+                      badgeCount: badgeCount,
+                      badgeDanger: badgeDanger,
+                      onTap: () => context.push('/pending-orders'),
                     ),
-                    _BarIconBtn(
+                    if (!compact) ...[
+                      _BarAction(
+                        icon: Icons.payments_outlined,
+                        label: s.shellCashInOut,
+                        compact: compact,
+                        disabled: !isOnline || shift == null,
+                        tooltip: !isOnline ? s.commonCashOfflineHint : null,
+                        onTap: () {
+                          if (shift != null) {
+                            CashMovementSheet.show(context, shiftId: shift.id);
+                          }
+                        },
+                      ),
+                      _BarAction(
+                        icon: Icons.schedule_rounded,
+                        label: s.shellPastShifts,
+                        compact: compact,
+                        onTap: () => context.push('/shift-history'),
+                      ),
+                      _BarAction(
+                        icon: Icons.settings_rounded,
+                        label: s.settings,
+                        compact: compact,
+                        onTap: () => context.push('/settings'),
+                      ),
+                    ],
+                    _BarAction(
                       icon: Icons.more_horiz_rounded,
-                      tooltip: 'More',
+                      label: s.shellMore,
+                      compact: compact,
                       onTap: () => ActionDrawer.show(context),
                     ),
                   ],
@@ -277,33 +326,124 @@ class _BottomBar extends ConsumerWidget {
   }
 }
 
-class _BarIconBtn extends StatelessWidget {
+// ── Shift stats — sales total · order count for the open shift ───────────────
+
+class _ShiftStatsPill extends ConsumerWidget {
+  const _ShiftStatsPill();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.tokens;
+    final hasOpenShift =
+        ref.watch(shiftProvider.select((s) => s.hasOpenShift));
+    if (!hasOpenShift) return const SizedBox.shrink();
+
+    // Derive both stats inside the selector so the pill only rebuilds when
+    // the count/total pair actually changes.
+    final (orderCount, salesTotal) =
+        ref.watch(orderHistoryProvider.select((h) {
+      var count = 0, total = 0;
+      for (final o in h.orders) {
+        if (o.status != 'voided') {
+          count++;
+          total += o.totalAmount;
+        }
+      }
+      return (count, total);
+    }));
+
+    return Container(
+      padding:
+          const EdgeInsetsDirectional.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: t.surfaceAlt,
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+        border: Border.all(color: t.borderLight),
+      ),
+      child: Text.rich(
+        TextSpan(children: [
+          TextSpan(
+              text: egp(salesTotal),
+              style: money(
+                  size: 11, weight: FontWeight.w700, color: t.textPrimary)),
+          TextSpan(
+              text: ' · ${l10n(context).commonOrdersCount(orderCount)}',
+              style: ui(
+                  size: 11,
+                  weight: FontWeight.w600,
+                  color: t.textSecondary)),
+        ]),
+      ),
+    );
+  }
+}
+
+// ── Action button — icon-only on phone, icon+label on tablet/desktop ─────────
+
+class _BarAction extends StatelessWidget {
   final IconData icon;
-  final String tooltip;
+  final String label;
+  final bool compact;
+  final bool disabled;
+  final String? tooltip;
+  final int badgeCount;
+  final bool badgeDanger;
   final VoidCallback onTap;
 
-  const _BarIconBtn({
+  const _BarAction({
     required this.icon,
-    required this.tooltip,
+    required this.label,
+    required this.compact,
     required this.onTap,
+    this.disabled = false,
+    this.tooltip,
+    this.badgeCount = 0,
+    this.badgeDanger = false,
   });
 
   @override
-  Widget build(BuildContext context) => Tooltip(
-        message: tooltip,
-        child: AnimatedPressScale(
-          onTap: onTap,
-          child: Container(
-            width: 36,
-            height: 36,
-            margin: const EdgeInsets.only(left: 4),
-            decoration: BoxDecoration(
-              color: AppColors.bg,
-              borderRadius: BorderRadius.circular(AppRadius.xs),
-            ),
-            alignment: Alignment.center,
-            child: Icon(icon, size: 17, color: AppColors.textSecondary),
-          ),
-        ),
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    final fg = disabled ? t.textMuted : t.textSecondary;
+
+    Widget iconWidget = Icon(icon, size: 17, color: fg);
+    if (badgeCount > 0) {
+      iconWidget = Badge(
+        backgroundColor: badgeDanger ? t.danger : t.accent,
+        label: Text('$badgeCount',
+            style: ui(size: 10, weight: FontWeight.w700, color: Colors.white)),
+        child: iconWidget,
       );
+    }
+
+    return Tooltip(
+      message: tooltip ?? label,
+      child: AnimatedPressScale(
+        onTap: disabled ? null : onTap,
+        child: Container(
+          height: 36,
+          width: compact ? 36 : null,
+          margin: const EdgeInsetsDirectional.only(start: AppSpace.xs),
+          padding: compact
+              ? EdgeInsets.zero
+              : const EdgeInsetsDirectional.symmetric(horizontal: 10),
+          decoration: BoxDecoration(
+            color: t.surfaceAlt,
+            borderRadius: BorderRadius.circular(AppRadius.xs),
+            border: Border.all(color: t.borderLight),
+          ),
+          alignment: Alignment.center,
+          child: compact
+              ? iconWidget
+              : Row(mainAxisSize: MainAxisSize.min, children: [
+                  iconWidget,
+                  const SizedBox(width: 6),
+                  Text(label,
+                      style:
+                          ui(size: 12, weight: FontWeight.w600, color: fg)),
+                ]),
+        ),
+      ),
+    );
+  }
 }

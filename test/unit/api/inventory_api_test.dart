@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:sufrix_pos/core/api/client.dart';
 import 'package:sufrix_pos/core/api/inventory_api.dart';
+import 'package:sufrix_pos/core/models/inventory.dart';
 
 class MockDio extends Mock implements Dio {}
 class MockDioClient extends Mock implements DioClient {}
@@ -24,15 +25,29 @@ void main() {
       final mockData = [
         {
           'id': 'inv1',
+          'branch_id': 'b1',
+          'org_ingredient_id': 'ing1',
           'ingredient_name': 'Coffee Beans',
           'unit': 'kg',
+          'cost_per_unit': 0,
           'current_stock': 12.5,
+          'reorder_threshold': 0,
+          'below_reorder': false,
+          'created_at': '2023-01-01T00:00:00Z',
+          'updated_at': '2023-01-01T00:00:00Z',
         },
         {
           'id': 'inv2',
+          'branch_id': 'b1',
+          'org_ingredient_id': 'ing2',
           'ingredient_name': 'Milk',
           'unit': 'L',
+          'cost_per_unit': 0,
           'current_stock': '4.0', // test string parsing fallback
+          'reorder_threshold': 0,
+          'below_reorder': false,
+          'created_at': '2023-01-01T00:00:00Z',
+          'updated_at': '2023-01-01T00:00:00Z',
         }
       ];
 

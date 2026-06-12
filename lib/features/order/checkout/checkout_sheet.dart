@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../../../core/api/client.dart';
+import '../../../core/l10n/l10n.dart';
 import '../../../core/providers/draft_carts_notifier.dart';
 import '../../../core/repositories/order_repository.dart';
 import '../../../core/utils/time_utils.dart';
@@ -10,6 +12,7 @@ import '../../../core/models/cart.dart';
 import '../../../core/models/discount.dart';
 import '../../../core/models/order.dart';
 import '../../../core/models/pending_action.dart';
+import '../../../core/models/shift.dart';
 import '../../../core/providers/auth_notifier.dart';
 import '../../../core/providers/cart_notifier.dart';
 import '../../../core/providers/discount_notifier.dart';
@@ -20,24 +23,133 @@ import '../../../core/services/offline_queue.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatting.dart';
 import '../../../shared/widgets/app_button.dart';
-import '../../../shared/widgets/label_value.dart';
+import '../../../shared/widgets/offline_banner.dart';
 import '../../../shared/widgets/responsive_sheet.dart';
-import '../../../shared/widgets/sync_status_banner.dart';
+import '../../../shared/widgets/section_header.dart';
+import '../../../shared/widgets/status_chip.dart';
+import '../../../shared/widgets/surface_card.dart';
 import '../helpers/payment_helpers.dart';
 import '../../../core/providers/payment_method_notifier.dart';
 import '../widgets/receipt_sheet.dart';
 import '../widgets/receipt_preview_sheet.dart';
-import '../widgets/shared_widgets.dart';
 
 import 'sections/discount_section.dart';
 import 'sections/tip_section.dart';
 import 'sections/cash_tendered_section.dart';
 import 'sections/split_payment_section.dart';
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  SHEET-LOCAL UI STATE
+//  Lives in an autoDispose provider so it resets every time the sheet closes —
+//  same lifecycle the State fields had, without setState.
+// ─────────────────────────────────────────────────────────────────────────────
+
+@immutable
+class _CheckoutUiState {
+  final bool loading;
+  final String? error;
+  final Discount? selectedDiscount;
+  final bool showTendered;
+  final String tipPaymentMethod;
+  final bool isSplit;
+  final Set<String> activeSplitMethods;
+
+  const _CheckoutUiState({
+    this.loading = false,
+    this.error,
+    this.selectedDiscount,
+    this.showTendered = false,
+    this.tipPaymentMethod = '',
+    this.isSplit = false,
+    this.activeSplitMethods = const {},
+  });
+
+  _CheckoutUiState copyWith({
+    bool? loading,
+    String? error,
+    bool clearError = false,
+    Discount? selectedDiscount,
+    bool clearDiscount = false,
+    bool? showTendered,
+    String? tipPaymentMethod,
+    bool? isSplit,
+    Set<String>? activeSplitMethods,
+  }) =>
+      _CheckoutUiState(
+        loading: loading ?? this.loading,
+        error: clearError ? null : (error ?? this.error),
+        selectedDiscount:
+            clearDiscount ? null : (selectedDiscount ?? this.selectedDiscount),
+        showTendered: showTendered ?? this.showTendered,
+        tipPaymentMethod: tipPaymentMethod ?? this.tipPaymentMethod,
+        isSplit: isSplit ?? this.isSplit,
+        activeSplitMethods: activeSplitMethods ?? this.activeSplitMethods,
+      );
+}
+
+class _CheckoutUiNotifier extends AutoDisposeNotifier<_CheckoutUiState> {
+  @override
+  _CheckoutUiState build() {
+    // Same seed as the old initState: cash payment shows the tendered field,
+    // and the tip defaults to the order's payment method.
+    final cart = ref.read(cartProvider);
+    final methods = ref.read(paymentMethodProvider).items;
+    return _CheckoutUiState(
+      showTendered: isCashMethod(methods, cart.payment),
+      tipPaymentMethod: cart.payment,
+    );
+  }
+
+  void setError(String? message) => state = message == null
+      ? state.copyWith(clearError: true)
+      : state.copyWith(error: message);
+
+  void startPlacing() =>
+      state = state.copyWith(loading: true, clearError: true);
+
+  /// Releases the Place Order button (`_place`'s `finally`).
+  void setLoading(bool value) => state = state.copyWith(loading: value);
+
+  void selectDiscount(Discount? discount) => state = discount == null
+      ? state.copyWith(clearDiscount: true)
+      : state.copyWith(selectedDiscount: discount);
+
+  void setTipMethod(String method) =>
+      state = state.copyWith(tipPaymentMethod: method);
+
+  void paymentSelected(String method) {
+    final methods = ref.read(paymentMethodProvider).items;
+    state = state.copyWith(showTendered: isCashMethod(methods, method));
+  }
+
+  void toggleSplitMethod(String method) {
+    final next = Set<String>.of(state.activeSplitMethods);
+    if (!next.remove(method)) next.add(method);
+    state = state.copyWith(activeSplitMethods: next);
+  }
+
+  void toggleSplitMode() {
+    if (state.isSplit) {
+      final methods = ref.read(paymentMethodProvider).items;
+      final pay = ref.read(cartProvider).payment;
+      state = state.copyWith(
+        isSplit: false,
+        activeSplitMethods: const {},
+        showTendered: isCashMethod(methods, pay),
+      );
+    } else {
+      state = state.copyWith(isSplit: true, showTendered: false);
+    }
+  }
+}
+
+final _checkoutUiProvider =
+    NotifierProvider.autoDispose<_CheckoutUiNotifier, _CheckoutUiState>(
+        _CheckoutUiNotifier.new);
+
 class CheckoutSheet extends ConsumerStatefulWidget {
   const CheckoutSheet({super.key});
 
-  // Task 3.2: Use ResponsiveSheet
   static Future<void> show(BuildContext ctx) => ResponsiveSheet.show(
       context: ctx,
       builder: (_) => const CheckoutSheet());
@@ -47,29 +159,17 @@ class CheckoutSheet extends ConsumerStatefulWidget {
 }
 
 class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
-  bool _loading = false;
-  String? _error;
   final _customerCtrl = TextEditingController();
-
-  Discount? _selectedDiscount;
-
   final _tenderedCtrl = TextEditingController();
-  bool _showTendered = false;
-
   final _tipCtrl = TextEditingController();
-  String _tipPaymentMethod = '';
-
-  bool _isSplit = false;
   final Map<String, TextEditingController> _splitCtrs = {};
-  final Set<String> _activeSplitMethods = {};
+
+  _CheckoutUiNotifier get _ui => ref.read(_checkoutUiProvider.notifier);
 
   @override
   void initState() {
     super.initState();
     final cart = ref.read(cartProvider);
-    final methods = ref.read(paymentMethodProvider).items;
-    _showTendered = isCashMethod(methods, cart.payment);
-    _tipPaymentMethod = cart.payment;
     if (cart.customerName != null && cart.customerName!.isNotEmpty) {
       _customerCtrl.text = cart.customerName!;
     }
@@ -93,20 +193,29 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
   }
 
   void _toggleSplitMethod(String method) {
-    setState(() {
-      if (_activeSplitMethods.contains(method)) {
-        _activeSplitMethods.remove(method);
-        _splitCtrs[method]?.clear();
-      } else {
-        _activeSplitMethods.add(method);
-        _splitCtrs.putIfAbsent(method, () => TextEditingController());
-      }
-    });
+    // Controllers stay owned by the State; only the active set is provider
+    // state.
+    if (ref.read(_checkoutUiProvider).activeSplitMethods.contains(method)) {
+      _splitCtrs[method]?.clear();
+    } else {
+      _splitCtrs.putIfAbsent(method, () => TextEditingController());
+    }
+    _ui.toggleSplitMethod(method);
   }
 
-  List<PaymentSplit> _buildSplits() {
+  void _toggleSplitMode() {
+    // Leaving split mode wipes the per-method amounts, like before.
+    if (ref.read(_checkoutUiProvider).isSplit) {
+      for (final c in _splitCtrs.values) {
+        c.clear();
+      }
+    }
+    _ui.toggleSplitMode();
+  }
+
+  List<PaymentSplit> _buildSplits(Set<String> activeSplitMethods) {
     final splits = <PaymentSplit>[];
-    for (final method in _activeSplitMethods) {
+    for (final method in activeSplitMethods) {
       final raw = double.tryParse(_splitCtrs[method]?.text ?? '');
       if (raw != null && raw > 0) {
         splits.add(PaymentSplit(method: method, amount: (raw * 100).round()));
@@ -123,7 +232,15 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
 
   bool get _tipIsCash {
     final methods = ref.read(paymentMethodProvider).items;
-    return isCashMethod(methods, _tipPaymentMethod);
+    return isCashMethod(
+        methods, ref.read(_checkoutUiProvider).tipPaymentMethod);
+  }
+
+  void _retryPaymentMethods() {
+    final orgId = ref.read(authProvider).user?.orgId;
+    if (orgId == null) return;
+    unawaited(
+        ref.read(paymentMethodProvider.notifier).load(orgId, force: true));
   }
 
   void _syncCheckoutToCart({
@@ -160,43 +277,45 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
   }
 
   void _previewReceipt() {
+    final s = l10n(context);
+    final ui = ref.read(_checkoutUiProvider);
     final cart = ref.read(cartProvider);
     final shift = ref.read(shiftProvider).shift;
     final customer =
         _customerCtrl.text.trim().isEmpty ? null : _customerCtrl.text.trim();
 
     if (cart.isEmpty) {
-      setState(() => _error = 'Cart is empty');
+      _ui.setError(s.orderCartEmpty);
       return;
     }
     if (shift == null) {
-      setState(() => _error = 'No open shift');
+      _ui.setError(s.shiftNoOpenShift);
       return;
     }
-    if (!_isSplit && cart.payment.isEmpty) {
-      setState(() => _error = 'Select a payment method');
+    if (!ui.isSplit && cart.payment.isEmpty) {
+      _ui.setError(s.checkoutSelectMethod);
       return;
     }
 
     final int? tip = _parsedTip;
-    final String? tipMethod = tip != null ? _tipPaymentMethod : null;
+    final String? tipMethod = tip != null ? ui.tipPaymentMethod : null;
 
-    final int? tendered = _showTendered && !_isSplit
+    final int? tendered = ui.showTendered && !ui.isSplit
         ? (double.tryParse(_tenderedCtrl.text) != null
             ? (double.parse(_tenderedCtrl.text) * 100).round()
             : null)
         : null;
 
     List<PaymentSplit>? splits;
-    if (_isSplit) {
-      splits = _buildSplits();
+    if (ui.isSplit) {
+      splits = _buildSplits(ui.activeSplitMethods);
     }
 
     final discountType =
-        _selectedDiscount?.dtype ?? cart.discountType?.apiValue;
-    final discountValue = _selectedDiscount?.value ?? cart.discountValue;
-    final discountId = _selectedDiscount?.id;
-    final paymentMethod = _isSplit
+        ui.selectedDiscount?.dtype ?? cart.discountType?.apiValue;
+    final discountValue = ui.selectedDiscount?.value ?? cart.discountValue;
+    final discountId = ui.selectedDiscount?.id;
+    final paymentMethod = ui.isSplit
         ? (splits != null && splits.isNotEmpty ? (splits.length == 1 ? splits.first.method : 'mixed') : 'mixed')
         : cart.payment;
 
@@ -222,38 +341,15 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
       tipPaymentMethod: tipMethod,
       discountId: discountId,
       createdAt: TimeUtils.now(),
-      items: cart.items.map((ci) => OrderItem(
-        id: '',
-        itemName: ci.itemName,
-        sizeLabel: ci.sizeLabel,
-        bundleId: ci.bundleId,
-        bundleComponents: ci.bundleComponents ?? const [],
-        unitPrice: ci.unitPrice,
-        quantity: ci.quantity,
-        lineTotal: ci.lineTotal,
-        addons: ci.addons.map((a) => OrderItemAddon(
-          id: '',
-          orderItemId: '',
-          addonItemId: a.addonItemId,
-          addonName: a.name,
-          unitPrice: a.priceModifier,
-          quantity: a.quantity,
-          lineTotal: a.priceModifier * a.quantity,
-        )).toList(),
-        optionals: ci.optionals.map((o) => OrderItemOptional(
-          id: '',
-          orderItemId: '',
-          optionalFieldId: o.optionalFieldId,
-          fieldName: o.name,
-          price: o.price,
-        )).toList(),
-      )).toList(),
+      items: cart.items.map((ci) => _orderItemFromCartItem(ci, id: '')).toList(),
     );
 
-    ReceiptPreviewSheet.show(context, draftOrder, title: 'Draft Receipt Preview');
+    ReceiptPreviewSheet.show(context, draftOrder,
+        title: l10n(context).orderDraftReceiptPreview);
   }
 
   Future<void> _place() async {
+    final ui = ref.read(_checkoutUiProvider);
     final cart = ref.read(cartProvider);
     final shift = ref.read(shiftProvider).shift;
     final queue = ref.read(offlineQueueProvider.notifier);
@@ -262,85 +358,83 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
     final customer =
         _customerCtrl.text.trim().isEmpty ? null : _customerCtrl.text.trim();
 
-    if (_loading) return;
+    if (ui.loading) return;
     if (cart.isEmpty) {
-      setState(() => _error = 'Cart is empty');
+      _ui.setError('Cart is empty');
       return;
     }
     if (shift == null) {
-      setState(() => _error = 'No open shift');
+      _ui.setError('No open shift');
       return;
     }
-    if (!_isSplit && cart.payment.isEmpty) {
-      setState(() => _error = 'Select a payment method');
+    if (!ui.isSplit && cart.payment.isEmpty) {
+      _ui.setError('Select a payment method');
       return;
     }
 
     final int? tip = _parsedTip;
-    final String? tipMethod = tip != null ? _tipPaymentMethod : null;
+    final String? tipMethod = tip != null ? ui.tipPaymentMethod : null;
 
-    final int? tendered = _showTendered && !_isSplit
+    final int? tendered = ui.showTendered && !ui.isSplit
         ? (double.tryParse(_tenderedCtrl.text) != null
             ? (double.parse(_tenderedCtrl.text) * 100).round()
             : null)
         : null;
 
-    if (_showTendered && !_isSplit) {
+    if (ui.showTendered && !ui.isSplit) {
       if (tendered == null || tendered == 0) {
-        setState(() => _error = 'Enter the cash amount tendered');
+        _ui.setError('Enter the cash amount tendered');
         return;
       }
       if (tendered < cart.total) {
-        setState(() => _error =
+        _ui.setError(
             'Tendered ${egp(tendered)} is less than total ${egp(cart.total)}');
         return;
       }
       if (tip != null && _tipIsCash) {
         final change = tendered - cart.total;
         if (tip > change) {
-          setState(() =>
-              _error = 'Cash tip ${egp(tip)} exceeds change ${egp(change)}');
+          _ui.setError(
+              'Cash tip ${egp(tip)} exceeds change ${egp(change)}');
           return;
         }
       }
     }
 
     List<PaymentSplit>? splits;
-    if (_isSplit) {
-      if (_activeSplitMethods.isEmpty) {
-        setState(() => _error = 'Select at least one payment method');
+    if (ui.isSplit) {
+      if (ui.activeSplitMethods.isEmpty) {
+        _ui.setError('Select at least one payment method');
         return;
       }
-      splits = _buildSplits();
+      splits = _buildSplits(ui.activeSplitMethods);
       if (splits.isEmpty) {
-        setState(() => _error = 'Enter amounts for selected payment methods');
+        _ui.setError('Enter amounts for selected payment methods');
         return;
       }
       final splitTotal = splits.fold(0, (s, p) => s + p.amount);
       final expectedSplitTotal = cart.total - (_tipIsCash ? (tip ?? 0) : 0);
       if (splitTotal != expectedSplitTotal) {
-        setState(() => _error =
+        _ui.setError(
             'Split total ${egp(splitTotal)} must equal ${egp(expectedSplitTotal)}');
         return;
       }
     }
 
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+    _ui.startPlacing();
 
-    final DiscountType? discountTypeEnum = _selectedDiscount != null
+    final selectedDiscount = ui.selectedDiscount;
+    final DiscountType? discountTypeEnum = selectedDiscount != null
         ? DiscountType.values.firstWhere(
-            (e) => e.name == _selectedDiscount!.dtype,
+            (e) => e.name == selectedDiscount.dtype,
             orElse: () => DiscountType.percentage,
           )
         : cart.discountType;
-    final discountValue = _selectedDiscount?.value ?? cart.discountValue;
-    final discountId = _selectedDiscount?.id ?? cart.discountId;
+    final discountValue = selectedDiscount?.value ?? cart.discountValue;
+    final discountId = selectedDiscount?.id ?? cart.discountId;
     final discountTypeApi =
-        _selectedDiscount?.dtype ?? cart.discountType?.apiValue;
-    final paymentMethod = _isSplit
+        selectedDiscount?.dtype ?? cart.discountType?.apiValue;
+    final paymentMethod = ui.isSplit
         ? (splits!.length == 1 ? splits.first.method : 'mixed')
         : cart.payment;
 
@@ -358,7 +452,27 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
     final syncedCart = ref.read(cartProvider);
     final idempotencyKey = ref.read(cartProvider.notifier).idempotencyKey();
 
-    if (!isOnline) {
+    // Cash physically taken for this order — drawer accounting.
+    int cashAdded = 0;
+    if (splits != null && splits.isNotEmpty) {
+      cashAdded = splits
+          .where((s) => isCashMethod(methods, s.method))
+          .fold(0, (sum, s) => sum + s.amount);
+    } else if (isCashMethod(methods, paymentMethod)) {
+      cashAdded = syncedCart.total;
+    }
+    if (tip != null && isCashMethod(methods, tipMethod ?? '')) {
+      cashAdded += tip;
+    }
+
+    // An offline session has no valid token — queue instead of burning 401s.
+    final offlineMode = !isOnline || ref.read(authProvider).isOfflineSession;
+
+    // Queue the order and finish optimistically. Also the fallback when the
+    // online attempt dies on a network error mid-flight: the queued retry
+    // reuses the same code path and the server's idempotency key handling
+    // prevents a double charge.
+    Future<void> placeQueued() async {
       final localId = const Uuid().v4();
       await queue.enqueueOrder(PendingOrder(
         localId: localId,
@@ -377,10 +491,91 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
         items: syncedCart.items,
         orderedAt: TimeUtils.now(),
         createdAt: TimeUtils.now(),
+        cashAmount: cashAdded,
       ));
+      final optimistic = _buildOptimisticOrder(
+        localId: localId,
+        shift: shift,
+        paymentMethod: paymentMethod,
+        customer: customer,
+        cart: syncedCart,
+        discountTypeApi: discountTypeApi,
+        discountValue: discountValue,
+        discountId: discountId,
+        tendered: tendered,
+        tip: tip,
+        tipMethod: tipMethod,
+      );
+      await _finalizeOrder(
+        order: optimistic,
+        total: syncedCart.total,
+        tendered: tendered,
+        cashAdded: cashAdded,
+      );
+    }
 
-      // Task 1.5: Optimistic offline order
-      final optimistic = Order(
+    try {
+      if (offlineMode) {
+        await placeQueued();
+        return;
+      }
+
+      try {
+        final order = await ref.read(orderRepositoryProvider).create(
+              branchId: shift.branchId,
+              shiftId: shift.id,
+              cart: syncedCart,
+              idempotencyKey: idempotencyKey,
+              customerName: customer,
+              discountType: discountTypeApi,
+              discountValue: discountValue,
+              discountId: discountId,
+              amountTendered: tendered,
+              tipAmount: tip,
+              tipPaymentMethod: tipMethod,
+              paymentSplits: splits,
+            );
+        await _finalizeOrder(
+          order: order,
+          total: syncedCart.total,
+          tendered: tendered,
+          cashAdded: cashAdded,
+        );
+      } catch (e) {
+        if (isNetworkError(e)) {
+          await placeQueued();
+        } else {
+          // Log the raw error so it's visible in the Flutter console.
+          debugPrint('[CheckoutSheet._place] order creation failed: $e');
+          if (e is DioException) {
+            debugPrint('[CheckoutSheet._place] status: ${e.response?.statusCode}');
+            debugPrint('[CheckoutSheet._place] body: ${e.response?.data}');
+          }
+          if (mounted) _ui.setError(friendlyError(e));
+        }
+      }
+    } finally {
+      // Always release the button — an exception anywhere above used to
+      // freeze the sheet with a spinner forever.
+      if (mounted) _ui.setLoading(false);
+    }
+  }
+
+  /// The local stand-in shown (and printed) while the real order is queued.
+  Order _buildOptimisticOrder({
+    required String localId,
+    required Shift shift,
+    required String paymentMethod,
+    required String? customer,
+    required CartState cart,
+    required String? discountTypeApi,
+    required int? discountValue,
+    required String? discountId,
+    required int? tendered,
+    required int? tip,
+    required String? tipMethod,
+  }) =>
+      Order(
         id: localId,
         branchId: shift.branchId,
         shiftId: shift.id,
@@ -389,496 +584,513 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
         orderNumber: -1,
         status: 'pending_sync',
         paymentMethod: paymentMethod,
-        subtotal: syncedCart.subtotal,
+        subtotal: cart.subtotal,
         discountType: discountTypeApi,
         discountValue: discountValue ?? 0,
-        discountAmount: syncedCart.discountAmount,
+        discountAmount: cart.discountAmount,
         taxAmount: 0,
-        totalAmount: syncedCart.total,
+        totalAmount: cart.total,
         customerName: customer,
-        notes: syncedCart.notes,
+        notes: cart.notes,
         amountTendered: tendered,
         tipAmount: tip,
         tipPaymentMethod: tipMethod,
         discountId: discountId,
         createdAt: TimeUtils.now(),
-        items: syncedCart.items.map((ci) => OrderItem(
-          id: const Uuid().v4(),
-          itemName: ci.itemName,
-          sizeLabel: ci.sizeLabel,
-          bundleId: ci.bundleId,
-          bundleComponents: ci.bundleComponents ?? const [],
-          unitPrice: ci.unitPrice,
-          quantity: ci.quantity,
-          lineTotal: ci.lineTotal,
-          addons: ci.addons.map((a) => OrderItemAddon(
-            id: const Uuid().v4(),
-            orderItemId: '',
-            addonItemId: a.addonItemId,
-            addonName: a.name,
-            unitPrice: a.priceModifier,
-            quantity: a.quantity,
-            lineTotal: a.priceModifier * a.quantity,
-          )).toList(),
-          optionals: ci.optionals.map((o) => OrderItemOptional(
-            id: const Uuid().v4(),
-            orderItemId: '',
-            optionalFieldId: o.optionalFieldId,
-            fieldName: o.name,
-            price: o.price,
-          )).toList(),
+        items: cart.items
+            .map((ci) => _orderItemFromCartItem(ci, id: const Uuid().v4()))
+            .toList(),
+      );
+
+  /// Builds the wire-shaped optimistic [OrderItem] for a cart line. Fields
+  /// the server normally computes (ids, name translations, costing) are
+  /// stubbed — these items only back local receipts and the history list
+  /// until the queued order syncs.
+  OrderItem _orderItemFromCartItem(CartItem ci, {required String id}) =>
+      OrderItem(
+        id: id,
+        orderId: '',
+        itemName: ci.itemName,
+        nameTranslations: const <String, dynamic>{},
+        sizeLabel: ci.sizeLabel,
+        bundleId: ci.bundleId,
+        bundleComponents: ci.bundleComponents
+                ?.map(_bundleComponentFromSnapshot)
+                .toList() ??
+            const [],
+        costMissing: false,
+        deductionsSnapshot: const [],
+        unitPrice: ci.unitPrice,
+        quantity: ci.quantity,
+        lineTotal: ci.lineTotal,
+        addons: ci.addons.map((a) => OrderItemAddon(
+          id: id.isEmpty ? '' : const Uuid().v4(),
+          orderItemId: '',
+          addonItemId: a.addonItemId,
+          addonName: a.name,
+          nameTranslations: const <String, dynamic>{},
+          unitPrice: a.priceModifier,
+          quantity: a.quantity,
+          lineTotal: a.priceModifier * a.quantity,
+        )).toList(),
+        optionals: ci.optionals.map((o) => OrderItemOptional(
+          id: id.isEmpty ? '' : const Uuid().v4(),
+          orderItemId: '',
+          optionalFieldId: o.optionalFieldId,
+          fieldName: o.name,
+          nameTranslations: const <String, dynamic>{},
+          price: o.price,
         )).toList(),
       );
-      ref.read(orderHistoryProvider.notifier).addOrder(optimistic);
 
-      final total = syncedCart.total;
-      ref.read(cartProvider.notifier).clear();
+  OrderBundleComponentFull _bundleComponentFromSnapshot(
+          BundleComponentSnapshot c) =>
+      OrderBundleComponentFull(
+        itemId: c.itemId,
+        itemName: c.itemName,
+        nameTranslations: const <String, dynamic>{},
+        quantity: c.quantity,
+        sizeLabel: c.sizeLabel,
+        addons: c.addons.map((a) => OrderBundleComponentAddon(
+          id: '',
+          orderLineId: '',
+          componentItemId: c.itemId,
+          addonItemId: a.addonItemId,
+          addonName: a.name,
+          nameTranslations: const <String, dynamic>{},
+          unitPrice: a.priceModifier,
+          quantity: a.quantity,
+          lineTotal: a.priceModifier * a.quantity,
+        )).toList(),
+        optionals: c.optionals.map((o) => OrderBundleComponentOptional(
+          id: '',
+          orderLineId: '',
+          componentItemId: c.itemId,
+          optionalFieldId: o.optionalFieldId,
+          fieldName: o.name,
+          nameTranslations: const <String, dynamic>{},
+          price: o.price,
+        )).toList(),
+      );
 
-      int cashAdded = 0;
-      if (splits != null && splits.isNotEmpty) {
-        cashAdded = splits
-            .where((s) => isCashMethod(methods, s.method))
-            .fold(0, (sum, s) => sum + s.amount);
-      } else if (isCashMethod(methods, paymentMethod)) {
-        cashAdded = total;
-      }
-      if (tip != null && isCashMethod(methods, tipMethod ?? '')) {
-        cashAdded += tip;
-      }
-      if (cashAdded > 0) {
-        ref.read(shiftProvider.notifier).addLocalCash(cashAdded);
-        ref.read(shiftProvider.notifier).loadSystemCash();
-      }
+  /// Shared tail of every successful placement: durably cache the order
+  /// BEFORE the receipt appears, clear the cart, bump drawer cash, show
+  /// the receipt.
+  Future<void> _finalizeOrder({
+    required Order order,
+    required int total,
+    required int? tendered,
+    required int cashAdded,
+  }) async {
+    await ref.read(orderHistoryProvider.notifier).addOrder(order);
+    ref.read(cartProvider.notifier).clear();
 
-      if (mounted) {
-        await _dismissCheckoutAndMaybeCartSheet(context);
-        ReceiptSheet.show(context,
-            order: optimistic,
-            total: total,
-            changeGiven:
-                tendered != null ? (tendered - total).clamp(0, 999999) : null);
-      }
-      return;
+    if (cashAdded > 0) {
+      ref.read(shiftProvider.notifier).addLocalCash(cashAdded);
+      unawaited(ref.read(shiftProvider.notifier).loadSystemCash());
     }
 
-    try {
-      final order = await ref.read(orderRepositoryProvider).create(
-            branchId: shift.branchId,
-            shiftId: shift.id,
-            cart: syncedCart,
-            idempotencyKey: idempotencyKey,
-            customerName: customer,
-            discountType: discountTypeApi,
-            discountValue: discountValue,
-            discountId: discountId,
-            amountTendered: tendered,
-            tipAmount: tip,
-            tipPaymentMethod: tipMethod,
-            paymentSplits: splits,
-          );
-      ref.read(orderHistoryProvider.notifier).addOrder(order);
-      final total = syncedCart.total;
-      ref.read(cartProvider.notifier).clear();
-
-      int cashAdded = 0;
-      if (splits != null && splits.isNotEmpty) {
-        cashAdded = splits
-            .where((s) => isCashMethod(methods, s.method))
-            .fold(0, (sum, s) => sum + s.amount);
-      } else if (isCashMethod(methods, paymentMethod)) {
-        cashAdded = total;
-      }
-      if (tip != null && isCashMethod(methods, tipMethod ?? '')) {
-        cashAdded += tip;
-      }
-      if (cashAdded > 0) {
-        ref.read(shiftProvider.notifier).addLocalCash(cashAdded);
-        ref.read(shiftProvider.notifier).loadSystemCash();
-      }
-      if (mounted) {
-        await _dismissCheckoutAndMaybeCartSheet(context);
-        ReceiptSheet.show(context,
-            order: order,
-            total: total,
-            changeGiven:
-                tendered != null ? (tendered - total).clamp(0, 999999) : null);
-      }
-    } catch (e) {
-      if (isNetworkError(e)) {
-        final localId = const Uuid().v4();
-        await queue.enqueueOrder(PendingOrder(
-          localId: localId,
-          branchId: shift.branchId,
-          shiftId: shift.id,
-          paymentMethod: paymentMethod,
-          customerName: customer,
-          notes: syncedCart.notes,
-          discountType: discountTypeApi,
-          discountValue: discountValue,
-          discountId: discountId,
-          amountTendered: tendered,
-          tipAmount: tip,
-          tipPaymentMethod: tipMethod,
-          paymentSplits: splits,
-          items: syncedCart.items,
-          createdAt: TimeUtils.now(),
-          orderedAt: TimeUtils.now(),
-        ));
-
-        // Task 1.5: Optimistic offline order
-        final optimistic = Order(
-          id: localId,
-          branchId: shift.branchId,
-          shiftId: shift.id,
-          tellerId: ref.read(authProvider).user!.id,
-          tellerName: ref.read(authProvider).user!.name,
-          orderNumber: -1,
-          status: 'pending_sync',
-          paymentMethod: paymentMethod,
-          subtotal: syncedCart.subtotal,
-          discountType: discountTypeApi,
-          discountValue: discountValue ?? 0,
-          discountAmount: syncedCart.discountAmount,
-          taxAmount: 0,
-          totalAmount: syncedCart.total,
-          customerName: customer,
-          notes: syncedCart.notes,
-          amountTendered: tendered,
-          tipAmount: tip,
-          tipPaymentMethod: tipMethod,
-          discountId: discountId,
-          createdAt: TimeUtils.now(),
-          items: syncedCart.items.map((ci) => OrderItem(
-            id: const Uuid().v4(),
-            itemName: ci.itemName,
-            sizeLabel: ci.sizeLabel,
-            bundleId: ci.bundleId,
-            bundleComponents: ci.bundleComponents ?? const [],
-            unitPrice: ci.unitPrice,
-            quantity: ci.quantity,
-            lineTotal: ci.lineTotal,
-            addons: ci.addons.map((a) => OrderItemAddon(
-              id: const Uuid().v4(),
-              orderItemId: '',
-              addonItemId: a.addonItemId,
-              addonName: a.name,
-              unitPrice: a.priceModifier,
-              quantity: a.quantity,
-              lineTotal: a.priceModifier * a.quantity,
-            )).toList(),
-            optionals: ci.optionals.map((o) => OrderItemOptional(
-              id: const Uuid().v4(),
-              orderItemId: '',
-              optionalFieldId: o.optionalFieldId,
-              fieldName: o.name,
-              price: o.price,
-            )).toList(),
-          )).toList(),
-        );
-        ref.read(orderHistoryProvider.notifier).addOrder(optimistic);
-
-        final total = syncedCart.total;
-        ref.read(cartProvider.notifier).clear();
-
-        int cashAdded = 0;
-        if (splits != null && splits.isNotEmpty) {
-          cashAdded = splits
-              .where((s) => isCashMethod(methods, s.method))
-              .fold(0, (sum, s) => sum + s.amount);
-        } else if (isCashMethod(methods, paymentMethod)) {
-          cashAdded = total;
-        }
-        if (tip != null && isCashMethod(methods, tipMethod ?? '')) {
-          cashAdded += tip;
-        }
-        if (cashAdded > 0) {
-          ref.read(shiftProvider.notifier).addLocalCash(cashAdded);
-          ref.read(shiftProvider.notifier).loadSystemCash();
-        }
-        if (mounted) {
-          await _dismissCheckoutAndMaybeCartSheet(context);
-          ReceiptSheet.show(context,
-            order: optimistic,
-            total: total,
-            changeGiven:
-                tendered != null ? (tendered - total).clamp(0, 999999) : null);
-        }
-      } else {
-        // Log the raw error so it's visible in the Flutter console.
-        debugPrint('[CheckoutSheet._place] order creation failed: $e');
-        if (e is DioException) {
-          debugPrint('[CheckoutSheet._place] status: ${e.response?.statusCode}');
-          debugPrint('[CheckoutSheet._place] body: ${e.response?.data}');
-        }
-        if (mounted) {
-          setState(() {
-            _error = friendlyError(e);
-            _loading = false;
-          });
-        }
-      }
+    if (mounted) {
+      // The checkout sheet pops inside the dismiss helper, so this State's
+      // own context dies with the route's exit animation. Show the receipt
+      // from the root navigator's context, which survives the pop.
+      final navContext = Navigator.of(context, rootNavigator: true).context;
+      await _dismissCheckoutAndMaybeCartSheet(context);
+      if (!navContext.mounted) return;
+      ReceiptSheet.show(navContext,
+          order: order,
+          total: total,
+          changeGiven:
+              tendered != null ? (tendered - total).clamp(0, 999999) : null);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final cart = ref.watch(cartProvider);
-    final discountState = ref.watch(discountProvider);
-    final isOnline = ref.watch(isOnlineProvider);
-    final methods = ref.watch(paymentMethodProvider).items;
+    final t = context.tokens;
+    final s = l10n(context);
+    // `checkout`, not `ui`: the latter would shadow the ui() text style.
+    final checkout = ref.watch(_checkoutUiProvider);
+    // Narrow watches: only the cart fields the sheet chrome needs, so cart
+    // mutations elsewhere (e.g. drafts) don't rebuild the whole sheet.
+    final cartTotal = ref.watch(cartProvider.select((c) => c.total));
+    final cartPayment = ref.watch(cartProvider.select((c) => c.payment));
+    final (discountsLoading, discounts) =
+        ref.watch(discountProvider.select((d) => (d.isLoading, d.items)));
+    final (methods, pmLoading, pmError) = ref.watch(
+        paymentMethodProvider.select((p) => (p.items, p.isLoading, p.error)));
+    final visibleMethods =
+        methods.where((m) => m.wireFormat != 'mixed').toList();
+    final tipIsCash = isCashMethod(methods, checkout.tipPaymentMethod);
     final mq = MediaQuery.of(context);
-    final maxH = mq.size.height - mq.padding.top - 16;
+    final maxH =
+        mq.size.height - mq.padding.top - mq.viewInsets.bottom - AppSpace.lg;
 
-    return Container(
-      constraints: BoxConstraints(maxHeight: maxH),
-      decoration: BoxDecoration(
-          color: Colors.white, borderRadius: AppRadius.sheetRadius),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(top: 12, bottom: 4),
-            child: Center(
-                child: Container(
-                    width: 36,
-                    height: 4,
-                    decoration: BoxDecoration(
-                        color: AppColors.border,
-                        borderRadius: BorderRadius.circular(2)))),
-          ),
-
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 8, 24, 12),
-            child: Row(children: [
-              Text('Checkout',
-                  style: cairo(fontSize: 20, fontWeight: FontWeight.w800)),
-              const Spacer(),
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 200),
-                transitionBuilder: (child, anim) => SlideTransition(
-                    position: Tween<Offset>(
-                            begin: const Offset(0.2, 0), end: Offset.zero)
-                        .animate(anim),
-                    child: FadeTransition(opacity: anim, child: child)),
-                child: Container(
-                  key: ValueKey(cart.total),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(20)),
-                  child: Text(egp(cart.total),
-                      style: cairo(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.primary)),
+    return Padding(
+      // Keeps the sticky footer above the keyboard.
+      padding: EdgeInsets.only(bottom: mq.viewInsets.bottom),
+      child: Container(
+        constraints: BoxConstraints(maxHeight: maxH),
+        decoration: BoxDecoration(
+            color: t.surfaceRaised, borderRadius: AppRadius.sheetRadius),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // ── Sticky header: title + live total ────────────────────────
+            Padding(
+              padding: const EdgeInsets.only(top: AppSpace.md, bottom: 4),
+              child: Center(
+                  child: Container(
+                      width: 36,
+                      height: 4,
+                      decoration: BoxDecoration(
+                          color: t.border,
+                          borderRadius: BorderRadius.circular(2)))),
+            ),
+            Padding(
+              padding: const EdgeInsetsDirectional.fromSTEB(
+                  AppSpace.xl, AppSpace.sm, AppSpace.xl, AppSpace.md),
+              child: Row(children: [
+                Expanded(
+                  child: Text(s.orderCheckout,
+                      style: ui(
+                          size: 19,
+                          weight: FontWeight.w800,
+                          color: t.textPrimary)),
                 ),
-              ),
-            ]),
-          ),
-          Container(height: 1, color: AppColors.border),
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  transitionBuilder: (child, anim) => FadeTransition(
+                      opacity: anim,
+                      child: ScaleTransition(scale: anim, child: child)),
+                  child: Text(egp(cartTotal),
+                      key: ValueKey(cartTotal),
+                      style: money(
+                          size: 20, weight: FontWeight.w800, color: t.accent)),
+                ),
+              ]),
+            ),
+            Container(height: 1, color: t.border),
 
-          Flexible(
-            child: SingleChildScrollView(
-              padding:
-                  EdgeInsets.fromLTRB(24, 20, 24, mq.viewInsets.bottom + 8),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Task 2.2: Show offline status
-                  if (!isOnline)
-                    const SyncStatusBanner(
-                      variant: SyncBannerVariant.offline,
-                      text: 'Offline — order will sync when reconnected.'
-                    ),
+            // ── Scrollable body ───────────────────────────────────────────
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsetsDirectional.fromSTEB(
+                    AppSpace.xl, AppSpace.lg, AppSpace.xl, AppSpace.sm),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const OfflineBanner(
+                        margin: EdgeInsets.only(bottom: AppSpace.lg)),
 
-                  _SummaryCard(cart: cart),
-                  const SizedBox(height: 20),
+                    const _SummaryCard(),
 
-                  const FieldLabel('CUSTOMER NAME (OPTIONAL)'),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: _customerCtrl,
-                    textCapitalization: TextCapitalization.words,
-                    style: cairo(fontSize: 15),
-                    decoration: InputDecoration(
-                      hintText: 'e.g. Ahmed',
-                      hintStyle:
-                          cairo(fontSize: 15, color: AppColors.textMuted),
-                      prefixIcon: const Icon(Icons.person_outline_rounded,
-                          size: 18, color: AppColors.textMuted),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  if (!discountState.isLoading && discountState.items.isNotEmpty) ...[
-                    const FieldLabel('DISCOUNT (OPTIONAL)'),
-                    const SizedBox(height: 8),
-                    DiscountSection(
-                      discounts: discountState.items,
-                      selected: _selectedDiscount,
-                      onSelect: (d) {
-                        setState(() => _selectedDiscount = d);
-                        if (d == null) {
-                          ref
-                              .read(cartProvider.notifier)
-                              .setDiscount(null, null);
-                        } else {
-                          ref.read(cartProvider.notifier).setDiscount(
-                              DiscountType.values.byName(d.dtype), d.value);
-                        }
-                      },
-                    ),
-                    const SizedBox(height: 20),
-                  ],
-
-                  Row(children: [
-                    const FieldLabel('PAYMENT'),
-                    const Spacer(),
-                    _SplitToggle(
-                      active: _isSplit,
-                      onToggle: () => setState(() {
-                        _isSplit = !_isSplit;
-                        if (!_isSplit) {
-                          for (final c in _splitCtrs.values) {
-                            c.clear();
+                    // Discount lives above the fold, right under the totals
+                    // it changes.
+                    if (!discountsLoading && discounts.isNotEmpty) ...[
+                      SectionHeader(title: s.checkoutDiscountOptional),
+                      DiscountSection(
+                        discounts: discounts,
+                        selected: checkout.selectedDiscount,
+                        onSelect: (d) {
+                          _ui.selectDiscount(d);
+                          if (d == null) {
+                            ref
+                                .read(cartProvider.notifier)
+                                .setDiscount(null, null);
+                          } else {
+                            ref.read(cartProvider.notifier).setDiscount(
+                                DiscountType.values.byName(d.dtype), d.value);
                           }
-                          _activeSplitMethods.clear();
-                          final pay = ref.read(cartProvider).payment;
-                          _showTendered = isCashMethod(methods, pay);
-                        } else {
-                          _showTendered = false;
-                        }
-                      }),
-                    ),
-                  ]),
-                  const SizedBox(height: 10),
-
-                  if (_isSplit)
-                    SplitPaymentSection(
-                      activeMethods: _activeSplitMethods,
-                      splitCtrs: _splitCtrs,
-                      cartTotal: cart.total,
-                      onToggleMethod: _toggleSplitMethod,
-                      onAmountChanged: () => setState(() {}),
-                      parsedTip: _parsedTip,
-                      tipPaymentMethod: _tipPaymentMethod,
-                      methods: methods,
-                    )
-                  else ...[
-                    _SinglePaymentGrid(
-                      selected: cart.payment,
-                      onSelect: (v) {
-                        ref.read(cartProvider.notifier).setPayment(v);
-                        setState(() =>
-                            _showTendered = isCashMethod(methods, v));
-                      },
-                      methods: methods,
-                    ),
-
-                    if (_showTendered) ...[
-                      const SizedBox(height: 20),
-                      CashTenderedSection(
-                        tenderedCtrl: _tenderedCtrl,
-                        cartTotal: cart.total,
-                        onChanged: () => setState(() {}),
-                        cashTip: _tipIsCash ? _parsedTip : null,
+                        },
                       ),
                     ],
+
+                    SectionHeader(title: s.checkoutCustomerOptional),
+                    TextField(
+                      controller: _customerCtrl,
+                      textCapitalization: TextCapitalization.words,
+                      style: ui(size: 15, color: t.textPrimary),
+                      decoration: InputDecoration(
+                        hintText: s.checkoutNameHint,
+                        prefixIcon: Icon(Icons.person_outline_rounded,
+                            size: 18, color: t.textMuted),
+                      ),
+                    ),
+
+                    SectionHeader(
+                      title: s.checkoutPaymentHeader,
+                      trailing: StatusChip(
+                        label: s.checkoutSplitPayment,
+                        tone: checkout.isSplit
+                            ? ChipTone.accent
+                            : ChipTone.neutral,
+                        icon: Icons.call_split_rounded,
+                        onTap: _toggleSplitMode,
+                      ),
+                    ),
+
+                    if (visibleMethods.isEmpty)
+                      _PaymentMethodsUnavailable(
+                        error: pmError,
+                        loading: pmLoading,
+                        onRetry: _retryPaymentMethods,
+                      )
+                    else if (checkout.isSplit)
+                      SplitPaymentSection(
+                        activeMethods: checkout.activeSplitMethods,
+                        splitCtrs: _splitCtrs,
+                        cartTotal: cartTotal,
+                        onToggleMethod: _toggleSplitMethod,
+                        tipCtrl: _tipCtrl,
+                        tipIsCash: tipIsCash,
+                        methods: methods,
+                      )
+                    else ...[
+                      _SinglePaymentGrid(
+                        selected: cartPayment,
+                        onSelect: (v) {
+                          ref.read(cartProvider.notifier).setPayment(v);
+                          _ui.paymentSelected(v);
+                        },
+                        methods: visibleMethods,
+                      ),
+                      if (checkout.showTendered) ...[
+                        const SizedBox(height: AppSpace.lg),
+                        CashTenderedSection(
+                          tenderedCtrl: _tenderedCtrl,
+                          cartTotal: cartTotal,
+                          tipCtrl: _tipCtrl,
+                          tipIsCash: tipIsCash,
+                        ),
+                      ],
+                    ],
+
+                    const SizedBox(height: AppSpace.lg),
+                    TipSection(
+                      tipCtrl: _tipCtrl,
+                      tipPaymentMethod: checkout.tipPaymentMethod,
+                      onMethodChanged: (m) => _ui.setTipMethod(m),
+                      methods: methods,
+                    ),
+
+                    AnimatedSize(
+                      duration: const Duration(milliseconds: 200),
+                      child: checkout.error != null
+                          ? Padding(
+                              padding:
+                                  const EdgeInsets.only(top: AppSpace.lg),
+                              child: Container(
+                                padding:
+                                    const EdgeInsetsDirectional.symmetric(
+                                        horizontal: 14, vertical: 11),
+                                decoration: BoxDecoration(
+                                    color: t.dangerBg,
+                                    borderRadius:
+                                        BorderRadius.circular(AppRadius.xs)),
+                                child: Row(children: [
+                                  Icon(Icons.error_outline_rounded,
+                                      size: 14, color: t.danger),
+                                  const SizedBox(width: AppSpace.sm),
+                                  Expanded(
+                                      child: Text(checkout.error!,
+                                          style: ui(
+                                              size: 13, color: t.danger))),
+                                ]),
+                              ))
+                          : const SizedBox.shrink(),
+                    ),
+
+                    const SizedBox(height: AppSpace.lg),
                   ],
+                ),
+              ),
+            ),
 
-                  const SizedBox(height: 20),
-                  TipSection(
-                    tipCtrl: _tipCtrl,
-                    tipPaymentMethod: _tipPaymentMethod,
-                    parsedTip: _parsedTip,
-                    onMethodChanged: (m) =>
-                        setState(() => _tipPaymentMethod = m),
-                    onAmountChanged: () => setState(() {}),
-                    methods: methods,
+            // ── Sticky footer: Place Order + Preview ──────────────────────
+            Container(
+              padding: EdgeInsetsDirectional.fromSTEB(AppSpace.xl,
+                  AppSpace.md, AppSpace.xl, mq.padding.bottom + AppSpace.lg),
+              decoration: BoxDecoration(
+                  color: t.surfaceRaised,
+                  border: Border(top: BorderSide(color: t.border))),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: AppButton(
+                      label: s.orderPlaceOrder,
+                      loading: checkout.loading,
+                      width: double.infinity,
+                      height: 52,
+                      icon: Icons.check_rounded,
+                      onTap: _place,
+                    ),
                   ),
-
-                  AnimatedSize(
-                    duration: const Duration(milliseconds: 200),
-                    child: _error != null
-                        ? Padding(
-                            padding: const EdgeInsets.only(top: 16),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 14, vertical: 11),
-                              decoration: BoxDecoration(
-                                  color: AppColors.danger.withOpacity(0.07),
-                                  borderRadius:
-                                      BorderRadius.circular(AppRadius.xs)),
-                              child: Row(children: [
-                                const Icon(Icons.error_outline_rounded,
-                                    size: 14, color: AppColors.danger),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                    child: Text(_error!,
-                                        style: cairo(
-                                            fontSize: 13,
-                                            color: AppColors.danger))),
-                              ]),
-                            ))
-                        : const SizedBox.shrink(),
+                  const SizedBox(width: AppSpace.md),
+                  AppButton(
+                    label: s.checkoutPreview,
+                    variant: BtnVariant.outline,
+                    height: 52,
+                    icon: Icons.receipt_long_rounded,
+                    onTap: _previewReceipt,
                   ),
-
-                  const SizedBox(height: 20),
                 ],
               ),
             ),
-          ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
-          Container(
-            padding: EdgeInsets.fromLTRB(24, 12, 24, mq.padding.bottom + 16),
-            decoration: const BoxDecoration(
-                color: Colors.white,
-                border: Border(top: BorderSide(color: AppColors.border))),
-            child: Row(
-              children: [
-                Expanded(
-                  child: AppButton(
-                    label: 'Place Order',
-                    loading: _loading,
-                    width: double.infinity,
-                    height: 52,
-                    icon: Icons.check_rounded,
-                    onTap: _place,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                SizedBox(
-                  height: 52,
-                  child: OutlinedButton(
-                    onPressed: _previewReceipt,
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: AppColors.primary, width: 1.5),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppRadius.sm),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.receipt_long_rounded, color: AppColors.primary, size: 18),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Preview',
-                          style: cairo(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+class _SummaryCard extends ConsumerWidget {
+  const _SummaryCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.tokens;
+    final s = l10n(context);
+    // Watches only the totals it renders.
+    final subtotal = ref.watch(cartProvider.select((c) => c.subtotal));
+    final discountAmount =
+        ref.watch(cartProvider.select((c) => c.discountAmount));
+    final total = ref.watch(cartProvider.select((c) => c.total));
+    return SurfaceCard(
+      padding: const EdgeInsets.all(AppSpace.lg),
+      child: Column(children: [
+        _SummaryRow(label: s.orderSubtotal, value: egp(subtotal)),
+        if (discountAmount > 0)
+          _SummaryRow(
+              label: s.orderDiscount,
+              value: '− ${egp(discountAmount)}',
+              valueColor: t.success),
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: AppSpace.sm),
+          child: Divider(),
+        ),
+        _SummaryRow(
+            label: s.orderTotal, value: egp(total), emphasized: true),
+      ]),
+    );
+  }
+}
+
+class _SummaryRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color? valueColor;
+  final bool emphasized;
+
+  const _SummaryRow({
+    required this.label,
+    required this.value,
+    this.valueColor,
+    this.emphasized = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpace.xs),
+      child: Row(children: [
+        Expanded(
+          child: Text(label,
+              style: ui(
+                  size: emphasized ? 14 : 13,
+                  weight: emphasized ? FontWeight.w700 : FontWeight.w500,
+                  color: emphasized ? t.textPrimary : t.textSecondary)),
+        ),
+        Text(value,
+            style: money(
+                size: emphasized ? 17 : 13,
+                weight: emphasized ? FontWeight.w800 : FontWeight.w600,
+                color: valueColor ?? t.textPrimary)),
+      ]),
+    );
+  }
+}
+
+/// Shown in place of the method grid when there is nothing to render —
+/// explains the why (provider error, still loading, or genuinely none).
+class _PaymentMethodsUnavailable extends StatelessWidget {
+  final String? error;
+  final bool loading;
+  final VoidCallback onRetry;
+
+  const _PaymentMethodsUnavailable({
+    required this.error,
+    required this.loading,
+    required this.onRetry,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    final s = l10n(context);
+
+    if (error == null && loading) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppSpace.md),
+        child: Row(children: [
+          const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2)),
+          const SizedBox(width: AppSpace.md),
+          Text(s.checkoutLoadingMethods,
+              style: ui(size: 13, color: t.textSecondary)),
+        ]),
+      );
+    }
+
+    if (error == null) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(AppSpace.lg),
+        decoration: BoxDecoration(
+          color: t.surfaceAlt,
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          border: Border.all(color: t.border),
+        ),
+        child: Text(s.checkoutNoMethodsConfigured,
+            style: ui(size: 13, color: t.textSecondary, height: 1.5)),
+      );
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpace.lg),
+      decoration: BoxDecoration(
+        color: t.dangerBg,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(color: t.danger.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Icon(Icons.error_outline_rounded, size: 16, color: t.danger),
+            const SizedBox(width: AppSpace.sm),
+            Expanded(
+              child: Text(s.checkoutMethodsLoadFailed,
+                  style: ui(
+                      size: 14, weight: FontWeight.w700, color: t.danger)),
             ),
+          ]),
+          const SizedBox(height: AppSpace.sm),
+          Text(error!, style: ui(size: 12, color: t.danger, height: 1.4)),
+          const SizedBox(height: AppSpace.xs),
+          Text(s.checkoutMethodsNeeded,
+              style: ui(size: 12, color: t.textSecondary, height: 1.4)),
+          const SizedBox(height: AppSpace.md),
+          StatusChip(
+            label: s.retryAction,
+            tone: ChipTone.danger,
+            icon: Icons.refresh_rounded,
+            onTap: onRetry,
           ),
         ],
       ),
@@ -886,103 +1098,64 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
   }
 }
 
-class _SummaryCard extends StatelessWidget {
-  final CartState cart;
-  const _SummaryCard({required this.cart});
-  @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-            color: AppColors.bg,
-            borderRadius: BorderRadius.circular(AppRadius.sm),
-            border: Border.all(color: AppColors.border)),
-        child: Column(children: [
-          LabelValue('Subtotal', egp(cart.subtotal)),
-          if (cart.discountAmount > 0)
-            LabelValue('Discount', '− ${egp(cart.discountAmount)}',
-                valueColor: AppColors.success),
-          const Divider(height: 16, color: AppColors.border),
-          LabelValue('Total', egp(cart.total), bold: true),
-        ]),
-      );
-}
-
-class _SplitToggle extends StatelessWidget {
-  final bool active;
-  final VoidCallback onToggle;
-  const _SplitToggle({required this.active, required this.onToggle});
-  @override
-  Widget build(BuildContext context) => GestureDetector(
-        onTap: onToggle,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-            color: active ? AppColors.primary.withOpacity(0.1) : AppColors.bg,
-            borderRadius: BorderRadius.circular(AppRadius.xs),
-            border: Border.all(
-                color: active ? AppColors.primary : AppColors.border),
-          ),
-          child: Text('Split',
-              style: cairo(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color:
-                      active ? AppColors.primary : AppColors.textSecondary)),
-        ),
-      );
-}
-
 class _SinglePaymentGrid extends StatelessWidget {
   final String selected;
   final void Function(String) onSelect;
   final List<PaymentMethod> methods;
-  const _SinglePaymentGrid({required this.selected, required this.onSelect, required this.methods});
+
+  const _SinglePaymentGrid(
+      {required this.selected,
+      required this.onSelect,
+      required this.methods});
 
   @override
-  Widget build(BuildContext context) =>
-      LayoutBuilder(builder: (ctx, constraints) {
-        final btnW = (constraints.maxWidth - 8) / 2;
-        // Task 4.1: Use new enum logic
-        return Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: methods.where((m) => m.wireFormat != 'mixed').map((m) {
-            final sel = selected == m.wireFormat;
-            return GestureDetector(
-              onTap: () => onSelect(m.wireFormat),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 150),
-                width: btnW,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-                decoration: BoxDecoration(
-                    color: sel ? m.color : AppColors.bg,
-                    borderRadius: BorderRadius.circular(AppRadius.sm),
-                    border: Border.all(
-                        color: sel ? m.color : AppColors.border,
-                        width: sel ? 1.5 : 1)),
-                child: Row(children: [
-                  Icon(m.icon, size: 20, color: sel ? Colors.white : m.color),
-                  const SizedBox(width: 10),
-                  Expanded(
-                      child: Text(m.label('en'),
-                          style: cairo(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color:
-                                  sel ? Colors.white : AppColors.textPrimary),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis)),
-                  if (sel) ...[
-                    const SizedBox(width: 4),
-                    const Icon(Icons.check_circle_rounded,
-                        size: 15, color: Colors.white)
-                  ],
-                ]),
-              ),
-            );
-          }).toList(),
-        );
-      });
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    return LayoutBuilder(builder: (ctx, constraints) {
+      final btnW = (constraints.maxWidth - AppSpace.sm) / 2;
+      return Wrap(
+        spacing: AppSpace.sm,
+        runSpacing: AppSpace.sm,
+        children: methods.map((m) {
+          final sel = selected == m.wireFormat;
+          return AnimatedPressScale(
+            onTap: () => onSelect(m.wireFormat),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              width: btnW,
+              padding: const EdgeInsetsDirectional.symmetric(
+                  horizontal: 12, vertical: 11),
+              decoration: BoxDecoration(
+                  // Selected tiles wear the method's own brand color (data
+                  // from the dashboard), with white content in both themes.
+                  color: sel ? m.uiColor : t.surfaceAlt,
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                  border: Border.all(
+                      color: sel ? m.uiColor : t.border,
+                      width: sel ? 1.5 : 1)),
+              child: Row(children: [
+                Icon(m.uiIcon, size: 20, color: sel ? Colors.white : m.uiColor),
+                const SizedBox(width: 10),
+                Expanded(
+                    child: Text(
+                        m.label(
+                            Localizations.localeOf(context).languageCode),
+                        style: ui(
+                            size: 13,
+                            weight: FontWeight.w600,
+                            color: sel ? Colors.white : t.textPrimary),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis)),
+                if (sel) ...[
+                  const SizedBox(width: AppSpace.xs),
+                  const Icon(Icons.check_circle_rounded,
+                      size: 15, color: Colors.white)
+                ],
+              ]),
+            ),
+          );
+        }).toList(),
+      );
+    });
+  }
 }

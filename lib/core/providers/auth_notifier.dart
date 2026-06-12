@@ -6,6 +6,7 @@ import '../models/branch.dart';
 import '../models/shift.dart';
 import '../models/user.dart';
 import '../repositories/auth_repository.dart';
+import '../services/offline_queue.dart';
 import '../storage/storage_service.dart';
 import 'cart_notifier.dart';
 import 'draft_carts_notifier.dart';
@@ -20,6 +21,11 @@ class AuthState {
   final SessionExpiry sessionExpiry;
   final String? blockedByName;
 
+  /// True when the teller got in via the offline PIN unlock: there is no
+  /// valid token, every write queues, and the outbox stays parked until a
+  /// real online login happens.
+  final bool isOfflineSession;
+
   const AuthState({
     this.isLoading = true,
     this.user,
@@ -27,6 +33,7 @@ class AuthState {
     this.error,
     this.sessionExpiry = SessionExpiry.none,
     this.blockedByName,
+    this.isOfflineSession = false,
   });
 
   bool get isAuthenticated => user != null;
@@ -38,6 +45,7 @@ class AuthState {
     String? error,
     SessionExpiry? sessionExpiry,
     String? blockedByName,
+    bool? isOfflineSession,
     bool clearUser = false,
     bool clearBranch = false,
     bool clearError = false,
@@ -51,6 +59,7 @@ class AuthState {
         sessionExpiry: sessionExpiry ?? this.sessionExpiry,
         blockedByName:
             clearBlocked ? null : (blockedByName ?? this.blockedByName),
+        isOfflineSession: isOfflineSession ?? this.isOfflineSession,
       );
 }
 
@@ -58,12 +67,50 @@ class AuthNotifier extends Notifier<AuthState> {
   @override
   AuthState build() {
     onUnauthorizedCallback = () {
-      if (state.user != null) {
+      // An offline session has no valid token by definition — stray 401s
+      // (e.g. connectivity returning mid-order) must not kick the teller out
+      // and interrupt a sale. The persistent banner already asks them to
+      // sign in; the queue is parked until they do.
+      if (state.user != null && !state.isOfflineSession) {
         _forceLogout(expiry: SessionExpiry.expired);
       }
     };
     Future.microtask(init);
     return const AuthState();
+  }
+
+  /// Offline PIN unlock: restores the teller's cached identity without a
+  /// token so selling can continue through an outage. All writes queue; the
+  /// outbox stays parked until a real online login refreshes the token.
+  Future<String?> offlineUnlock(
+      {required String name, required String pin}) async {
+    final user = ref
+        .read(authRepositoryProvider)
+        .verifyOfflineUnlock(name: name, pin: pin);
+    if (user == null) {
+      const msg = 'Offline sign-in failed — name or PIN not recognized on '
+          'this device';
+      state = state.copyWith(isLoading: false, error: msg);
+      return msg;
+    }
+
+    Branch? branch;
+    if (user.branchId != null) {
+      final cached =
+          ref.read(storageServiceProvider).loadBranch(user.branchId!);
+      if (cached != null) branch = _tryDecodeBranch(cached);
+    }
+
+    // No token: park the queue before exposing the session so a drain can't
+    // race ahead and burn 401s.
+    ref.read(offlineQueueProvider.notifier).pauseForAuth();
+    state = AuthState(
+      isLoading: false,
+      user: user,
+      branch: branch,
+      isOfflineSession: true,
+    );
+    return null;
   }
 
   void clearError() => state = state.copyWith(clearError: true); // Task 1.8
@@ -79,6 +126,29 @@ class AuthNotifier extends Notifier<AuthState> {
     }
     await _hydrateAfterAuth(session.user, emitLoading: false);
   }
+
+  /// Step 1 of device setup: manager credentials → branch list.
+  Future<({String? error, List<Branch> branches})> fetchBranchesForSetup({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      final branches = await ref
+          .read(authRepositoryProvider)
+          .setupDevice(email: email, password: password);
+      return (error: null, branches: branches);
+    } on DeviceSetupError catch (e) {
+      return (error: e.message, branches: <Branch>[]);
+    } catch (e) {
+      return (error: friendlyError(e), branches: <Branch>[]);
+    }
+  }
+
+  /// Step 2 of device setup: manager picked a branch — persist device config.
+  /// The setup screen navigates to /login afterwards (the router redirect
+  /// only re-evaluates on auth-state changes or navigation events).
+  Future<void> confirmBranch(Branch branch) =>
+      ref.read(authRepositoryProvider).confirmDeviceBranch(branch);
 
   Future<String?> login({required String name, required String pin}) async {
     state = state.copyWith(
@@ -114,7 +184,7 @@ class AuthNotifier extends Notifier<AuthState> {
       } catch (_) {
         final cached =
             ref.read(storageServiceProvider).loadBranch(user.branchId!);
-        if (cached != null) branch = Branch.fromJson(cached);
+        if (cached != null) branch = _tryDecodeBranch(cached);
       }
     }
 
@@ -157,7 +227,11 @@ class AuthNotifier extends Notifier<AuthState> {
       clearError: true,
       clearBlocked: true,
       sessionExpiry: SessionExpiry.none,
+      isOfflineSession: false,
     );
+
+    // A fresh token means a 401-parked outbox can sync again.
+    ref.read(offlineQueueProvider.notifier).resumeAfterAuth();
     return null;
   }
 
@@ -191,9 +265,21 @@ class AuthNotifier extends Notifier<AuthState> {
 
   // Task 1.7: Await logout
   Future<void> _forceLogout({required SessionExpiry expiry}) async {
-    await _clearCartSession();
+    // Deliberately does NOT clear cart/draft storage: a forced logout (401)
+    // can land mid-order, and the cart is keyed by {branchId}_{shiftId} so it
+    // restores intact after the teller signs back in.
     await ref.read(authRepositoryProvider).logout();
     state = AuthState(isLoading: false, sessionExpiry: expiry);
+  }
+
+  /// Pre-migration branch caches may miss keys the generated fromJson
+  /// requires — treat an undecodable cache as a miss, not a crash.
+  static Branch? _tryDecodeBranch(Map<String, dynamic> cached) {
+    try {
+      return Branch.fromJson(cached);
+    } catch (_) {
+      return null;
+    }
   }
 }
 

@@ -6,6 +6,8 @@ import 'package:sufrix_pos/core/models/discount.dart';
 import 'package:sufrix_pos/core/providers/discount_notifier.dart';
 import 'package:sufrix_pos/core/storage/storage_service.dart';
 
+import '../../helpers/model_fixtures.dart';
+
 class MockDiscountApi extends Mock implements DiscountApi {}
 class MockStorageService extends Mock implements StorageService {}
 
@@ -34,7 +36,7 @@ void main() {
       when(() => mockStorage.saveDiscounts('org1', any())).thenAnswer((_) async {});
       
       final List<Discount> discounts = [
-        Discount(id: 'd1', orgId: 'org1', name: '10% Off', dtype: 'percentage', value: 10, isActive: true)
+        makeDiscount(id: 'd1', orgId: 'org1', name: '10% Off', dtype: 'percentage', value: 10)
       ];
       when(() => mockApi.list('org1')).thenAnswer((_) async => discounts);
 
@@ -51,7 +53,17 @@ void main() {
 
     test('load uses cache initially', () async {
       final cachedDiscounts = [
-        {'id': 'd1', 'org_id': 'org1', 'name': 'Cached', 'dtype': 'percentage', 'value': 10, 'is_active': true}
+        {
+          'id': 'd1',
+          'org_id': 'org1',
+          'name': 'Cached',
+          'name_translations': <String, dynamic>{},
+          'dtype': 'percentage',
+          'value': 10,
+          'is_active': true,
+          'created_at': '2026-01-01T00:00:00.000Z',
+          'updated_at': '2026-01-01T00:00:00.000Z',
+        }
       ];
       when(() => mockStorage.loadDiscounts('org1')).thenReturn(cachedDiscounts);
       when(() => mockStorage.saveDiscounts('org1', any())).thenAnswer((_) async {});
@@ -74,13 +86,13 @@ void main() {
       when(() => mockStorage.saveDiscounts('org1', any())).thenAnswer((_) async {});
       
       final List<Discount> discounts = [
-        Discount(id: 'd1', orgId: 'org1', name: '10% Off', dtype: 'percentage', value: 10, isActive: true)
+        makeDiscount(id: 'd1', orgId: 'org1', name: '10% Off', dtype: 'percentage', value: 10)
       ];
       when(() => mockApi.list('org1')).thenAnswer((_) async => discounts);
 
       final notifier = container.read(discountProvider.notifier);
       await notifier.load('org1');
-      
+
       // Call load again
       await notifier.load('org1');
       
@@ -97,7 +109,7 @@ void main() {
       when(() => mockStorage.saveDiscounts('org1', any())).thenAnswer((_) async {});
       
       final List<Discount> discounts = [
-        Discount(id: 'd1', orgId: 'org1', name: '10% Off', dtype: 'percentage', value: 10, isActive: true)
+        makeDiscount(id: 'd1', orgId: 'org1', name: '10% Off', dtype: 'percentage', value: 10)
       ];
       when(() => mockApi.list('org1')).thenAnswer((_) async => discounts);
 

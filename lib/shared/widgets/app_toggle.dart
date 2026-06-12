@@ -21,7 +21,9 @@ class AppToggle extends StatelessWidget {
           borderRadius: BorderRadius.circular(13),
           color: value ? AppColors.primary : AppColors.border,
         ),
-        alignment: value ? Alignment.centerRight : Alignment.centerLeft,
+        alignment: value
+            ? AlignmentDirectional.centerEnd
+            : AlignmentDirectional.centerStart,
         child: Container(
           width: 22,
           height: 22,

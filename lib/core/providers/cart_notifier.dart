@@ -45,9 +45,16 @@ class CartNotifier extends Notifier<CartState> {
     }
   }
 
+  /// Chains persistence so rapid successive mutations can never write to
+  /// storage out of order (last mutation always lands last on disk).
+  Future<void> _persistChain = Future.value();
+
   void _update(CartState next) {
     state = next;
-    _persist();
+    // catchError keeps the chain alive: one failed write must not poison
+    // every subsequent persist for the rest of the session.
+    _persistChain =
+        _persistChain.then((_) => _persist()).catchError((Object _) {});
   }
 
   Future<void> _persist() async {

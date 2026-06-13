@@ -23,8 +23,6 @@ abstract class _$CreateBundleRequestCWProxy {
 
   CreateBundleRequest descriptionTranslations(Object? descriptionTranslations);
 
-  CreateBundleRequest displayOrder(int? displayOrder);
-
   CreateBundleRequest imageUrl(String? imageUrl);
 
   CreateBundleRequest name(String name);
@@ -50,7 +48,6 @@ abstract class _$CreateBundleRequestCWProxy {
     List<CreateBundleComponentInput> components,
     String? description,
     Object? descriptionTranslations,
-    int? displayOrder,
     String? imageUrl,
     String name,
     Object? nameTranslations,
@@ -99,10 +96,6 @@ class _$CreateBundleRequestCWProxyImpl implements _$CreateBundleRequestCWProxy {
   ) => this(descriptionTranslations: descriptionTranslations);
 
   @override
-  CreateBundleRequest displayOrder(int? displayOrder) =>
-      this(displayOrder: displayOrder);
-
-  @override
   CreateBundleRequest imageUrl(String? imageUrl) => this(imageUrl: imageUrl);
 
   @override
@@ -134,7 +127,6 @@ class _$CreateBundleRequestCWProxyImpl implements _$CreateBundleRequestCWProxy {
     Object? components = const $CopyWithPlaceholder(),
     Object? description = const $CopyWithPlaceholder(),
     Object? descriptionTranslations = const $CopyWithPlaceholder(),
-    Object? displayOrder = const $CopyWithPlaceholder(),
     Object? imageUrl = const $CopyWithPlaceholder(),
     Object? name = const $CopyWithPlaceholder(),
     Object? nameTranslations = const $CopyWithPlaceholder(),
@@ -175,10 +167,6 @@ class _$CreateBundleRequestCWProxyImpl implements _$CreateBundleRequestCWProxy {
           ? _value.descriptionTranslations
           // ignore: cast_nullable_to_non_nullable
           : descriptionTranslations as Object?,
-      displayOrder: displayOrder == const $CopyWithPlaceholder()
-          ? _value.displayOrder
-          // ignore: cast_nullable_to_non_nullable
-          : displayOrder as int?,
       imageUrl: imageUrl == const $CopyWithPlaceholder()
           ? _value.imageUrl
           // ignore: cast_nullable_to_non_nullable
@@ -259,10 +247,6 @@ CreateBundleRequest _$CreateBundleRequestFromJson(Map<String, dynamic> json) =>
             'description_translations',
             (v) => v,
           ),
-          displayOrder: $checkedConvert(
-            'display_order',
-            (v) => (v as num?)?.toInt(),
-          ),
           imageUrl: $checkedConvert('image_url', (v) => v as String?),
           name: $checkedConvert('name', (v) => v as String),
           nameTranslations: $checkedConvert('name_translations', (v) => v),
@@ -278,7 +262,6 @@ CreateBundleRequest _$CreateBundleRequestFromJson(Map<String, dynamic> json) =>
         'availableUntilTime': 'available_until_time',
         'branchIds': 'branch_ids',
         'descriptionTranslations': 'description_translations',
-        'displayOrder': 'display_order',
         'imageUrl': 'image_url',
         'nameTranslations': 'name_translations',
         'orgId': 'org_id',
@@ -296,7 +279,6 @@ Map<String, dynamic> _$CreateBundleRequestToJson(
   'components': instance.components.map((e) => e.toJson()).toList(),
   'description': ?instance.description,
   'description_translations': ?instance.descriptionTranslations,
-  'display_order': ?instance.displayOrder,
   'image_url': ?instance.imageUrl,
   'name': instance.name,
   'name_translations': ?instance.nameTranslations,

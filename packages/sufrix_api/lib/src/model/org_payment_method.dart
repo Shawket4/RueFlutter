@@ -24,8 +24,6 @@ class OrgPaymentMethod {
 
     required  this.createdAt,
 
-    required  this.displayOrder,
-
     required  this.icon,
 
     required  this.id,
@@ -64,18 +62,6 @@ class OrgPaymentMethod {
 
 
   final DateTime createdAt;
-
-
-
-  @JsonKey(
-    
-    name: r'display_order',
-    required: true,
-    includeIfNull: false,
-  )
-
-
-  final int displayOrder;
 
 
 
@@ -181,7 +167,6 @@ class OrgPaymentMethod {
     bool operator ==(Object other) => identical(this, other) || other is OrgPaymentMethod &&
       other.color == color &&
       other.createdAt == createdAt &&
-      other.displayOrder == displayOrder &&
       other.icon == icon &&
       other.id == id &&
       other.isActive == isActive &&
@@ -195,7 +180,6 @@ class OrgPaymentMethod {
     int get hashCode =>
         color.hashCode +
         createdAt.hashCode +
-        displayOrder.hashCode +
         icon.hashCode +
         id.hashCode +
         isActive.hashCode +

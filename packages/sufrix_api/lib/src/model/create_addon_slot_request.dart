@@ -22,8 +22,6 @@ class CreateAddonSlotRequest {
 
      this.addonType,
 
-     this.displayOrder,
-
      this.isRequired,
 
      this.label,
@@ -44,18 +42,6 @@ class CreateAddonSlotRequest {
 
 
   final String? addonType;
-
-
-
-  @JsonKey(
-    
-    name: r'display_order',
-    required: false,
-    includeIfNull: false,
-  )
-
-
-  final int? displayOrder;
 
 
 
@@ -124,7 +110,6 @@ class CreateAddonSlotRequest {
     @override
     bool operator ==(Object other) => identical(this, other) || other is CreateAddonSlotRequest &&
       other.addonType == addonType &&
-      other.displayOrder == displayOrder &&
       other.isRequired == isRequired &&
       other.label == label &&
       other.labelTranslations == labelTranslations &&
@@ -134,7 +119,6 @@ class CreateAddonSlotRequest {
     @override
     int get hashCode =>
         (addonType == null ? 0 : addonType.hashCode) +
-        (displayOrder == null ? 0 : displayOrder.hashCode) +
         (isRequired == null ? 0 : isRequired.hashCode) +
         (label == null ? 0 : label.hashCode) +
         (labelTranslations == null ? 0 : labelTranslations.hashCode) +

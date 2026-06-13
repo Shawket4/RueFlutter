@@ -1439,4 +1439,25 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsReconfigureConfirm => 'Reconfigure';
+
+  @override
+  String get receiptOrderLabel => 'Order #';
+
+  @override
+  String get receiptDate => 'Date';
+
+  @override
+  String get receiptItems => 'ITEMS';
+
+  @override
+  String get receiptNoItems => 'No items in cart';
+
+  @override
+  String get receiptVoidedStamp => '*** VOIDED ***';
+
+  @override
+  String get receiptThankYou => 'Thank you for visiting!';
+
+  @override
+  String get receiptDraft => 'DRAFT';
 }

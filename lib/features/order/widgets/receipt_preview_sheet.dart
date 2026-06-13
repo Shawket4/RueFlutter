@@ -264,6 +264,7 @@ class ThermalReceiptCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = context.tokens;
+    final s = l10n(context);
     return Container(
       decoration: BoxDecoration(
         color: Colors.white, // paper
@@ -278,20 +279,20 @@ class ThermalReceiptCard extends StatelessWidget {
           const SizedBox(height: AppSpace.md),
           const _DottedLine(),
           const SizedBox(height: AppSpace.md),
-          _buildOrderDetails(),
+          _buildOrderDetails(context, s),
           const SizedBox(height: AppSpace.md),
           const _DottedLine(),
           const SizedBox(height: AppSpace.md),
-          _buildItemsList(),
+          _buildItemsList(s),
           const SizedBox(height: AppSpace.sm),
           const _DottedLine(),
           const SizedBox(height: AppSpace.md),
-          _buildSummary(),
+          _buildSummary(s),
           const SizedBox(height: AppSpace.lg),
           const _DottedLine(),
           const SizedBox(height: 14),
           Text(
-            'Thank you for visiting!',
+            s.receiptThankYou,
             textAlign: TextAlign.center,
             style: ui(size: 11, color: _ink.textMuted),
           ),
@@ -336,7 +337,8 @@ class ThermalReceiptCard extends StatelessWidget {
     );
   }
 
-  Widget _buildOrderDetails() {
+  Widget _buildOrderDetails(BuildContext context, AppLocalizations s) {
+    final locale = Localizations.localeOf(context).languageCode;
     return Padding(
       padding: const EdgeInsetsDirectional.symmetric(horizontal: AppSpace.lg),
       child: Column(
@@ -353,7 +355,7 @@ class ThermalReceiptCard extends StatelessWidget {
               ),
               alignment: Alignment.center,
               child: Text(
-                '*** VOIDED ***',
+                s.receiptVoidedStamp,
                 style: ui(
                     size: 14,
                     weight: FontWeight.w800,
@@ -363,36 +365,36 @@ class ThermalReceiptCard extends StatelessWidget {
             ),
           ],
           _ReceiptInfoRow(
-            label: 'Order #',
-            value: order.orderNumber == 0 ? 'DRAFT' : '#${order.orderNumber}',
+            label: s.receiptOrderLabel,
+            value: order.orderNumber == 0 ? s.receiptDraft : '#${order.orderNumber}',
           ),
           const SizedBox(height: AppSpace.xs),
-          _ReceiptInfoRow(label: 'Date', value: dateTime(order.createdAt)),
+          _ReceiptInfoRow(label: s.receiptDate, value: dateTime(order.createdAt)),
           if (order.tellerName.isNotEmpty) ...[
             const SizedBox(height: AppSpace.xs),
-            _ReceiptInfoRow(label: 'Teller', value: order.tellerName),
+            _ReceiptInfoRow(label: s.commonTeller, value: order.tellerName),
           ],
           if (order.customerName != null) ...[
             const SizedBox(height: AppSpace.xs),
-            _ReceiptInfoRow(label: 'Customer', value: order.customerName!),
+            _ReceiptInfoRow(label: s.orderReceiptCustomer, value: order.customerName!),
           ],
           const SizedBox(height: AppSpace.xs),
           _ReceiptInfoRow(
-              label: 'Payment',
-              value: methodLabel(methods, 'en', order.paymentMethod)),
+              label: s.orderPaymentMethod,
+              value: methodLabel(methods, locale, order.paymentMethod)),
         ],
       ),
     );
   }
 
-  Widget _buildItemsList() {
+  Widget _buildItemsList(AppLocalizations s) {
     return Padding(
       padding: const EdgeInsetsDirectional.symmetric(horizontal: AppSpace.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'ITEMS',
+            s.receiptItems,
             style: ui(
               size: 10,
               weight: FontWeight.w800,
@@ -405,7 +407,7 @@ class ThermalReceiptCard extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: AppSpace.sm),
               child: Text(
-                'No items in cart',
+                s.receiptNoItems,
                 style: ui(size: 12, color: _ink.textSecondary),
               ),
             )
@@ -416,30 +418,30 @@ class ThermalReceiptCard extends StatelessWidget {
     );
   }
 
-  Widget _buildSummary() {
+  Widget _buildSummary(AppLocalizations s) {
     return Padding(
       padding: const EdgeInsetsDirectional.symmetric(horizontal: AppSpace.lg),
       child: Column(
         children: [
-          _ReceiptAmountRow(label: 'Subtotal', value: egp(order.subtotal)),
+          _ReceiptAmountRow(label: s.orderSubtotal, value: egp(order.subtotal)),
           if (order.discountAmount > 0) ...[
             const SizedBox(height: AppSpace.xs),
             _ReceiptAmountRow(
-              label: 'Discount',
+              label: s.orderDiscount,
               value: '- ${egp(order.discountAmount)}',
               valueColor: _ink.success,
             ),
           ],
           if (order.taxAmount > 0) ...[
             const SizedBox(height: AppSpace.xs),
-            _ReceiptAmountRow(label: 'Tax (14%)', value: egp(order.taxAmount)),
+            _ReceiptAmountRow(label: s.orderTax14, value: egp(order.taxAmount)),
           ],
           const SizedBox(height: AppSpace.sm),
           Row(
             children: [
               Expanded(
                 child: Text(
-                  'TOTAL',
+                  s.orderTotal.toUpperCase(),
                   style: ui(
                       size: 15,
                       weight: FontWeight.w800,

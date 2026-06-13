@@ -8,7 +8,6 @@ import 'package:sufrix_api/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**displayOrder** | **int** |  | 
 **id** | **String** |  | 
 **isActive** | **bool** |  | 
 **label** | **String** |  | 

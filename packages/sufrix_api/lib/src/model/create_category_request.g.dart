@@ -7,8 +7,6 @@ part of 'create_category_request.dart';
 // **************************************************************************
 
 abstract class _$CreateCategoryRequestCWProxy {
-  CreateCategoryRequest displayOrder(int? displayOrder);
-
   CreateCategoryRequest imageUrl(String? imageUrl);
 
   CreateCategoryRequest name(String name);
@@ -24,7 +22,6 @@ abstract class _$CreateCategoryRequestCWProxy {
   /// CreateCategoryRequest(...).copyWith(id: 12, name: "My name")
   /// ````
   CreateCategoryRequest call({
-    int? displayOrder,
     String? imageUrl,
     String name,
     Object? nameTranslations,
@@ -38,10 +35,6 @@ class _$CreateCategoryRequestCWProxyImpl
   const _$CreateCategoryRequestCWProxyImpl(this._value);
 
   final CreateCategoryRequest _value;
-
-  @override
-  CreateCategoryRequest displayOrder(int? displayOrder) =>
-      this(displayOrder: displayOrder);
 
   @override
   CreateCategoryRequest imageUrl(String? imageUrl) => this(imageUrl: imageUrl);
@@ -64,17 +57,12 @@ class _$CreateCategoryRequestCWProxyImpl
   /// CreateCategoryRequest(...).copyWith(id: 12, name: "My name")
   /// ````
   CreateCategoryRequest call({
-    Object? displayOrder = const $CopyWithPlaceholder(),
     Object? imageUrl = const $CopyWithPlaceholder(),
     Object? name = const $CopyWithPlaceholder(),
     Object? nameTranslations = const $CopyWithPlaceholder(),
     Object? orgId = const $CopyWithPlaceholder(),
   }) {
     return CreateCategoryRequest(
-      displayOrder: displayOrder == const $CopyWithPlaceholder()
-          ? _value.displayOrder
-          // ignore: cast_nullable_to_non_nullable
-          : displayOrder as int?,
       imageUrl: imageUrl == const $CopyWithPlaceholder()
           ? _value.imageUrl
           // ignore: cast_nullable_to_non_nullable
@@ -114,10 +102,6 @@ CreateCategoryRequest _$CreateCategoryRequestFromJson(
   ($checkedConvert) {
     $checkKeys(json, requiredKeys: const ['name', 'org_id']);
     final val = CreateCategoryRequest(
-      displayOrder: $checkedConvert(
-        'display_order',
-        (v) => (v as num?)?.toInt(),
-      ),
       imageUrl: $checkedConvert('image_url', (v) => v as String?),
       name: $checkedConvert('name', (v) => v as String),
       nameTranslations: $checkedConvert('name_translations', (v) => v),
@@ -126,7 +110,6 @@ CreateCategoryRequest _$CreateCategoryRequestFromJson(
     return val;
   },
   fieldKeyMap: const {
-    'displayOrder': 'display_order',
     'imageUrl': 'image_url',
     'nameTranslations': 'name_translations',
     'orgId': 'org_id',
@@ -136,7 +119,6 @@ CreateCategoryRequest _$CreateCategoryRequestFromJson(
 Map<String, dynamic> _$CreateCategoryRequestToJson(
   CreateCategoryRequest instance,
 ) => <String, dynamic>{
-  'display_order': ?instance.displayOrder,
   'image_url': ?instance.imageUrl,
   'name': instance.name,
   'name_translations': ?instance.nameTranslations,

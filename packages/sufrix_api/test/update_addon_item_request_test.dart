@@ -17,11 +17,6 @@ void main() {
       // TODO
     });
 
-    // int displayOrder
-    test('to test the property `displayOrder`', () async {
-      // TODO
-    });
-
     // bool isActive
     test('to test the property `isActive`', () async {
       // TODO

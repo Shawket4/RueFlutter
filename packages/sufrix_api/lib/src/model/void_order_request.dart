@@ -20,12 +20,27 @@ class VoidOrderRequest {
   /// Returns a new [VoidOrderRequest] instance.
   VoidOrderRequest({
 
+     this.note,
+
     required  this.reason,
 
      this.restoreInventory,
 
      this.voidedAt,
   });
+
+      /// Free-text explanation. Required when `reason` is \"other\".
+  @JsonKey(
+    
+    name: r'note',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final String? note;
+
+
 
   @JsonKey(
     
@@ -67,12 +82,14 @@ class VoidOrderRequest {
 
     @override
     bool operator ==(Object other) => identical(this, other) || other is VoidOrderRequest &&
+      other.note == note &&
       other.reason == reason &&
       other.restoreInventory == restoreInventory &&
       other.voidedAt == voidedAt;
 
     @override
     int get hashCode =>
+        (note == null ? 0 : note.hashCode) +
         reason.hashCode +
         (restoreInventory == null ? 0 : restoreInventory.hashCode) +
         (voidedAt == null ? 0 : voidedAt.hashCode);

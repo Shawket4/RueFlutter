@@ -22,8 +22,6 @@ class OptionalField {
 
     required  this.createdAt,
 
-    required  this.displayOrder,
-
     required  this.id,
 
      this.ingredientName,
@@ -58,18 +56,6 @@ class OptionalField {
 
 
   final DateTime createdAt;
-
-
-
-  @JsonKey(
-    
-    name: r'display_order',
-    required: true,
-    includeIfNull: false,
-  )
-
-
-  final int displayOrder;
 
 
 
@@ -222,7 +208,6 @@ class OptionalField {
     @override
     bool operator ==(Object other) => identical(this, other) || other is OptionalField &&
       other.createdAt == createdAt &&
-      other.displayOrder == displayOrder &&
       other.id == id &&
       other.ingredientName == ingredientName &&
       other.ingredientUnit == ingredientUnit &&
@@ -239,7 +224,6 @@ class OptionalField {
     @override
     int get hashCode =>
         createdAt.hashCode +
-        displayOrder.hashCode +
         id.hashCode +
         (ingredientName == null ? 0 : ingredientName.hashCode) +
         (ingredientUnit == null ? 0 : ingredientUnit.hashCode) +

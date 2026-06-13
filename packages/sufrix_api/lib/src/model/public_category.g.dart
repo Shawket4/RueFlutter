@@ -7,8 +7,6 @@ part of 'public_category.dart';
 // **************************************************************************
 
 abstract class _$PublicCategoryCWProxy {
-  PublicCategory displayOrder(int displayOrder);
-
   PublicCategory id(String id);
 
   PublicCategory imageUrl(String? imageUrl);
@@ -26,7 +24,6 @@ abstract class _$PublicCategoryCWProxy {
   /// PublicCategory(...).copyWith(id: 12, name: "My name")
   /// ````
   PublicCategory call({
-    int displayOrder,
     String id,
     String? imageUrl,
     List<PublicMenuItem> items,
@@ -40,10 +37,6 @@ class _$PublicCategoryCWProxyImpl implements _$PublicCategoryCWProxy {
   const _$PublicCategoryCWProxyImpl(this._value);
 
   final PublicCategory _value;
-
-  @override
-  PublicCategory displayOrder(int displayOrder) =>
-      this(displayOrder: displayOrder);
 
   @override
   PublicCategory id(String id) => this(id: id);
@@ -69,7 +62,6 @@ class _$PublicCategoryCWProxyImpl implements _$PublicCategoryCWProxy {
   /// PublicCategory(...).copyWith(id: 12, name: "My name")
   /// ````
   PublicCategory call({
-    Object? displayOrder = const $CopyWithPlaceholder(),
     Object? id = const $CopyWithPlaceholder(),
     Object? imageUrl = const $CopyWithPlaceholder(),
     Object? items = const $CopyWithPlaceholder(),
@@ -77,10 +69,6 @@ class _$PublicCategoryCWProxyImpl implements _$PublicCategoryCWProxy {
     Object? nameTranslations = const $CopyWithPlaceholder(),
   }) {
     return PublicCategory(
-      displayOrder: displayOrder == const $CopyWithPlaceholder()
-          ? _value.displayOrder
-          // ignore: cast_nullable_to_non_nullable
-          : displayOrder as int,
       id: id == const $CopyWithPlaceholder()
           ? _value.id
           // ignore: cast_nullable_to_non_nullable
@@ -122,19 +110,9 @@ PublicCategory _$PublicCategoryFromJson(Map<String, dynamic> json) =>
       ($checkedConvert) {
         $checkKeys(
           json,
-          requiredKeys: const [
-            'display_order',
-            'id',
-            'items',
-            'name',
-            'name_translations',
-          ],
+          requiredKeys: const ['id', 'items', 'name', 'name_translations'],
         );
         final val = PublicCategory(
-          displayOrder: $checkedConvert(
-            'display_order',
-            (v) => (v as num).toInt(),
-          ),
           id: $checkedConvert('id', (v) => v as String),
           imageUrl: $checkedConvert('image_url', (v) => v as String?),
           items: $checkedConvert(
@@ -152,7 +130,6 @@ PublicCategory _$PublicCategoryFromJson(Map<String, dynamic> json) =>
         return val;
       },
       fieldKeyMap: const {
-        'displayOrder': 'display_order',
         'imageUrl': 'image_url',
         'nameTranslations': 'name_translations',
       },
@@ -160,7 +137,6 @@ PublicCategory _$PublicCategoryFromJson(Map<String, dynamic> json) =>
 
 Map<String, dynamic> _$PublicCategoryToJson(PublicCategory instance) =>
     <String, dynamic>{
-      'display_order': instance.displayOrder,
       'id': instance.id,
       'image_url': ?instance.imageUrl,
       'items': instance.items.map((e) => e.toJson()).toList(),

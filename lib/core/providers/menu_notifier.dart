@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/bundle.dart';
-import '../models/inventory.dart';
 import '../models/menu.dart';
 import '../repositories/menu_repository.dart';
 import '../services/connectivity_service.dart';
@@ -65,7 +64,6 @@ class MenuState {
 
   List<MenuGridEntry> gridEntriesForCategory({
     required String branchId,
-    required List<InventoryItem> inventory,
     DateTime? now,
   }) {
     final n     = now ?? DateTime.now();
@@ -75,12 +73,9 @@ class MenuState {
     if (catId == kComboCategoryId) {
       for (final b in bundles) {
         if (b.status != BundleStatus.active) continue;
-        final available = isBundleAvailableNow(b, branchId, n);
-        final oos = bundleOutOfStockReason(b, items, inventory);
-        entries.add(MenuGridEntry.bundle(b,
-            enabled: available && oos == null, disabledReason: oos));
+        if (!isBundleAvailableNow(b, branchId, n)) continue;
+        entries.add(MenuGridEntry.bundle(b));
       }
-      entries.sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
       return entries;
     }
 
@@ -89,21 +84,18 @@ class MenuState {
       if (catId != null && i.categoryId != catId) continue;
       entries.add(MenuGridEntry.item(i));
     }
-    entries.sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
     return entries;
   }
 
   List<Bundle> searchBundles(
     String query, {
     required String branchId,
-    required List<InventoryItem> inventory,
     DateTime? now,
   }) {
     final q = query.toLowerCase();
     final n = now ?? DateTime.now();
     return bundles.where((b) {
       if (!isBundleAvailableNow(b, branchId, n)) return false;
-      if (bundleOutOfStockReason(b, items, inventory) != null) return false;
       return b.name.toLowerCase().contains(q) ||
           (b.description?.toLowerCase().contains(q) ?? false);
     }).toList();
@@ -114,9 +106,6 @@ class MenuState {
     for (final a in allAddons) {
       if (!a.isActive) continue;
       map.putIfAbsent(a.addonType, () => []).add(a);
-    }
-    for (final list in map.values) {
-      list.sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
     }
     return map;
   }

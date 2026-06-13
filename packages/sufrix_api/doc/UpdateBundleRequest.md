@@ -16,7 +16,6 @@ Name | Type | Description | Notes
 **components** | [**List&lt;CreateBundleComponentInput&gt;**](CreateBundleComponentInput.md) |  | [optional] 
 **description** | **String** |  | [optional] 
 **descriptionTranslations** | **Object** |  | [optional] 
-**displayOrder** | **int** |  | [optional] 
 **imageUrl** | **String** |  | [optional] 
 **name** | **String** |  | [optional] 
 **nameTranslations** | **Object** |  | [optional] 

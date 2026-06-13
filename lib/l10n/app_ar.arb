@@ -392,5 +392,12 @@
   "settingsReconfigureShiftOpen": "أغلق الوردية الحالية قبل إعادة ضبط الجهاز.",
   "settingsReconfigureTitle": "إعادة ضبط الجهاز؟",
   "settingsReconfigureBody": "سيتم تسجيل خروجك وستحتاج إلى تسجيل دخول المدير لإعادة الاتصال.",
-  "settingsReconfigureConfirm": "إعادة الضبط"
+  "settingsReconfigureConfirm": "إعادة الضبط",
+  "receiptOrderLabel": "طلب #",
+  "receiptDate": "التاريخ",
+  "receiptItems": "الأصناف",
+  "receiptNoItems": "لا توجد أصناف في السلة",
+  "receiptVoidedStamp": "*** ملغي ***",
+  "receiptThankYou": "شكراً لزيارتكم!",
+  "receiptDraft": "مسودة"
 }

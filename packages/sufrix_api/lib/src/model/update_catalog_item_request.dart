@@ -30,6 +30,8 @@ class UpdateCatalogItemRequest {
 
      this.name,
 
+     this.supplierId,
+
      this.unit,
   });
 
@@ -93,6 +95,19 @@ class UpdateCatalogItemRequest {
 
 
 
+      /// Set/replace the default supplier. (Omitted = unchanged; clearing to none is not supported via this field.)
+  @JsonKey(
+    
+    name: r'supplier_id',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final String? supplierId;
+
+
+
   @JsonKey(
     
     name: r'unit',
@@ -114,6 +129,7 @@ class UpdateCatalogItemRequest {
       other.description == description &&
       other.isActive == isActive &&
       other.name == name &&
+      other.supplierId == supplierId &&
       other.unit == unit;
 
     @override
@@ -123,6 +139,7 @@ class UpdateCatalogItemRequest {
         (description == null ? 0 : description.hashCode) +
         (isActive == null ? 0 : isActive.hashCode) +
         (name == null ? 0 : name.hashCode) +
+        (supplierId == null ? 0 : supplierId.hashCode) +
         (unit == null ? 0 : unit.hashCode);
 
   factory UpdateCatalogItemRequest.fromJson(Map<String, dynamic> json) => _$UpdateCatalogItemRequestFromJson(json);

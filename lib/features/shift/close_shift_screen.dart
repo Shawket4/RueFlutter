@@ -7,7 +7,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/l10n/l10n.dart';
 import '../../core/models/branch.dart';
-import '../../core/models/inventory.dart';
 import '../../core/models/shift.dart';
 import '../../core/providers/auth_notifier.dart';
 import '../../core/providers/payment_method_notifier.dart';
@@ -22,9 +21,7 @@ import '../../core/utils/responsive.dart';
 import '../../shared/widgets/amount_field.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_top_bar.dart';
-import '../../shared/widgets/confirm_sheet.dart';
 import '../../shared/widgets/empty_state.dart';
-import '../../shared/widgets/status_chip.dart';
 import '../../shared/widgets/surface_card.dart';
 import 'shift_report_preview_sheet.dart';
 
@@ -36,41 +33,33 @@ import 'shift_report_preview_sheet.dart';
 class _CloseShiftState {
   static const _unset = Object();
 
-  final bool loadingInv;
   final bool submitting;
   final bool printing;
   final String? error;
   final int declaredCash;
   final bool hasCashText;
-  final Map<String, bool> zeroWarn;
 
   const _CloseShiftState({
-    this.loadingInv = true,
     this.submitting = false,
     this.printing = false,
     this.error,
     this.declaredCash = 0,
     this.hasCashText = false,
-    this.zeroWarn = const {},
   });
 
   _CloseShiftState copyWith({
-    bool? loadingInv,
     bool? submitting,
     bool? printing,
     Object? error = _unset,
     int? declaredCash,
     bool? hasCashText,
-    Map<String, bool>? zeroWarn,
   }) =>
       _CloseShiftState(
-        loadingInv: loadingInv ?? this.loadingInv,
         submitting: submitting ?? this.submitting,
         printing: printing ?? this.printing,
         error: identical(error, _unset) ? this.error : error as String?,
         declaredCash: declaredCash ?? this.declaredCash,
         hasCashText: hasCashText ?? this.hasCashText,
-        zeroWarn: zeroWarn ?? this.zeroWarn,
       );
 }
 
@@ -90,21 +79,6 @@ class _CloseShiftController extends AutoDisposeNotifier<_CloseShiftState> {
   void setCash(int declared, bool hasText) {
     if (_disposed) return;
     state = state.copyWith(declaredCash: declared, hasCashText: hasText);
-  }
-
-  void setZeroWarn(String id, bool warn) {
-    if (_disposed) return;
-    state = state.copyWith(zeroWarn: {...state.zeroWarn, id: warn});
-  }
-
-  void setZeroWarnAll(Map<String, bool> warns) {
-    if (_disposed) return;
-    state = state.copyWith(zeroWarn: warns);
-  }
-
-  void setLoadingInv(bool value) {
-    if (_disposed) return;
-    state = state.copyWith(loadingInv: value);
   }
 
   void setPrinting(bool value) {
@@ -137,7 +111,11 @@ class CloseShiftScreen extends ConsumerStatefulWidget {
 class _CloseShiftScreenState extends ConsumerState<CloseShiftScreen> {
   final _cashCtrl = TextEditingController();
   final _noteCtrl = TextEditingController();
-  final Map<String, TextEditingController> _invCtrs = {};
+
+  // Set to true the moment the user presses Back so that any in-flight close
+  // that completes after navigation (but before the frame where mounted→false)
+  // doesn't trigger a logout.
+  bool _navigatedAway = false;
 
   Timer? _draftTimer;
 
@@ -150,7 +128,8 @@ class _CloseShiftScreenState extends ConsumerState<CloseShiftScreen> {
     _noteCtrl.addListener(_scheduleDraftSave);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await ref.read(shiftProvider.notifier).loadSystemCash();
-      await _loadInventory();
+      if (!mounted) return;
+      _restoreDraft();
     });
   }
 
@@ -163,10 +142,15 @@ class _CloseShiftScreenState extends ConsumerState<CloseShiftScreen> {
     _noteCtrl
       ..removeListener(_scheduleDraftSave)
       ..dispose();
-    for (final c in _invCtrs.values) {
-      c.dispose();
-    }
     super.dispose();
+  }
+
+  void _onBack() {
+    _navigatedAway = true;
+    // Stay on the order screen if the shift is still open; only go to
+    // open-shift when the shift has already been cleared (shouldn't normally
+    // happen via the back button, but handle it gracefully).
+    context.go(ref.read(shiftProvider).hasOpenShift ? '/order' : '/open-shift');
   }
 
   void _onCashChanged() {
@@ -197,77 +181,26 @@ class _CloseShiftScreenState extends ConsumerState<CloseShiftScreen> {
     final draft = {
       'cash': _cashCtrl.text,
       'note': _noteCtrl.text,
-      'counts': {for (final e in _invCtrs.entries) e.key: e.value.text},
     };
     await ref.read(storageServiceProvider).raw.setString(key, jsonEncode(draft));
   }
 
-  Map<String, dynamic>? _readDraft() {
+  void _restoreDraft() {
     final key = _draftKey;
-    if (key == null) return null;
+    if (key == null) return;
     final raw = ref.read(storageServiceProvider).raw.getString(key);
-    if (raw == null) return null;
+    if (raw == null) return;
     try {
-      return jsonDecode(raw) as Map<String, dynamic>;
-    } catch (_) {
-      return null;
-    }
-  }
-
-  Future<void> _clearDraft(String shiftId) =>
-      ref.read(storageServiceProvider).raw.remove('close_draft_$shiftId');
-
-  // ── Inventory ──────────────────────────────────────────────────────────────
-
-  Future<void> _loadInventory() async {
-    final branchId = ref.read(authProvider).user?.branchId;
-    if (branchId == null) {
-      _ctl.setLoadingInv(false);
-      return;
-    }
-    await ref.read(shiftProvider.notifier).loadInventory(branchId);
-    if (!mounted) return;
-
-    final items = ref.read(shiftProvider).inventory;
-    final draft = _readDraft();
-    final draftCounts =
-        (draft?['counts'] as Map<String, dynamic>?) ?? const <String, dynamic>{};
-
-    final warns = <String, bool>{};
-    for (final i in items) {
-      final initial =
-          (draftCounts[i.id] as String?) ?? i.currentStock.toStringAsFixed(2);
-      final ctrl = TextEditingController(text: initial);
-      ctrl.addListener(() {
-        if (!mounted) return;
-        final v = double.tryParse(ctrl.text);
-        final was = ref.read(_closeShiftProvider).zeroWarn[i.id] ?? false;
-        final is0 = v == 0.0;
-        if (was != is0) _ctl.setZeroWarn(i.id, is0);
-        _scheduleDraftSave();
-      });
-      _invCtrs[i.id] = ctrl;
-      warns[i.id] = double.tryParse(initial) == 0.0;
-    }
-    _ctl.setZeroWarnAll(warns);
-
-    if (draft != null) {
+      final draft = jsonDecode(raw) as Map<String, dynamic>;
       final cash = draft['cash'] as String? ?? '';
       if (cash.isNotEmpty) _cashCtrl.text = cash;
       final note = draft['note'] as String? ?? '';
       if (note.isNotEmpty) _noteCtrl.text = note;
-    }
-
-    _ctl.setLoadingInv(false);
+    } catch (_) {}
   }
 
-  /// Fill every row's actual count with the system value in one tap.
-  void _useSystemCounts() {
-    final items = ref.read(shiftProvider).inventory;
-    for (final i in items) {
-      _invCtrs[i.id]?.text = i.currentStock.toStringAsFixed(2);
-    }
-  }
+  Future<void> _clearDraft(String shiftId) =>
+      ref.read(storageServiceProvider).raw.remove('close_draft_$shiftId');
 
   // ── Print ──────────────────────────────────────────────────────────────────
 
@@ -343,35 +276,7 @@ class _CloseShiftScreenState extends ConsumerState<CloseShiftScreen> {
       return;
     }
 
-    final inv = ref.read(shiftProvider).inventory;
-    final zeroItems = inv
-        .where((i) {
-          final v = double.tryParse(_invCtrs[i.id]?.text ?? '');
-          return v == null || v == 0.0;
-        })
-        .map((i) => i.name)
-        .toList();
-
-    if (zeroItems.isNotEmpty) {
-      final ok = await ConfirmSheet.show(
-        context,
-        title: s.shiftZeroStockTitle,
-        body: s.shiftZeroStockBody(zeroItems.join(', ')),
-        confirmLabel: s.shiftSubmitAnyway,
-        destructive: true,
-        icon: Icons.inventory_2_outlined,
-      );
-      if (!ok) return;
-    }
-
     _ctl.startSubmit();
-
-    final counts = _invCtrs.entries
-        .map((e) => {
-              'branch_inventory_id': e.key,
-              'actual_stock': double.tryParse(e.value.text) ?? 0.0,
-            })
-        .toList();
 
     final branchId = ref.read(authProvider).user!.branchId!;
     final shiftId = ref.read(shiftProvider).shift?.id;
@@ -383,28 +288,27 @@ class _CloseShiftScreenState extends ConsumerState<CloseShiftScreen> {
           branchId: branchId,
           closingCash: piastres,
           note: _noteCtrl.text.isEmpty ? null : _noteCtrl.text,
-          inventoryCounts: counts,
         );
 
-    if (!mounted) return;
+    if (!mounted || _navigatedAway) return;
 
     if (ok) {
       _draftTimer?.cancel();
       if (shiftId != null) await _clearDraft(shiftId);
-      if (!mounted) return;
+      if (!mounted || _navigatedAway) return;
       // Auto-print the final report before logout/navigation tears the branch
       // printer config down.
       if (shiftId != null && !willQueue) {
         await _autoPrintReport(shiftId);
-        if (!mounted) return;
+        if (!mounted || _navigatedAway) return;
       }
       final canNowLogout = await ref.read(authProvider.notifier).canLogout();
-      if (!mounted) return;
+      if (!mounted || _navigatedAway) return;
       if (canNowLogout) {
         await ref.read(authProvider.notifier).logout();
-        if (mounted) context.go('/login');
+        if (mounted && !_navigatedAway) context.go('/login');
       } else {
-        context.go('/home');
+        context.go('/open-shift');
       }
     } else {
       _ctl.failSubmit(
@@ -421,6 +325,8 @@ class _CloseShiftScreenState extends ConsumerState<CloseShiftScreen> {
     // Watched at the root so the provider stays alive for the whole screen.
     final printing =
         ref.watch(_closeShiftProvider.select((s) => s.printing));
+    final submitting =
+        ref.watch(_closeShiftProvider.select((s) => s.submitting));
 
     return Scaffold(
       body: Column(
@@ -429,7 +335,9 @@ class _CloseShiftScreenState extends ConsumerState<CloseShiftScreen> {
           AppTopBar(
             title: l10n(context).shiftClose,
             subtitle: shift?.tellerName,
-            onBack: () => context.go('/home'),
+            // Disable back during submission so a fast close + back press can't
+            // trigger a spurious logout before the widget unmounts.
+            onBack: submitting ? null : _onBack,
             actions: [
               if (shift != null)
                 printing
@@ -477,8 +385,6 @@ class _CloseShiftScreenState extends ConsumerState<CloseShiftScreen> {
                 const SizedBox(height: AppSpace.lg),
                 _CashCard(state: this),
                 const SizedBox(height: AppSpace.lg),
-                _InventoryCard(state: this),
-                const SizedBox(height: AppSpace.lg),
                 _SubmitSection(state: this),
                 const SizedBox(height: AppSpace.xxl),
               ],
@@ -505,8 +411,6 @@ class _CloseShiftScreenState extends ConsumerState<CloseShiftScreen> {
                         _CashCard(state: this),
                       ]),
                     ),
-                    const SizedBox(width: AppSpace.lg),
-                    Expanded(child: _InventoryCard(state: this)),
                   ],
                 ),
               ),
@@ -533,8 +437,7 @@ class _CloseShiftScreenState extends ConsumerState<CloseShiftScreen> {
 class _CardTitle extends StatelessWidget {
   final IconData icon;
   final String title;
-  final Widget? trailing;
-  const _CardTitle({required this.icon, required this.title, this.trailing});
+  const _CardTitle({required this.icon, required this.title});
 
   @override
   Widget build(BuildContext context) {
@@ -550,11 +453,8 @@ class _CardTitle extends StatelessWidget {
         child: Icon(icon, color: t.navy, size: 18),
       ),
       const SizedBox(width: AppSpace.md),
-      Expanded(
-        child: Text(title,
-            style: ui(size: 14, weight: FontWeight.w600, color: t.textPrimary)),
-      ),
-      if (trailing != null) trailing!,
+      Text(title,
+          style: ui(size: 14, weight: FontWeight.w600, color: t.textPrimary)),
     ]);
   }
 }
@@ -688,111 +588,6 @@ class _CashCard extends ConsumerWidget {
               prefixIcon: Icon(Icons.notes_rounded, size: 16, color: t.textMuted),
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _InventoryCard extends ConsumerWidget {
-  final _CloseShiftScreenState state;
-  const _InventoryCard({required this.state});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final t = context.tokens;
-    final s = l10n(context);
-    final inventory = ref.watch(shiftProvider.select((st) => st.inventory));
-    final loadingInv =
-        ref.watch(_closeShiftProvider.select((st) => st.loadingInv));
-    final zeroWarn =
-        ref.watch(_closeShiftProvider.select((st) => st.zeroWarn));
-
-    return SurfaceCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _CardTitle(
-            icon: Icons.inventory_2_outlined,
-            title: s.shiftInventoryCount,
-            trailing: inventory.isEmpty
-                ? null
-                : StatusChip(
-                    label: s.shiftUseSystemCounts,
-                    tone: ChipTone.accent,
-                    icon: Icons.restore_rounded,
-                    onTap: state._useSystemCounts,
-                  ),
-          ),
-          const SizedBox(height: AppSpace.lg),
-          if (loadingInv)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.all(AppSpace.lg),
-                child: CircularProgressIndicator(),
-              ),
-            )
-          else if (inventory.isEmpty)
-            Text(s.shiftNoInventory,
-                style: ui(size: 13, color: t.textMuted))
-          else
-            ...inventory.map((item) {
-              final warn = zeroWarn[item.id] ?? false;
-              return Padding(
-                padding: const EdgeInsets.only(bottom: AppSpace.md + 2),
-                child: Row(children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(item.name,
-                            style: ui(
-                                size: 14,
-                                weight: FontWeight.w600,
-                                color: t.textPrimary)),
-                        const SizedBox(height: 2),
-                        Text(
-                            s.shiftSystemStock(
-                                '${item.currentStock}', item.unit),
-                            style: ui(size: 12, color: t.textSecondary)),
-                        if (warn)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 3),
-                            child: Text(s.shiftZeroConfirmHint,
-                                style: ui(size: 11, color: t.warning)),
-                          ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: AppSpace.md),
-                  SizedBox(
-                    width: 130,
-                    child: TextField(
-                      controller: state._invCtrs[item.id],
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
-                      textAlign: TextAlign.center,
-                      style: ui(
-                          size: 14,
-                          weight: FontWeight.w600,
-                          color: warn ? t.warning : t.textPrimary),
-                      decoration: InputDecoration(
-                        suffixText: item.unit,
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 12),
-                        enabledBorder: warn
-                            ? OutlineInputBorder(
-                                borderRadius:
-                                    BorderRadius.circular(AppRadius.sm),
-                                borderSide: BorderSide(color: t.warning),
-                              )
-                            : null,
-                      ),
-                    ),
-                  ),
-                ]),
-              );
-            }),
         ],
       ),
     );

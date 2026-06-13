@@ -11,8 +11,6 @@ abstract class _$OrgPaymentMethodCWProxy {
 
   OrgPaymentMethod createdAt(DateTime createdAt);
 
-  OrgPaymentMethod displayOrder(int displayOrder);
-
   OrgPaymentMethod icon(String icon);
 
   OrgPaymentMethod id(String id);
@@ -38,7 +36,6 @@ abstract class _$OrgPaymentMethodCWProxy {
   OrgPaymentMethod call({
     String color,
     DateTime createdAt,
-    int displayOrder,
     String icon,
     String id,
     bool isActive,
@@ -61,10 +58,6 @@ class _$OrgPaymentMethodCWProxyImpl implements _$OrgPaymentMethodCWProxy {
 
   @override
   OrgPaymentMethod createdAt(DateTime createdAt) => this(createdAt: createdAt);
-
-  @override
-  OrgPaymentMethod displayOrder(int displayOrder) =>
-      this(displayOrder: displayOrder);
 
   @override
   OrgPaymentMethod icon(String icon) => this(icon: icon);
@@ -101,7 +94,6 @@ class _$OrgPaymentMethodCWProxyImpl implements _$OrgPaymentMethodCWProxy {
   OrgPaymentMethod call({
     Object? color = const $CopyWithPlaceholder(),
     Object? createdAt = const $CopyWithPlaceholder(),
-    Object? displayOrder = const $CopyWithPlaceholder(),
     Object? icon = const $CopyWithPlaceholder(),
     Object? id = const $CopyWithPlaceholder(),
     Object? isActive = const $CopyWithPlaceholder(),
@@ -120,10 +112,6 @@ class _$OrgPaymentMethodCWProxyImpl implements _$OrgPaymentMethodCWProxy {
           ? _value.createdAt
           // ignore: cast_nullable_to_non_nullable
           : createdAt as DateTime,
-      displayOrder: displayOrder == const $CopyWithPlaceholder()
-          ? _value.displayOrder
-          // ignore: cast_nullable_to_non_nullable
-          : displayOrder as int,
       icon: icon == const $CopyWithPlaceholder()
           ? _value.icon
           // ignore: cast_nullable_to_non_nullable
@@ -180,7 +168,6 @@ OrgPaymentMethod _$OrgPaymentMethodFromJson(Map<String, dynamic> json) =>
           requiredKeys: const [
             'color',
             'created_at',
-            'display_order',
             'icon',
             'id',
             'is_active',
@@ -196,10 +183,6 @@ OrgPaymentMethod _$OrgPaymentMethodFromJson(Map<String, dynamic> json) =>
           createdAt: $checkedConvert(
             'created_at',
             (v) => DateTime.parse(v as String),
-          ),
-          displayOrder: $checkedConvert(
-            'display_order',
-            (v) => (v as num).toInt(),
           ),
           icon: $checkedConvert('icon', (v) => v as String),
           id: $checkedConvert('id', (v) => v as String),
@@ -217,7 +200,6 @@ OrgPaymentMethod _$OrgPaymentMethodFromJson(Map<String, dynamic> json) =>
       },
       fieldKeyMap: const {
         'createdAt': 'created_at',
-        'displayOrder': 'display_order',
         'isActive': 'is_active',
         'isCash': 'is_cash',
         'labelTranslations': 'label_translations',
@@ -230,7 +212,6 @@ Map<String, dynamic> _$OrgPaymentMethodToJson(OrgPaymentMethod instance) =>
     <String, dynamic>{
       'color': instance.color,
       'created_at': instance.createdAt.toIso8601String(),
-      'display_order': instance.displayOrder,
       'icon': instance.icon,
       'id': instance.id,
       'is_active': instance.isActive,

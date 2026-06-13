@@ -17,6 +17,7 @@ void main() {
       // TODO
     });
 
+    // Piastres per unit; `null` ⟺ cost never entered.
     // double costPerUnit
     test('to test the property `costPerUnit`', () async {
       // TODO

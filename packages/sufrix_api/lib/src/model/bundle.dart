@@ -37,8 +37,6 @@ class Bundle {
 
     required  this.descriptionTranslations,
 
-    required  this.displayOrder,
-
     required  this.id,
 
      this.imageUrl,
@@ -154,18 +152,6 @@ class Bundle {
 
   @JsonKey(
     
-    name: r'display_order',
-    required: true,
-    includeIfNull: false,
-  )
-
-
-  final int displayOrder;
-
-
-
-  @JsonKey(
-    
     name: r'id',
     required: true,
     includeIfNull: false,
@@ -273,7 +259,6 @@ class Bundle {
       other.createdBy == createdBy &&
       other.description == description &&
       other.descriptionTranslations == descriptionTranslations &&
-      other.displayOrder == displayOrder &&
       other.id == id &&
       other.imageUrl == imageUrl &&
       other.name == name &&
@@ -293,7 +278,6 @@ class Bundle {
         (createdBy == null ? 0 : createdBy.hashCode) +
         (description == null ? 0 : description.hashCode) +
         (descriptionTranslations == null ? 0 : descriptionTranslations.hashCode) +
-        displayOrder.hashCode +
         id.hashCode +
         (imageUrl == null ? 0 : imageUrl.hashCode) +
         name.hashCode +

@@ -65,6 +65,8 @@ class OrderFull {
 
     required  this.totalAmount,
 
+     this.voidNote,
+
      this.voidReason,
 
      this.voidedAt,
@@ -72,6 +74,8 @@ class OrderFull {
      this.voidedBy,
 
     required  this.items,
+
+     this.warnings,
   });
 
   @JsonKey(
@@ -340,6 +344,18 @@ class OrderFull {
 
   @JsonKey(
     
+    name: r'void_note',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final String? voidNote;
+
+
+
+  @JsonKey(
+    
     name: r'void_reason',
     required: false,
     includeIfNull: false,
@@ -386,6 +402,19 @@ class OrderFull {
 
 
 
+      /// Non-fatal warnings raised while placing the order — currently used to flag ingredients that were oversold (stock driven below zero). Empty for reads/refunds.
+  @JsonKey(
+    
+    name: r'warnings',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final List<String>? warnings;
+
+
+
 
 
     @override
@@ -412,10 +441,12 @@ class OrderFull {
       other.tipAmount == tipAmount &&
       other.tipPaymentMethod == tipPaymentMethod &&
       other.totalAmount == totalAmount &&
+      other.voidNote == voidNote &&
       other.voidReason == voidReason &&
       other.voidedAt == voidedAt &&
       other.voidedBy == voidedBy &&
-      other.items == items;
+      other.items == items &&
+      other.warnings == warnings;
 
     @override
     int get hashCode =>
@@ -441,10 +472,12 @@ class OrderFull {
         tipAmount.hashCode +
         tipPaymentMethod.hashCode +
         totalAmount.hashCode +
+        voidNote.hashCode +
         voidReason.hashCode +
         voidedAt.hashCode +
         voidedBy.hashCode +
-        items.hashCode;
+        items.hashCode +
+        warnings.hashCode;
 
   factory OrderFull.fromJson(Map<String, dynamic> json) => _$OrderFullFromJson(json);
 

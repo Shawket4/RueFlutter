@@ -24,13 +24,13 @@ class MenuEngineeringRow {
 
      this.categoryName,
 
-     this.class_,
+    required  this.class_,
 
     required  this.costMissingLines,
 
     required  this.itemName,
 
-     this.itemProfit,
+    required  this.itemProfit,
 
     required  this.menuItemId,
 
@@ -38,7 +38,7 @@ class MenuEngineeringRow {
 
     required  this.popularityPct,
 
-     this.profitCategory,
+    required  this.profitCategory,
 
     required  this.quantitySold,
 
@@ -46,9 +46,9 @@ class MenuEngineeringRow {
 
     required  this.sizeLabel,
 
-     this.totalCost,
+    required  this.totalCost,
 
-     this.totalProfit,
+    required  this.totalProfit,
   });
 
   @JsonKey(
@@ -75,20 +75,20 @@ class MenuEngineeringRow {
 
 
 
-      /// star | workhorse | challenge | dog (Foodics names) — only for cost-tracked rows; `null` when cost is unknown.
+      /// star | workhorse | challenge | dog (Foodics names).
   @JsonKey(
     
     name: r'class',
-    required: false,
+    required: true,
     includeIfNull: false,
   )
 
 
-  final String? class_;
+  final String class_;
 
 
 
-      /// Lines in the window whose cost could not be resolved.
+      /// Lines in the window whose sale-time cost could not be resolved. Always reports snapshot data quality, regardless of `cost_basis` — under `current`, an included row can still carry snapshot gaps.
   @JsonKey(
     
     name: r'cost_missing_lines',
@@ -117,12 +117,12 @@ class MenuEngineeringRow {
   @JsonKey(
     
     name: r'item_profit',
-    required: false,
+    required: true,
     includeIfNull: false,
   )
 
 
-  final int? itemProfit;
+  final int itemProfit;
 
 
 
@@ -151,7 +151,7 @@ class MenuEngineeringRow {
 
 
 
-      /// Share of units among rows in this report.
+      /// Share of units among the rows in this report (cost-tracked only).
   @JsonKey(
     
     name: r'popularity_pct',
@@ -164,16 +164,16 @@ class MenuEngineeringRow {
 
 
 
-      /// \"high\" | \"low\" — vs weighted-average per-unit profit (cost-tracked rows only).
+      /// \"high\" | \"low\" — vs weighted-average per-unit profit.
   @JsonKey(
     
     name: r'profit_category',
-    required: false,
+    required: true,
     includeIfNull: false,
   )
 
 
-  final String? profitCategory;
+  final String profitCategory;
 
 
 
@@ -216,16 +216,16 @@ class MenuEngineeringRow {
 
 
 
-      /// COGS from sale-time snapshots, piastres. `null` ⟺ at least one line in the window had unresolved cost.
+      /// Recipe-scope COGS in piastres (additive addons excluded — they have their own revenue and their own report). Snapshot basis: `SUM(unit_cost × quantity)`; current basis: today's recipe rollup × quantity. Rows where this is unresolvable are excluded from the report, so it is always present.
   @JsonKey(
     
     name: r'total_cost',
-    required: false,
+    required: true,
     includeIfNull: false,
   )
 
 
-  final int? totalCost;
+  final int totalCost;
 
 
 
@@ -233,12 +233,12 @@ class MenuEngineeringRow {
   @JsonKey(
     
     name: r'total_profit',
-    required: false,
+    required: true,
     includeIfNull: false,
   )
 
 
-  final int? totalProfit;
+  final int totalProfit;
 
 
 
@@ -266,19 +266,19 @@ class MenuEngineeringRow {
     int get hashCode =>
         (categoryId == null ? 0 : categoryId.hashCode) +
         (categoryName == null ? 0 : categoryName.hashCode) +
-        (class_ == null ? 0 : class_.hashCode) +
+        class_.hashCode +
         costMissingLines.hashCode +
         itemName.hashCode +
-        (itemProfit == null ? 0 : itemProfit.hashCode) +
+        itemProfit.hashCode +
         menuItemId.hashCode +
         popularityCategory.hashCode +
         popularityPct.hashCode +
-        (profitCategory == null ? 0 : profitCategory.hashCode) +
+        profitCategory.hashCode +
         quantitySold.hashCode +
         sales.hashCode +
         sizeLabel.hashCode +
-        (totalCost == null ? 0 : totalCost.hashCode) +
-        (totalProfit == null ? 0 : totalProfit.hashCode);
+        totalCost.hashCode +
+        totalProfit.hashCode;
 
   factory MenuEngineeringRow.fromJson(Map<String, dynamic> json) => _$MenuEngineeringRowFromJson(json);
 

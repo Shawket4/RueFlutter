@@ -1117,5 +1117,12 @@
   "settingsReconfigureShiftOpen": "Close the current shift before reconfiguring the device.",
   "settingsReconfigureTitle": "Reconfigure Device?",
   "settingsReconfigureBody": "This will sign you out and require a manager login to reconnect.",
-  "settingsReconfigureConfirm": "Reconfigure"
+  "settingsReconfigureConfirm": "Reconfigure",
+  "receiptOrderLabel": "Order #",
+  "receiptDate": "Date",
+  "receiptItems": "ITEMS",
+  "receiptNoItems": "No items in cart",
+  "receiptVoidedStamp": "*** VOIDED ***",
+  "receiptThankYou": "Thank you for visiting!",
+  "receiptDraft": "DRAFT"
 }

@@ -23,7 +23,6 @@ PaymentMethod _findMethod(List<PaymentMethod> methods, String m) {
       color: '#7C3AED',
       icon: 'credit_card',
       isCash: false,
-      displayOrder: 99,
     );
   }
 
@@ -35,7 +34,6 @@ PaymentMethod _findMethod(List<PaymentMethod> methods, String m) {
       color: '#22C55E', // AppColors.success roughly
       icon: 'money',
       isCash: true,
-      displayOrder: 1,
     );
   }
 

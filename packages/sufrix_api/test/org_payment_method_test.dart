@@ -17,11 +17,6 @@ void main() {
       // TODO
     });
 
-    // int displayOrder
-    test('to test the property `displayOrder`', () async {
-      // TODO
-    });
-
     // String icon
     test('to test the property `icon`', () async {
       // TODO

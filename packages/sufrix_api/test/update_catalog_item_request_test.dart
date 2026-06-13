@@ -32,6 +32,12 @@ void main() {
       // TODO
     });
 
+    // Set/replace the default supplier. (Omitted = unchanged; clearing to none is not supported via this field.)
+    // String supplierId
+    test('to test the property `supplierId`', () async {
+      // TODO
+    });
+
     // String unit
     test('to test the property `unit`', () async {
       // TODO

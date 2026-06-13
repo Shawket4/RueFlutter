@@ -240,23 +240,10 @@ class _DeviceSetupScreenState extends ConsumerState<DeviceSetupScreen> {
           duration: const Duration(milliseconds: 150),
           child: setup.error == null
               ? const SizedBox.shrink()
-              : Padding(
-                  padding: const EdgeInsets.only(top: AppSpace.md),
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsetsDirectional.symmetric(
-                        horizontal: 14, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: t.dangerBg,
-                      borderRadius: BorderRadius.circular(AppRadius.xs),
-                      border: Border.all(color: t.danger.withOpacity(0.3)),
-                    ),
-                    child: Text(setup.error!,
-                        style: ui(
-                            size: 13,
-                            weight: FontWeight.w600,
-                            color: t.danger)),
-                  ),
+              : _SetupErrorBanner(
+                  message: setup.error!,
+                  isConnection: _isConnectionError(setup.error!),
+                  margin: const EdgeInsets.only(top: AppSpace.md),
                 ),
         ),
         const SizedBox(height: AppSpace.xl),
@@ -268,6 +255,10 @@ class _DeviceSetupScreenState extends ConsumerState<DeviceSetupScreen> {
       ],
     );
   }
+
+  bool _isConnectionError(String msg) =>
+      msg == 'No internet connection' ||
+      msg == 'Request timed out — check your connection';
 
   Widget _buildBranchStep(_SetupState setup) {
     final t = context.tokens;
@@ -340,6 +331,50 @@ class _DeviceSetupScreenState extends ConsumerState<DeviceSetupScreen> {
                 ),
               )),
       ],
+    );
+  }
+}
+
+class _SetupErrorBanner extends StatelessWidget {
+  final String message;
+  final bool isConnection;
+  final EdgeInsetsGeometry margin;
+
+  const _SetupErrorBanner({
+    required this.message,
+    required this.isConnection,
+    this.margin = EdgeInsets.zero,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    final fg = isConnection ? t.warning : t.danger;
+    final bg = isConnection ? t.warningBg : t.dangerBg;
+    final icon = isConnection
+        ? Icons.wifi_off_rounded
+        : Icons.error_outline_rounded;
+
+    return Container(
+      width: double.infinity,
+      margin: margin,
+      padding:
+          const EdgeInsetsDirectional.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(color: fg.withOpacity(0.25)),
+      ),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Icon(icon, size: 16, color: fg),
+        const SizedBox(width: AppSpace.sm + 2),
+        Expanded(
+          child: Text(
+            message,
+            style: ui(size: 13, weight: FontWeight.w500, color: fg, height: 1.4),
+          ),
+        ),
+      ]),
     );
   }
 }

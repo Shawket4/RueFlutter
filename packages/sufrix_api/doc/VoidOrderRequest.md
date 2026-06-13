@@ -8,6 +8,7 @@ import 'package:sufrix_api/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
+**note** | **String** | Free-text explanation. Required when `reason` is \"other\". | [optional] 
 **reason** | **String** |  | 
 **restoreInventory** | **bool** |  | [optional] 
 **voidedAt** | [**DateTime**](DateTime.md) |  | [optional] 

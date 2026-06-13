@@ -21,8 +21,6 @@ class PublicCategory {
   /// Returns a new [PublicCategory] instance.
   PublicCategory({
 
-    required  this.displayOrder,
-
     required  this.id,
 
      this.imageUrl,
@@ -33,18 +31,6 @@ class PublicCategory {
 
     required  this.nameTranslations,
   });
-
-  @JsonKey(
-    
-    name: r'display_order',
-    required: true,
-    includeIfNull: false,
-  )
-
-
-  final int displayOrder;
-
-
 
   @JsonKey(
     
@@ -110,7 +96,6 @@ class PublicCategory {
 
     @override
     bool operator ==(Object other) => identical(this, other) || other is PublicCategory &&
-      other.displayOrder == displayOrder &&
       other.id == id &&
       other.imageUrl == imageUrl &&
       other.items == items &&
@@ -119,7 +104,6 @@ class PublicCategory {
 
     @override
     int get hashCode =>
-        displayOrder.hashCode +
         id.hashCode +
         (imageUrl == null ? 0 : imageUrl.hashCode) +
         items.hashCode +

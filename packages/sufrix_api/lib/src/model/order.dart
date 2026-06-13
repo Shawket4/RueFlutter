@@ -64,6 +64,8 @@ class Order {
 
     required  this.totalAmount,
 
+     this.voidNote,
+
      this.voidReason,
 
      this.voidedAt,
@@ -337,6 +339,18 @@ class Order {
 
   @JsonKey(
     
+    name: r'void_note',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final String? voidNote;
+
+
+
+  @JsonKey(
+    
     name: r'void_reason',
     required: false,
     includeIfNull: false,
@@ -397,6 +411,7 @@ class Order {
       other.tipAmount == tipAmount &&
       other.tipPaymentMethod == tipPaymentMethod &&
       other.totalAmount == totalAmount &&
+      other.voidNote == voidNote &&
       other.voidReason == voidReason &&
       other.voidedAt == voidedAt &&
       other.voidedBy == voidedBy;
@@ -425,6 +440,7 @@ class Order {
         (tipAmount == null ? 0 : tipAmount.hashCode) +
         (tipPaymentMethod == null ? 0 : tipPaymentMethod.hashCode) +
         totalAmount.hashCode +
+        (voidNote == null ? 0 : voidNote.hashCode) +
         (voidReason == null ? 0 : voidReason.hashCode) +
         (voidedAt == null ? 0 : voidedAt.hashCode) +
         (voidedBy == null ? 0 : voidedBy.hashCode);

@@ -17,6 +17,8 @@ abstract class _$UpdateCatalogItemRequestCWProxy {
 
   UpdateCatalogItemRequest name(String? name);
 
+  UpdateCatalogItemRequest supplierId(String? supplierId);
+
   UpdateCatalogItemRequest unit(String? unit);
 
   /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `UpdateCatalogItemRequest(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
@@ -31,6 +33,7 @@ abstract class _$UpdateCatalogItemRequestCWProxy {
     String? description,
     bool? isActive,
     String? name,
+    String? supplierId,
     String? unit,
   });
 }
@@ -61,6 +64,10 @@ class _$UpdateCatalogItemRequestCWProxyImpl
   UpdateCatalogItemRequest name(String? name) => this(name: name);
 
   @override
+  UpdateCatalogItemRequest supplierId(String? supplierId) =>
+      this(supplierId: supplierId);
+
+  @override
   UpdateCatalogItemRequest unit(String? unit) => this(unit: unit);
 
   @override
@@ -76,6 +83,7 @@ class _$UpdateCatalogItemRequestCWProxyImpl
     Object? description = const $CopyWithPlaceholder(),
     Object? isActive = const $CopyWithPlaceholder(),
     Object? name = const $CopyWithPlaceholder(),
+    Object? supplierId = const $CopyWithPlaceholder(),
     Object? unit = const $CopyWithPlaceholder(),
   }) {
     return UpdateCatalogItemRequest(
@@ -99,6 +107,10 @@ class _$UpdateCatalogItemRequestCWProxyImpl
           ? _value.name
           // ignore: cast_nullable_to_non_nullable
           : name as String?,
+      supplierId: supplierId == const $CopyWithPlaceholder()
+          ? _value.supplierId
+          // ignore: cast_nullable_to_non_nullable
+          : supplierId as String?,
       unit: unit == const $CopyWithPlaceholder()
           ? _value.unit
           // ignore: cast_nullable_to_non_nullable
@@ -133,11 +145,16 @@ UpdateCatalogItemRequest _$UpdateCatalogItemRequestFromJson(
       description: $checkedConvert('description', (v) => v as String?),
       isActive: $checkedConvert('is_active', (v) => v as bool?),
       name: $checkedConvert('name', (v) => v as String?),
+      supplierId: $checkedConvert('supplier_id', (v) => v as String?),
       unit: $checkedConvert('unit', (v) => v as String?),
     );
     return val;
   },
-  fieldKeyMap: const {'costPerUnit': 'cost_per_unit', 'isActive': 'is_active'},
+  fieldKeyMap: const {
+    'costPerUnit': 'cost_per_unit',
+    'isActive': 'is_active',
+    'supplierId': 'supplier_id',
+  },
 );
 
 Map<String, dynamic> _$UpdateCatalogItemRequestToJson(
@@ -148,5 +165,6 @@ Map<String, dynamic> _$UpdateCatalogItemRequestToJson(
   'description': ?instance.description,
   'is_active': ?instance.isActive,
   'name': ?instance.name,
+  'supplier_id': ?instance.supplierId,
   'unit': ?instance.unit,
 };

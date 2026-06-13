@@ -117,6 +117,11 @@ void main() {
       // TODO
     });
 
+    // String voidNote
+    test('to test the property `voidNote`', () async {
+      // TODO
+    });
+
     // String voidReason
     test('to test the property `voidReason`', () async {
       // TODO
@@ -134,6 +139,12 @@ void main() {
 
     // List<OrderItemFull> items
     test('to test the property `items`', () async {
+      // TODO
+    });
+
+    // Non-fatal warnings raised while placing the order — currently used to flag ingredients that were oversold (stock driven below zero). Empty for reads/refunds.
+    // List<String> warnings
+    test('to test the property `warnings`', () async {
       // TODO
     });
 

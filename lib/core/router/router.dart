@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../features/auth/login_screen.dart';
-import '../../features/home/home_screen.dart';
 import '../../features/order/order_history_screen.dart';
 import '../../features/order/order_screen.dart';
 import '../../features/order/pending_orders_screen.dart';
@@ -12,6 +11,8 @@ import '../../features/shift/close_shift_screen.dart';
 import '../../features/shift/open_shift_screen.dart';
 import '../../features/shift/shift_history_screen.dart';
 import '../providers/auth_notifier.dart';
+import '../providers/shift_notifier.dart';
+import '../repositories/shift_repository.dart';
 import '../storage/storage_service.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -39,11 +40,22 @@ final routerProvider = Provider<GoRouter>((ref) {
         return (loc == '/login' || loc == '/device-setup') ? null : '/login';
       }
 
-      // Authed: an existing session keeps working even if this device was
-      // signed in before device-config existed — setup is enforced at the
-      // NEXT sign-in. (Gating authed users here looped: /device-setup⇄/home.)
-      if (loc == '/login') return '/home';
-      if (loc == '/device-setup') return configured ? '/home' : null;
+      // Authed: pick the destination from the locally cached shift. A redirect
+      // runs during router build, so it MUST NOT mutate providers — read the
+      // cache directly instead. The order / open-shift screens seed shift state
+      // themselves via load() once they mount.
+      final branchId = auth.user?.branchId;
+      final local = branchId != null
+          ? ref.read(shiftRepositoryProvider).loadShiftLocal(branchId)
+          : null;
+      final hasShift = local != null
+          ? local.hasOpenShift
+          : ref.read(shiftProvider).hasOpenShift;
+
+      if (loc == '/login' || loc == '/home') {
+        return hasShift ? '/order' : '/open-shift';
+      }
+      if (loc == '/device-setup') return configured ? (hasShift ? '/order' : '/open-shift') : null;
 
       return null;
     },
@@ -52,7 +64,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       // navigation hub; everything else is pushed on top of it.
       GoRoute(path: '/device-setup',   builder: (_, __) => const DeviceSetupScreen()),
       GoRoute(path: '/login',          builder: (_, __) => const LoginScreen()),
-      GoRoute(path: '/home',           builder: (_, __) => const HomeScreen()),
       GoRoute(path: '/open-shift',     builder: (_, __) => const OpenShiftScreen()),
       GoRoute(path: '/close-shift',    builder: (_, __) => const CloseShiftScreen()),
       GoRoute(path: '/order',          builder: (_, __) => const OrderScreen()),

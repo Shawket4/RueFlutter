@@ -659,8 +659,8 @@ class _ItemDetailSheetState extends ConsumerState<ItemDetailSheet> {
         .where((type) => (byType[type] ?? []).any((a) => a.isActive))
         .toList();
 
-    final sortedSlots = widget.item.addonSlots.toList()
-      ..sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
+    // Slots arrive in server order (the API dropped `display_order`).
+    final sortedSlots = widget.item.addonSlots.toList();
 
     List<AddonItem> getItemsWithAdjustedPrice(String type) {
       final list = (byType[type] ?? []).where((a) => a.isActive).toList();

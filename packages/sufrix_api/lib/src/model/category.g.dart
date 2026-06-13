@@ -11,8 +11,6 @@ abstract class _$CategoryCWProxy {
 
   Category deletedAt(DateTime? deletedAt);
 
-  Category displayOrder(int displayOrder);
-
   Category id(String id);
 
   Category imageUrl(String? imageUrl);
@@ -36,7 +34,6 @@ abstract class _$CategoryCWProxy {
   Category call({
     DateTime createdAt,
     DateTime? deletedAt,
-    int displayOrder,
     String id,
     String? imageUrl,
     bool isActive,
@@ -58,9 +55,6 @@ class _$CategoryCWProxyImpl implements _$CategoryCWProxy {
 
   @override
   Category deletedAt(DateTime? deletedAt) => this(deletedAt: deletedAt);
-
-  @override
-  Category displayOrder(int displayOrder) => this(displayOrder: displayOrder);
 
   @override
   Category id(String id) => this(id: id);
@@ -94,7 +88,6 @@ class _$CategoryCWProxyImpl implements _$CategoryCWProxy {
   Category call({
     Object? createdAt = const $CopyWithPlaceholder(),
     Object? deletedAt = const $CopyWithPlaceholder(),
-    Object? displayOrder = const $CopyWithPlaceholder(),
     Object? id = const $CopyWithPlaceholder(),
     Object? imageUrl = const $CopyWithPlaceholder(),
     Object? isActive = const $CopyWithPlaceholder(),
@@ -112,10 +105,6 @@ class _$CategoryCWProxyImpl implements _$CategoryCWProxy {
           ? _value.deletedAt
           // ignore: cast_nullable_to_non_nullable
           : deletedAt as DateTime?,
-      displayOrder: displayOrder == const $CopyWithPlaceholder()
-          ? _value.displayOrder
-          // ignore: cast_nullable_to_non_nullable
-          : displayOrder as int,
       id: id == const $CopyWithPlaceholder()
           ? _value.id
           // ignore: cast_nullable_to_non_nullable
@@ -166,7 +155,6 @@ Category _$CategoryFromJson(Map<String, dynamic> json) => $checkedCreate(
       json,
       requiredKeys: const [
         'created_at',
-        'display_order',
         'id',
         'is_active',
         'name',
@@ -184,7 +172,6 @@ Category _$CategoryFromJson(Map<String, dynamic> json) => $checkedCreate(
         'deleted_at',
         (v) => v == null ? null : DateTime.parse(v as String),
       ),
-      displayOrder: $checkedConvert('display_order', (v) => (v as num).toInt()),
       id: $checkedConvert('id', (v) => v as String),
       imageUrl: $checkedConvert('image_url', (v) => v as String?),
       isActive: $checkedConvert('is_active', (v) => v as bool),
@@ -204,7 +191,6 @@ Category _$CategoryFromJson(Map<String, dynamic> json) => $checkedCreate(
   fieldKeyMap: const {
     'createdAt': 'created_at',
     'deletedAt': 'deleted_at',
-    'displayOrder': 'display_order',
     'imageUrl': 'image_url',
     'isActive': 'is_active',
     'nameTranslations': 'name_translations',
@@ -216,7 +202,6 @@ Category _$CategoryFromJson(Map<String, dynamic> json) => $checkedCreate(
 Map<String, dynamic> _$CategoryToJson(Category instance) => <String, dynamic>{
   'created_at': instance.createdAt.toIso8601String(),
   'deleted_at': ?instance.deletedAt?.toIso8601String(),
-  'display_order': instance.displayOrder,
   'id': instance.id,
   'image_url': ?instance.imageUrl,
   'is_active': instance.isActive,

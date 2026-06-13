@@ -11,13 +11,13 @@ abstract class _$MenuEngineeringRowCWProxy {
 
   MenuEngineeringRow categoryName(String? categoryName);
 
-  MenuEngineeringRow class_(String? class_);
+  MenuEngineeringRow class_(String class_);
 
   MenuEngineeringRow costMissingLines(int costMissingLines);
 
   MenuEngineeringRow itemName(String itemName);
 
-  MenuEngineeringRow itemProfit(int? itemProfit);
+  MenuEngineeringRow itemProfit(int itemProfit);
 
   MenuEngineeringRow menuItemId(String menuItemId);
 
@@ -25,7 +25,7 @@ abstract class _$MenuEngineeringRowCWProxy {
 
   MenuEngineeringRow popularityPct(double popularityPct);
 
-  MenuEngineeringRow profitCategory(String? profitCategory);
+  MenuEngineeringRow profitCategory(String profitCategory);
 
   MenuEngineeringRow quantitySold(int quantitySold);
 
@@ -33,9 +33,9 @@ abstract class _$MenuEngineeringRowCWProxy {
 
   MenuEngineeringRow sizeLabel(String sizeLabel);
 
-  MenuEngineeringRow totalCost(int? totalCost);
+  MenuEngineeringRow totalCost(int totalCost);
 
-  MenuEngineeringRow totalProfit(int? totalProfit);
+  MenuEngineeringRow totalProfit(int totalProfit);
 
   /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `MenuEngineeringRow(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
   ///
@@ -46,19 +46,19 @@ abstract class _$MenuEngineeringRowCWProxy {
   MenuEngineeringRow call({
     String? categoryId,
     String? categoryName,
-    String? class_,
+    String class_,
     int costMissingLines,
     String itemName,
-    int? itemProfit,
+    int itemProfit,
     String menuItemId,
     String popularityCategory,
     double popularityPct,
-    String? profitCategory,
+    String profitCategory,
     int quantitySold,
     int sales,
     String sizeLabel,
-    int? totalCost,
-    int? totalProfit,
+    int totalCost,
+    int totalProfit,
   });
 }
 
@@ -77,7 +77,7 @@ class _$MenuEngineeringRowCWProxyImpl implements _$MenuEngineeringRowCWProxy {
       this(categoryName: categoryName);
 
   @override
-  MenuEngineeringRow class_(String? class_) => this(class_: class_);
+  MenuEngineeringRow class_(String class_) => this(class_: class_);
 
   @override
   MenuEngineeringRow costMissingLines(int costMissingLines) =>
@@ -87,8 +87,7 @@ class _$MenuEngineeringRowCWProxyImpl implements _$MenuEngineeringRowCWProxy {
   MenuEngineeringRow itemName(String itemName) => this(itemName: itemName);
 
   @override
-  MenuEngineeringRow itemProfit(int? itemProfit) =>
-      this(itemProfit: itemProfit);
+  MenuEngineeringRow itemProfit(int itemProfit) => this(itemProfit: itemProfit);
 
   @override
   MenuEngineeringRow menuItemId(String menuItemId) =>
@@ -103,7 +102,7 @@ class _$MenuEngineeringRowCWProxyImpl implements _$MenuEngineeringRowCWProxy {
       this(popularityPct: popularityPct);
 
   @override
-  MenuEngineeringRow profitCategory(String? profitCategory) =>
+  MenuEngineeringRow profitCategory(String profitCategory) =>
       this(profitCategory: profitCategory);
 
   @override
@@ -117,10 +116,10 @@ class _$MenuEngineeringRowCWProxyImpl implements _$MenuEngineeringRowCWProxy {
   MenuEngineeringRow sizeLabel(String sizeLabel) => this(sizeLabel: sizeLabel);
 
   @override
-  MenuEngineeringRow totalCost(int? totalCost) => this(totalCost: totalCost);
+  MenuEngineeringRow totalCost(int totalCost) => this(totalCost: totalCost);
 
   @override
-  MenuEngineeringRow totalProfit(int? totalProfit) =>
+  MenuEngineeringRow totalProfit(int totalProfit) =>
       this(totalProfit: totalProfit);
 
   @override
@@ -159,7 +158,7 @@ class _$MenuEngineeringRowCWProxyImpl implements _$MenuEngineeringRowCWProxy {
       class_: class_ == const $CopyWithPlaceholder()
           ? _value.class_
           // ignore: cast_nullable_to_non_nullable
-          : class_ as String?,
+          : class_ as String,
       costMissingLines: costMissingLines == const $CopyWithPlaceholder()
           ? _value.costMissingLines
           // ignore: cast_nullable_to_non_nullable
@@ -171,7 +170,7 @@ class _$MenuEngineeringRowCWProxyImpl implements _$MenuEngineeringRowCWProxy {
       itemProfit: itemProfit == const $CopyWithPlaceholder()
           ? _value.itemProfit
           // ignore: cast_nullable_to_non_nullable
-          : itemProfit as int?,
+          : itemProfit as int,
       menuItemId: menuItemId == const $CopyWithPlaceholder()
           ? _value.menuItemId
           // ignore: cast_nullable_to_non_nullable
@@ -187,7 +186,7 @@ class _$MenuEngineeringRowCWProxyImpl implements _$MenuEngineeringRowCWProxy {
       profitCategory: profitCategory == const $CopyWithPlaceholder()
           ? _value.profitCategory
           // ignore: cast_nullable_to_non_nullable
-          : profitCategory as String?,
+          : profitCategory as String,
       quantitySold: quantitySold == const $CopyWithPlaceholder()
           ? _value.quantitySold
           // ignore: cast_nullable_to_non_nullable
@@ -203,11 +202,11 @@ class _$MenuEngineeringRowCWProxyImpl implements _$MenuEngineeringRowCWProxy {
       totalCost: totalCost == const $CopyWithPlaceholder()
           ? _value.totalCost
           // ignore: cast_nullable_to_non_nullable
-          : totalCost as int?,
+          : totalCost as int,
       totalProfit: totalProfit == const $CopyWithPlaceholder()
           ? _value.totalProfit
           // ignore: cast_nullable_to_non_nullable
-          : totalProfit as int?,
+          : totalProfit as int,
     );
   }
 }
@@ -232,26 +231,31 @@ MenuEngineeringRow _$MenuEngineeringRowFromJson(
     $checkKeys(
       json,
       requiredKeys: const [
+        'class',
         'cost_missing_lines',
         'item_name',
+        'item_profit',
         'menu_item_id',
         'popularity_category',
         'popularity_pct',
+        'profit_category',
         'quantity_sold',
         'sales',
         'size_label',
+        'total_cost',
+        'total_profit',
       ],
     );
     final val = MenuEngineeringRow(
       categoryId: $checkedConvert('category_id', (v) => v as String?),
       categoryName: $checkedConvert('category_name', (v) => v as String?),
-      class_: $checkedConvert('class', (v) => v as String?),
+      class_: $checkedConvert('class', (v) => v as String),
       costMissingLines: $checkedConvert(
         'cost_missing_lines',
         (v) => (v as num).toInt(),
       ),
       itemName: $checkedConvert('item_name', (v) => v as String),
-      itemProfit: $checkedConvert('item_profit', (v) => (v as num?)?.toInt()),
+      itemProfit: $checkedConvert('item_profit', (v) => (v as num).toInt()),
       menuItemId: $checkedConvert('menu_item_id', (v) => v as String),
       popularityCategory: $checkedConvert(
         'popularity_category',
@@ -261,12 +265,12 @@ MenuEngineeringRow _$MenuEngineeringRowFromJson(
         'popularity_pct',
         (v) => (v is String ? double.parse(v) : (v as num).toDouble()),
       ),
-      profitCategory: $checkedConvert('profit_category', (v) => v as String?),
+      profitCategory: $checkedConvert('profit_category', (v) => v as String),
       quantitySold: $checkedConvert('quantity_sold', (v) => (v as num).toInt()),
       sales: $checkedConvert('sales', (v) => (v as num).toInt()),
       sizeLabel: $checkedConvert('size_label', (v) => v as String),
-      totalCost: $checkedConvert('total_cost', (v) => (v as num?)?.toInt()),
-      totalProfit: $checkedConvert('total_profit', (v) => (v as num?)?.toInt()),
+      totalCost: $checkedConvert('total_cost', (v) => (v as num).toInt()),
+      totalProfit: $checkedConvert('total_profit', (v) => (v as num).toInt()),
     );
     return val;
   },
@@ -292,17 +296,17 @@ Map<String, dynamic> _$MenuEngineeringRowToJson(MenuEngineeringRow instance) =>
     <String, dynamic>{
       'category_id': ?instance.categoryId,
       'category_name': ?instance.categoryName,
-      'class': ?instance.class_,
+      'class': instance.class_,
       'cost_missing_lines': instance.costMissingLines,
       'item_name': instance.itemName,
-      'item_profit': ?instance.itemProfit,
+      'item_profit': instance.itemProfit,
       'menu_item_id': instance.menuItemId,
       'popularity_category': instance.popularityCategory,
       'popularity_pct': instance.popularityPct,
-      'profit_category': ?instance.profitCategory,
+      'profit_category': instance.profitCategory,
       'quantity_sold': instance.quantitySold,
       'sales': instance.sales,
       'size_label': instance.sizeLabel,
-      'total_cost': ?instance.totalCost,
-      'total_profit': ?instance.totalProfit,
+      'total_cost': instance.totalCost,
+      'total_profit': instance.totalProfit,
     };

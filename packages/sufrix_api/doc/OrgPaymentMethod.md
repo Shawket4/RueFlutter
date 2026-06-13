@@ -10,7 +10,6 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **color** | **String** |  | 
 **createdAt** | [**DateTime**](DateTime.md) |  | 
-**displayOrder** | **int** |  | 
 **icon** | **String** |  | 
 **id** | **String** |  | 
 **isActive** | **bool** |  | 

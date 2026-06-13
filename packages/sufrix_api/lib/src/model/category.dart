@@ -24,8 +24,6 @@ class Category {
 
      this.deletedAt,
 
-    required  this.displayOrder,
-
     required  this.id,
 
      this.imageUrl,
@@ -62,18 +60,6 @@ class Category {
 
 
   final DateTime? deletedAt;
-
-
-
-  @JsonKey(
-    
-    name: r'display_order',
-    required: true,
-    includeIfNull: false,
-  )
-
-
-  final int displayOrder;
 
 
 
@@ -167,7 +153,6 @@ class Category {
     bool operator ==(Object other) => identical(this, other) || other is Category &&
       other.createdAt == createdAt &&
       other.deletedAt == deletedAt &&
-      other.displayOrder == displayOrder &&
       other.id == id &&
       other.imageUrl == imageUrl &&
       other.isActive == isActive &&
@@ -180,7 +165,6 @@ class Category {
     int get hashCode =>
         createdAt.hashCode +
         (deletedAt == null ? 0 : deletedAt.hashCode) +
-        displayOrder.hashCode +
         id.hashCode +
         (imageUrl == null ? 0 : imageUrl.hashCode) +
         isActive.hashCode +

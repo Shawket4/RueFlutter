@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:sufrix_pos/core/models/inventory.dart';
 import 'package:sufrix_pos/core/models/shift.dart';
 import 'package:sufrix_pos/core/providers/auth_notifier.dart';
 import 'package:sufrix_pos/core/providers/menu_notifier.dart' show DataFreshness;
@@ -42,7 +41,6 @@ void main() {
     // defaults to true in tests (init() is never called), so the notifier
     // takes the online paths.
     when(() => mockRepo.loadShiftLocal(any())).thenReturn(null);
-    when(() => mockRepo.loadInventoryLocal(any())).thenReturn(null);
 
     container = ProviderContainer(overrides: [
       shiftRepositoryProvider.overrideWithValue(mockRepo),
@@ -179,15 +177,5 @@ void main() {
       expect(container.read(shiftProvider).systemCash, 150);
     });
 
-    test('loadInventory updates state', () async {
-      when(() => mockRepo.fetchInventoryFresh('b1'))
-          .thenAnswer((_) async => <InventoryItem>[]);
-
-      final notifier = container.read(shiftProvider.notifier);
-      await notifier.loadInventory('b1');
-
-      final state = container.read(shiftProvider);
-      expect(state.inventory, isEmpty);
-    });
   });
 }

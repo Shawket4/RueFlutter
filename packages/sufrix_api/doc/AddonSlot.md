@@ -10,7 +10,6 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **addonType** | **String** |  | 
 **createdAt** | [**DateTime**](DateTime.md) |  | 
-**displayOrder** | **int** |  | 
 **id** | **String** |  | 
 **isRequired** | **bool** |  | 
 **label** | **String** |  | [optional] 

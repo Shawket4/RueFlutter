@@ -116,11 +116,13 @@ class OrderApi {
   Future<Order> voidOrder(
     String id, {
     required String reason,
+    String?  note,
     bool     restoreInventory = false,
     DateTime? voidedAt,
   }) async {
     final res = await _c.dio.post('/orders/$id/void', data: {
       'reason':            reason,
+      if (note != null && note.isNotEmpty) 'note': note,
       'restore_inventory': restoreInventory,
       if (voidedAt != null) 'voided_at': voidedAt.toUtc().toIso8601String(),
     });

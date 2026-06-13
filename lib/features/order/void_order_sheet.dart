@@ -115,14 +115,15 @@ class _VoidOrderSheetState extends ConsumerState<VoidOrderSheet> {
       return;
     }
 
-    String finalReason = form.reason!;
-    if (form.reason == 'other') {
+    final reason = form.reason!;
+    String? note;
+    if (reason == 'other') {
       final otherText = _otherCtrl.text.trim();
       if (otherText.isEmpty) {
         _form.setError(s.orderVoidSpecifyReason);
         return;
       }
-      finalReason = 'other: $otherText';
+      note = otherText;
     }
 
     final isOnline = ConnectivityService.instance.isOnline;
@@ -146,7 +147,8 @@ class _VoidOrderSheetState extends ConsumerState<VoidOrderSheet> {
       if (isOnline) {
         final updated = await ref.read(orderApiProvider).voidOrder(
               widget.order.id,
-              reason: finalReason,
+              reason: reason,
+              note: note,
               restoreInventory: form.restore,
               voidedAt: now,
             );
@@ -160,14 +162,15 @@ class _VoidOrderSheetState extends ConsumerState<VoidOrderSheet> {
                 localId: const Uuid().v4(),
                 createdAt: now,
                 orderId: widget.order.id,
-                reason: finalReason,
+                reason: reason,
+                note: note,
                 restoreInventory: form.restore,
                 voidedAt: now,
               ),
             );
         final optimistic = widget.order.copyWith(
           status: 'voided',
-          voidReason: finalReason,
+          voidReason: reason,
         );
         if (mounted) {
           Navigator.pop(context);

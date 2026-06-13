@@ -12,6 +12,7 @@ Name | Type | Description | Notes
 **costPerUnit** | **double** |  | [optional] 
 **description** | **String** |  | [optional] 
 **name** | **String** |  | 
+**supplierId** | **String** | Optional default supplier for reordering. | [optional] 
 **unit** | **String** |  | 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

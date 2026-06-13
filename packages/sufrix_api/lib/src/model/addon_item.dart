@@ -27,8 +27,6 @@ class AddonItem {
 
     required  this.defaultPrice,
 
-    required  this.displayOrder,
-
     required  this.id,
 
      this.ingredients,
@@ -79,18 +77,6 @@ class AddonItem {
 
 
   final int defaultPrice;
-
-
-
-  @JsonKey(
-    
-    name: r'display_order',
-    required: true,
-    includeIfNull: false,
-  )
-
-
-  final int displayOrder;
 
 
 
@@ -197,7 +183,6 @@ class AddonItem {
       other.addonType == addonType &&
       other.createdAt == createdAt &&
       other.defaultPrice == defaultPrice &&
-      other.displayOrder == displayOrder &&
       other.id == id &&
       other.ingredients == ingredients &&
       other.isActive == isActive &&
@@ -212,7 +197,6 @@ class AddonItem {
         addonType.hashCode +
         createdAt.hashCode +
         defaultPrice.hashCode +
-        displayOrder.hashCode +
         id.hashCode +
         ingredients.hashCode +
         isActive.hashCode +

@@ -83,7 +83,6 @@ PaymentMethod paymentMethodMixed() => _syntheticMethod(
       color: '#3B82F6',
       icon: 'pie_chart',
       isCash: false,
-      displayOrder: 999,
     );
 
 /// Builds a client-side stub method (offline fallbacks in payment helpers).
@@ -94,7 +93,6 @@ PaymentMethod paymentMethodStub({
   required String color,
   required String icon,
   required bool isCash,
-  int displayOrder = 99,
 }) =>
     _syntheticMethod(
       id: id,
@@ -103,7 +101,6 @@ PaymentMethod paymentMethodStub({
       color: color,
       icon: icon,
       isCash: isCash,
-      displayOrder: displayOrder,
     );
 
 PaymentMethod _syntheticMethod({
@@ -113,7 +110,6 @@ PaymentMethod _syntheticMethod({
   required String color,
   required String icon,
   required bool isCash,
-  required int displayOrder,
 }) =>
     OrgPaymentMethod(
       id: id,
@@ -124,7 +120,6 @@ PaymentMethod _syntheticMethod({
       icon: icon,
       isCash: isCash,
       isActive: true,
-      displayOrder: displayOrder,
       createdAt: DateTime.fromMillisecondsSinceEpoch(0),
       updatedAt: DateTime.fromMillisecondsSinceEpoch(0),
     );

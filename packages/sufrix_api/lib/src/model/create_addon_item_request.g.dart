@@ -11,8 +11,6 @@ abstract class _$CreateAddonItemRequestCWProxy {
 
   CreateAddonItemRequest defaultPrice(int defaultPrice);
 
-  CreateAddonItemRequest displayOrder(int? displayOrder);
-
   CreateAddonItemRequest name(String name);
 
   CreateAddonItemRequest nameTranslations(Object? nameTranslations);
@@ -28,7 +26,6 @@ abstract class _$CreateAddonItemRequestCWProxy {
   CreateAddonItemRequest call({
     String addonType,
     int defaultPrice,
-    int? displayOrder,
     String name,
     Object? nameTranslations,
     String orgId,
@@ -51,10 +48,6 @@ class _$CreateAddonItemRequestCWProxyImpl
       this(defaultPrice: defaultPrice);
 
   @override
-  CreateAddonItemRequest displayOrder(int? displayOrder) =>
-      this(displayOrder: displayOrder);
-
-  @override
   CreateAddonItemRequest name(String name) => this(name: name);
 
   @override
@@ -74,7 +67,6 @@ class _$CreateAddonItemRequestCWProxyImpl
   CreateAddonItemRequest call({
     Object? addonType = const $CopyWithPlaceholder(),
     Object? defaultPrice = const $CopyWithPlaceholder(),
-    Object? displayOrder = const $CopyWithPlaceholder(),
     Object? name = const $CopyWithPlaceholder(),
     Object? nameTranslations = const $CopyWithPlaceholder(),
     Object? orgId = const $CopyWithPlaceholder(),
@@ -88,10 +80,6 @@ class _$CreateAddonItemRequestCWProxyImpl
           ? _value.defaultPrice
           // ignore: cast_nullable_to_non_nullable
           : defaultPrice as int,
-      displayOrder: displayOrder == const $CopyWithPlaceholder()
-          ? _value.displayOrder
-          // ignore: cast_nullable_to_non_nullable
-          : displayOrder as int?,
       name: name == const $CopyWithPlaceholder()
           ? _value.name
           // ignore: cast_nullable_to_non_nullable
@@ -132,10 +120,6 @@ CreateAddonItemRequest _$CreateAddonItemRequestFromJson(
     final val = CreateAddonItemRequest(
       addonType: $checkedConvert('addon_type', (v) => v as String),
       defaultPrice: $checkedConvert('default_price', (v) => (v as num).toInt()),
-      displayOrder: $checkedConvert(
-        'display_order',
-        (v) => (v as num?)?.toInt(),
-      ),
       name: $checkedConvert('name', (v) => v as String),
       nameTranslations: $checkedConvert('name_translations', (v) => v),
       orgId: $checkedConvert('org_id', (v) => v as String),
@@ -145,7 +129,6 @@ CreateAddonItemRequest _$CreateAddonItemRequestFromJson(
   fieldKeyMap: const {
     'addonType': 'addon_type',
     'defaultPrice': 'default_price',
-    'displayOrder': 'display_order',
     'nameTranslations': 'name_translations',
     'orgId': 'org_id',
   },
@@ -156,7 +139,6 @@ Map<String, dynamic> _$CreateAddonItemRequestToJson(
 ) => <String, dynamic>{
   'addon_type': instance.addonType,
   'default_price': instance.defaultPrice,
-  'display_order': ?instance.displayOrder,
   'name': instance.name,
   'name_translations': ?instance.nameTranslations,
   'org_id': instance.orgId,

@@ -138,29 +138,6 @@ void main() {
       expect(isBundleAvailableNow(unknownStatus, 'br1', nowInTime), false);
     });
 
-    test('bundleOutOfStockReason logic', () {
-      // Recipes reference org_ingredient_id (NOT the inventory row id) —
-      // give the row a different id to prove the lookup keys correctly.
-      final invFull = [
-        makeInventoryItem(
-            id: 'row-9',
-            orgIngredientId: 'inv1',
-            ingredientName: 'Beans',
-            unit: 'g',
-            currentStock: 50.0)
-      ];
-      final invEmpty = [
-        makeInventoryItem(
-            id: 'row-9',
-            orgIngredientId: 'inv1',
-            ingredientName: 'Beans',
-            unit: 'g',
-            currentStock: 5.0)
-      ]; // needs 10
-
-      expect(bundleOutOfStockReason(mockBundle, [mockMenuItem1, mockMenuItem2], invFull), null);
-      expect(bundleOutOfStockReason(mockBundle, [mockMenuItem1, mockMenuItem2], invEmpty), 'Coffee');
-    });
   });
 
   group('MenuGridEntry', () {
@@ -172,11 +149,9 @@ void main() {
       expect(eItem.bundle, null);
 
       final bundle = makeBundle(id: '2', displayOrder: 2);
-      final eBundle = MenuGridEntry.bundle(bundle, enabled: false, disabledReason: 'Out');
+      final eBundle = MenuGridEntry.bundle(bundle);
       expect(eBundle.kind, MenuGridEntryKind.bundle);
       expect(eBundle.bundle, bundle);
-      expect(eBundle.enabled, false);
-      expect(eBundle.disabledReason, 'Out');
     });
   });
 }

@@ -28,8 +28,6 @@ class UpdateMenuItemRequest {
 
      this.descriptionTranslations,
 
-     this.displayOrder,
-
      this.imageUrl,
 
      this.isActive,
@@ -89,18 +87,6 @@ class UpdateMenuItemRequest {
 
   @JsonKey(
     
-    name: r'display_order',
-    required: false,
-    includeIfNull: false,
-  )
-
-
-  final int? displayOrder;
-
-
-
-  @JsonKey(
-    
     name: r'image_url',
     required: false,
     includeIfNull: false,
@@ -155,7 +141,6 @@ class UpdateMenuItemRequest {
       other.categoryId == categoryId &&
       other.description == description &&
       other.descriptionTranslations == descriptionTranslations &&
-      other.displayOrder == displayOrder &&
       other.imageUrl == imageUrl &&
       other.isActive == isActive &&
       other.name == name &&
@@ -167,7 +152,6 @@ class UpdateMenuItemRequest {
         (categoryId == null ? 0 : categoryId.hashCode) +
         (description == null ? 0 : description.hashCode) +
         (descriptionTranslations == null ? 0 : descriptionTranslations.hashCode) +
-        (displayOrder == null ? 0 : displayOrder.hashCode) +
         (imageUrl == null ? 0 : imageUrl.hashCode) +
         (isActive == null ? 0 : isActive.hashCode) +
         (name == null ? 0 : name.hashCode) +

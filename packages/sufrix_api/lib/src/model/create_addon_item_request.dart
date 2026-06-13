@@ -24,8 +24,6 @@ class CreateAddonItemRequest {
 
     required  this.defaultPrice,
 
-     this.displayOrder,
-
     required  this.name,
 
      this.nameTranslations,
@@ -54,18 +52,6 @@ class CreateAddonItemRequest {
 
 
   final int defaultPrice;
-
-
-
-  @JsonKey(
-    
-    name: r'display_order',
-    required: false,
-    includeIfNull: false,
-  )
-
-
-  final int? displayOrder;
 
 
 
@@ -111,7 +97,6 @@ class CreateAddonItemRequest {
     bool operator ==(Object other) => identical(this, other) || other is CreateAddonItemRequest &&
       other.addonType == addonType &&
       other.defaultPrice == defaultPrice &&
-      other.displayOrder == displayOrder &&
       other.name == name &&
       other.nameTranslations == nameTranslations &&
       other.orgId == orgId;
@@ -120,7 +105,6 @@ class CreateAddonItemRequest {
     int get hashCode =>
         addonType.hashCode +
         defaultPrice.hashCode +
-        (displayOrder == null ? 0 : displayOrder.hashCode) +
         name.hashCode +
         (nameTranslations == null ? 0 : nameTranslations.hashCode) +
         orgId.hashCode;

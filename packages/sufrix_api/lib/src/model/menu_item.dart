@@ -34,8 +34,6 @@ class MenuItem {
 
     required  this.descriptionTranslations,
 
-    required  this.displayOrder,
-
     required  this.id,
 
      this.imageUrl,
@@ -137,18 +135,6 @@ class MenuItem {
 
   @JsonKey(
     
-    name: r'display_order',
-    required: true,
-    includeIfNull: false,
-  )
-
-
-  final int displayOrder;
-
-
-
-  @JsonKey(
-    
     name: r'id',
     required: true,
     includeIfNull: false,
@@ -242,7 +228,6 @@ class MenuItem {
       other.deletedAt == deletedAt &&
       other.description == description &&
       other.descriptionTranslations == descriptionTranslations &&
-      other.displayOrder == displayOrder &&
       other.id == id &&
       other.imageUrl == imageUrl &&
       other.isActive == isActive &&
@@ -260,7 +245,6 @@ class MenuItem {
         (deletedAt == null ? 0 : deletedAt.hashCode) +
         (description == null ? 0 : description.hashCode) +
         descriptionTranslations.hashCode +
-        displayOrder.hashCode +
         id.hashCode +
         (imageUrl == null ? 0 : imageUrl.hashCode) +
         isActive.hashCode +

@@ -7,11 +7,6 @@ void main() {
   // TODO add properties to the entity
 
   group(UpdateCategoryRequest, () {
-    // int displayOrder
-    test('to test the property `displayOrder`', () async {
-      // TODO
-    });
-
     // String imageUrl
     test('to test the property `imageUrl`', () async {
       // TODO

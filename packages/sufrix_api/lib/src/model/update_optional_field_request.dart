@@ -20,8 +20,6 @@ class UpdateOptionalFieldRequest {
   /// Returns a new [UpdateOptionalFieldRequest] instance.
   UpdateOptionalFieldRequest({
 
-     this.displayOrder,
-
      this.ingredientName,
 
      this.ingredientUnit,
@@ -40,18 +38,6 @@ class UpdateOptionalFieldRequest {
 
      this.sizeLabel,
   });
-
-  @JsonKey(
-    
-    name: r'display_order',
-    required: false,
-    includeIfNull: false,
-  )
-
-
-  final int? displayOrder;
-
-
 
   @JsonKey(
     
@@ -165,7 +151,6 @@ class UpdateOptionalFieldRequest {
 
     @override
     bool operator ==(Object other) => identical(this, other) || other is UpdateOptionalFieldRequest &&
-      other.displayOrder == displayOrder &&
       other.ingredientName == ingredientName &&
       other.ingredientUnit == ingredientUnit &&
       other.isActive == isActive &&
@@ -178,7 +163,6 @@ class UpdateOptionalFieldRequest {
 
     @override
     int get hashCode =>
-        (displayOrder == null ? 0 : displayOrder.hashCode) +
         (ingredientName == null ? 0 : ingredientName.hashCode) +
         (ingredientUnit == null ? 0 : ingredientUnit.hashCode) +
         (isActive == null ? 0 : isActive.hashCode) +

@@ -16,6 +16,7 @@ class MenuCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = context.tokens;
+    final locale = Localizations.localeOf(context).languageCode;
     final style =
         CatStyle.of(item.name, brightness: Theme.of(context).brightness);
     final hasImage = item.imageUrl != null && item.imageUrl!.isNotEmpty;
@@ -57,7 +58,7 @@ class MenuCard extends StatelessWidget {
                             color: style.accent,
                             borderRadius: BorderRadius.circular(2))),
                     Expanded(
-                        child: Text(normaliseName(item.name),
+                        child: Text(item.localizedName(locale),
                             style: ui(
                                 size: 12,
                                 weight: FontWeight.w600,

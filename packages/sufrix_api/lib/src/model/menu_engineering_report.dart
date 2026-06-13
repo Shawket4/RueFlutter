@@ -23,6 +23,10 @@ class MenuEngineeringReport {
 
     required  this.branchId,
 
+    required  this.costBasis,
+
+    required  this.excludedSales,
+
      this.from,
 
     required  this.rows,
@@ -50,6 +54,32 @@ class MenuEngineeringReport {
 
 
 
+      /// Cost basis the report was computed with: \"snapshot\" | \"current\".
+  @JsonKey(
+    
+    name: r'cost_basis',
+    required: true,
+    includeIfNull: false,
+  )
+
+
+  final String costBasis;
+
+
+
+      /// Realized revenue (piastres) carried by the excluded SKUs — explains why `total_sales` differs between cost bases: each basis excludes a different set of un-costable rows.
+  @JsonKey(
+    
+    name: r'excluded_sales',
+    required: true,
+    includeIfNull: false,
+  )
+
+
+  final int excludedSales;
+
+
+
   @JsonKey(
     
     name: r'from',
@@ -74,7 +104,7 @@ class MenuEngineeringReport {
 
 
 
-      /// Rows excluded from profit math because cost was unresolvable.
+      /// SKUs sold in the window but EXCLUDED from this report because their cost was unresolvable under the chosen basis.
   @JsonKey(
     
     name: r'rows_cost_missing',
@@ -123,7 +153,7 @@ class MenuEngineeringReport {
 
 
 
-      /// Totals over cost-tracked rows.
+      /// Totals over the returned rows.
   @JsonKey(
     
     name: r'total_sales',
@@ -141,6 +171,8 @@ class MenuEngineeringReport {
     @override
     bool operator ==(Object other) => identical(this, other) || other is MenuEngineeringReport &&
       other.branchId == branchId &&
+      other.costBasis == costBasis &&
+      other.excludedSales == excludedSales &&
       other.from == from &&
       other.rows == rows &&
       other.rowsCostMissing == rowsCostMissing &&
@@ -152,6 +184,8 @@ class MenuEngineeringReport {
     @override
     int get hashCode =>
         branchId.hashCode +
+        costBasis.hashCode +
+        excludedSales.hashCode +
         (from == null ? 0 : from.hashCode) +
         rows.hashCode +
         rowsCostMissing.hashCode +

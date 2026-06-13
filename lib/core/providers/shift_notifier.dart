@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../api/client.dart';
-import '../models/inventory.dart';
 import '../models/pending_action.dart';
 import '../models/shift.dart';
 import '../repositories/shift_repository.dart';
@@ -17,7 +16,6 @@ class ShiftState {
   final bool               isLoading;
   final Shift?             shift;
   final int                suggestedOpeningCash;
-  final List<InventoryItem> inventory;
   final int                systemCash;
   final bool               systemCashLoading;
   final String?            error;
@@ -28,7 +26,6 @@ class ShiftState {
     this.isLoading            = false,
     this.shift,
     this.suggestedOpeningCash = 0,
-    this.inventory            = const [],
     this.systemCash           = 0,
     this.systemCashLoading    = false,
     this.error,
@@ -42,23 +39,21 @@ class ShiftState {
   bool get fromCache => freshness != DataFreshness.live;
 
   ShiftState copyWith({
-    bool?                isLoading,
-    Shift?               shift,
-    int?                 suggestedOpeningCash,
-    List<InventoryItem>? inventory,
-    int?                 systemCash,
-    bool?                systemCashLoading,
-    String?              error,
-    DataFreshness?       freshness,
-    bool?                isLocalShift,
-    bool                 clearShift = false,
-    bool                 clearError = false,
+    bool?          isLoading,
+    Shift?         shift,
+    int?           suggestedOpeningCash,
+    int?           systemCash,
+    bool?          systemCashLoading,
+    String?        error,
+    DataFreshness? freshness,
+    bool?          isLocalShift,
+    bool           clearShift = false,
+    bool           clearError = false,
   }) =>
       ShiftState(
         isLoading:            isLoading            ?? this.isLoading,
         shift:                clearShift ? null    : (shift ?? this.shift),
         suggestedOpeningCash: suggestedOpeningCash ?? this.suggestedOpeningCash,
-        inventory:            inventory            ?? this.inventory,
         systemCash:           systemCash           ?? this.systemCash,
         systemCashLoading:    systemCashLoading    ?? this.systemCashLoading,
         error:                clearError ? null    : (error ?? this.error),
@@ -73,6 +68,27 @@ class ShiftNotifier extends Notifier<ShiftState> {
 
   void updateShiftSynced(Shift shift) {
     state = state.copyWith(shift: shift, isLocalShift: false);
+  }
+
+  /// Seeds shift state from data already fetched during auth hydration,
+  /// before isLoading goes false so the router redirect can read it.
+  void seedFromAuth(Shift? shift) {
+    state = shift != null
+        ? state.copyWith(shift: shift, clearError: true)
+        : state.copyWith(clearShift: true, clearError: true);
+  }
+
+  /// Phase-1 only load: reads local storage and updates state instantly.
+  /// Used when auth hydration failed to reach the network.
+  void loadLocal(String branchId) {
+    final local = ref.read(shiftRepositoryProvider).loadShiftLocal(branchId);
+    if (local == null) return;
+    state = state.copyWith(
+      shift: local.openShift,
+      suggestedOpeningCash: local.suggestedOpeningCash,
+      clearShift: local.openShift == null,
+      clearError: true,
+    );
   }
 
   /// Two-phase load:
@@ -193,7 +209,7 @@ class ShiftNotifier extends Notifier<ShiftState> {
     required String branchId,
     required int    closingCash,
     String?         note,
-    required List<Map<String, dynamic>> inventoryCounts,
+    List<Map<String, dynamic>> inventoryCounts = const [],
   }) async {
     if (state.shift == null) return false;
     state = state.copyWith(isLoading: true, clearError: true);
@@ -286,24 +302,6 @@ class ShiftNotifier extends Notifier<ShiftState> {
     return sum;
   }
 
-  Future<void> loadInventory(String branchId) async {
-    final repo     = ref.read(shiftRepositoryProvider);
-    final isOnline = ConnectivityService.instance.isOnline;
-
-    // Phase 1: local
-    final local = repo.loadInventoryLocal(branchId);
-    if (local != null) state = state.copyWith(inventory: local);
-
-    if (!isOnline) return;
-
-    // Phase 2: refresh
-    try {
-      final items = await repo.fetchInventoryFresh(branchId);
-      state = state.copyWith(inventory: items);
-    } catch (_) {
-      // keep local
-    }
-  }
 }
 
 final shiftProvider =

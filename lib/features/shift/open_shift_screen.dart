@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -64,6 +66,7 @@ class OpenShiftScreen extends ConsumerStatefulWidget {
 
 class _OpenShiftScreenState extends ConsumerState<OpenShiftScreen> {
   final _ctrl = TextEditingController();
+  StreamSubscription<bool>? _connectivitySub;
 
   @override
   void initState() {
@@ -72,10 +75,22 @@ class _OpenShiftScreenState extends ConsumerState<OpenShiftScreen> {
       final s = ref.read(shiftProvider).suggestedOpeningCash;
       if (s > 0) _ctrl.text = (s / 100).toStringAsFixed(0);
     });
+    // On reconnect, re-check shift state — another device may have opened one.
+    _connectivitySub = ConnectivityService.instance.stream.listen((online) {
+      if (!online || !mounted) return;
+      final branchId = ref.read(authProvider).user?.branchId;
+      if (branchId == null) return;
+      ref.read(shiftProvider.notifier).load(branchId).then((_) {
+        if (mounted && ref.read(shiftProvider).hasOpenShift) {
+          context.go('/order');
+        }
+      });
+    });
   }
 
   @override
   void dispose() {
+    _connectivitySub?.cancel();
     _ctrl.dispose();
     super.dispose();
   }
@@ -138,7 +153,6 @@ class _OpenShiftScreenState extends ConsumerState<OpenShiftScreen> {
           AppTopBar(
             title: l10n(context).shiftOpen,
             subtitle: l10n(context).shiftOpenSubtitle,
-            onBack: () => context.go('/home'),
           ),
           Expanded(
             child: SingleChildScrollView(

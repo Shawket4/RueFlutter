@@ -7,8 +7,6 @@ part of 'create_optional_field_request.dart';
 // **************************************************************************
 
 abstract class _$CreateOptionalFieldRequestCWProxy {
-  CreateOptionalFieldRequest displayOrder(int? displayOrder);
-
   CreateOptionalFieldRequest ingredientName(String? ingredientName);
 
   CreateOptionalFieldRequest ingredientUnit(String? ingredientUnit);
@@ -32,7 +30,6 @@ abstract class _$CreateOptionalFieldRequestCWProxy {
   /// CreateOptionalFieldRequest(...).copyWith(id: 12, name: "My name")
   /// ````
   CreateOptionalFieldRequest call({
-    int? displayOrder,
     String? ingredientName,
     String? ingredientUnit,
     String name,
@@ -50,10 +47,6 @@ class _$CreateOptionalFieldRequestCWProxyImpl
   const _$CreateOptionalFieldRequestCWProxyImpl(this._value);
 
   final CreateOptionalFieldRequest _value;
-
-  @override
-  CreateOptionalFieldRequest displayOrder(int? displayOrder) =>
-      this(displayOrder: displayOrder);
 
   @override
   CreateOptionalFieldRequest ingredientName(String? ingredientName) =>
@@ -93,7 +86,6 @@ class _$CreateOptionalFieldRequestCWProxyImpl
   /// CreateOptionalFieldRequest(...).copyWith(id: 12, name: "My name")
   /// ````
   CreateOptionalFieldRequest call({
-    Object? displayOrder = const $CopyWithPlaceholder(),
     Object? ingredientName = const $CopyWithPlaceholder(),
     Object? ingredientUnit = const $CopyWithPlaceholder(),
     Object? name = const $CopyWithPlaceholder(),
@@ -104,10 +96,6 @@ class _$CreateOptionalFieldRequestCWProxyImpl
     Object? sizeLabel = const $CopyWithPlaceholder(),
   }) {
     return CreateOptionalFieldRequest(
-      displayOrder: displayOrder == const $CopyWithPlaceholder()
-          ? _value.displayOrder
-          // ignore: cast_nullable_to_non_nullable
-          : displayOrder as int?,
       ingredientName: ingredientName == const $CopyWithPlaceholder()
           ? _value.ingredientName
           // ignore: cast_nullable_to_non_nullable
@@ -163,10 +151,6 @@ CreateOptionalFieldRequest _$CreateOptionalFieldRequestFromJson(
   ($checkedConvert) {
     $checkKeys(json, requiredKeys: const ['name']);
     final val = CreateOptionalFieldRequest(
-      displayOrder: $checkedConvert(
-        'display_order',
-        (v) => (v as num?)?.toInt(),
-      ),
       ingredientName: $checkedConvert('ingredient_name', (v) => v as String?),
       ingredientUnit: $checkedConvert('ingredient_unit', (v) => v as String?),
       name: $checkedConvert('name', (v) => v as String),
@@ -185,7 +169,6 @@ CreateOptionalFieldRequest _$CreateOptionalFieldRequestFromJson(
     return val;
   },
   fieldKeyMap: const {
-    'displayOrder': 'display_order',
     'ingredientName': 'ingredient_name',
     'ingredientUnit': 'ingredient_unit',
     'nameTranslations': 'name_translations',
@@ -198,7 +181,6 @@ CreateOptionalFieldRequest _$CreateOptionalFieldRequestFromJson(
 Map<String, dynamic> _$CreateOptionalFieldRequestToJson(
   CreateOptionalFieldRequest instance,
 ) => <String, dynamic>{
-  'display_order': ?instance.displayOrder,
   'ingredient_name': ?instance.ingredientName,
   'ingredient_unit': ?instance.ingredientUnit,
   'name': instance.name,

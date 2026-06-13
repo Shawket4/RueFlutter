@@ -22,7 +22,7 @@ class OrgIngredient {
 
     required  this.category,
 
-    required  this.costPerUnit,
+     this.costPerUnit,
 
     required  this.createdAt,
 
@@ -35,6 +35,10 @@ class OrgIngredient {
     required  this.name,
 
     required  this.orgId,
+
+     this.supplierId,
+
+     this.supplierName,
 
     required  this.unit,
 
@@ -53,15 +57,16 @@ class OrgIngredient {
 
 
 
+      /// Piastres per unit. `null` ⟺ never entered (unknown, NOT free) — recipes using this ingredient are cost-missing everywhere.
   @JsonKey(
     
     name: r'cost_per_unit',
-    required: true,
+    required: false,
     includeIfNull: false,
   )
 
 
-  final double costPerUnit;
+  final double? costPerUnit;
 
 
 
@@ -137,6 +142,31 @@ class OrgIngredient {
 
 
 
+      /// Default supplier for reordering this ingredient; `null` = none set.
+  @JsonKey(
+    
+    name: r'supplier_id',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final String? supplierId;
+
+
+
+  @JsonKey(
+    
+    name: r'supplier_name',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final String? supplierName;
+
+
+
   @JsonKey(
     
     name: r'unit',
@@ -173,19 +203,23 @@ class OrgIngredient {
       other.isActive == isActive &&
       other.name == name &&
       other.orgId == orgId &&
+      other.supplierId == supplierId &&
+      other.supplierName == supplierName &&
       other.unit == unit &&
       other.updatedAt == updatedAt;
 
     @override
     int get hashCode =>
         category.hashCode +
-        costPerUnit.hashCode +
+        (costPerUnit == null ? 0 : costPerUnit.hashCode) +
         createdAt.hashCode +
         (description == null ? 0 : description.hashCode) +
         id.hashCode +
         isActive.hashCode +
         name.hashCode +
         orgId.hashCode +
+        (supplierId == null ? 0 : supplierId.hashCode) +
+        (supplierName == null ? 0 : supplierName.hashCode) +
         unit.hashCode +
         updatedAt.hashCode;
 

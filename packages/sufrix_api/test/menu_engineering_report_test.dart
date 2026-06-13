@@ -12,6 +12,18 @@ void main() {
       // TODO
     });
 
+    // Cost basis the report was computed with: \"snapshot\" | \"current\".
+    // String costBasis
+    test('to test the property `costBasis`', () async {
+      // TODO
+    });
+
+    // Realized revenue (piastres) carried by the excluded SKUs — explains why `total_sales` differs between cost bases: each basis excludes a different set of un-costable rows.
+    // int excludedSales
+    test('to test the property `excludedSales`', () async {
+      // TODO
+    });
+
     // DateTime from
     test('to test the property `from`', () async {
       // TODO
@@ -22,7 +34,7 @@ void main() {
       // TODO
     });
 
-    // Rows excluded from profit math because cost was unresolvable.
+    // SKUs sold in the window but EXCLUDED from this report because their cost was unresolvable under the chosen basis.
     // int rowsCostMissing
     test('to test the property `rowsCostMissing`', () async {
       // TODO
@@ -43,7 +55,7 @@ void main() {
       // TODO
     });
 
-    // Totals over cost-tracked rows.
+    // Totals over the returned rows.
     // int totalSales
     test('to test the property `totalSales`', () async {
       // TODO

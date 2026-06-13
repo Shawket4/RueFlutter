@@ -2449,6 +2449,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Reconfigure'**
   String get settingsReconfigureConfirm;
+
+  /// No description provided for @receiptOrderLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Order #'**
+  String get receiptOrderLabel;
+
+  /// No description provided for @receiptDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Date'**
+  String get receiptDate;
+
+  /// No description provided for @receiptItems.
+  ///
+  /// In en, this message translates to:
+  /// **'ITEMS'**
+  String get receiptItems;
+
+  /// No description provided for @receiptNoItems.
+  ///
+  /// In en, this message translates to:
+  /// **'No items in cart'**
+  String get receiptNoItems;
+
+  /// No description provided for @receiptVoidedStamp.
+  ///
+  /// In en, this message translates to:
+  /// **'*** VOIDED ***'**
+  String get receiptVoidedStamp;
+
+  /// No description provided for @receiptThankYou.
+  ///
+  /// In en, this message translates to:
+  /// **'Thank you for visiting!'**
+  String get receiptThankYou;
+
+  /// No description provided for @receiptDraft.
+  ///
+  /// In en, this message translates to:
+  /// **'DRAFT'**
+  String get receiptDraft;
 }
 
 class _AppLocalizationsDelegate

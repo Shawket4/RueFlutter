@@ -462,6 +462,7 @@ class OfflineQueueNotifier extends Notifier<OfflineQueueState> {
         final result = await ref.read(orderApiProvider).voidOrder(
               action.orderId,
               reason: action.reason,
+              note: action.note,
               restoreInventory: action.restoreInventory,
             );
         onVoidSynced?.call(result);

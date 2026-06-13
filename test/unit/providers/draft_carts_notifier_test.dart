@@ -36,13 +36,14 @@ class MockCartNotifier extends Notifier<CartState> implements CartNotifier {
 
 class MockShiftNotifier extends Notifier<ShiftState> implements ShiftNotifier {
   @override ShiftState build() => const ShiftState();
-  @override Future<bool> closeShift({required String branchId, required int closingCash, required List<Map<String, dynamic>> inventoryCounts, String? note}) async => true;
+  @override Future<bool> closeShift({required String branchId, required int closingCash, List<Map<String, dynamic>> inventoryCounts = const [], String? note}) async => true;
   @override Future<void> load(String branchId) async {}
-  @override Future<void> loadInventory(String branchId) async {}
   @override Future<void> loadSystemCash() async {}
   @override Future<bool> openShift(String branchId, int openingCash) async => true;
   @override void updateShiftSynced(dynamic shift) {}
   @override void addLocalCash(int amount) {}
+  @override void seedFromAuth(dynamic shift) {}
+  @override void loadLocal(String branchId) {}
 }
 
 void main() {

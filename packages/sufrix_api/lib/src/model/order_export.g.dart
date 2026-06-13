@@ -51,6 +51,8 @@ abstract class _$OrderExportCWProxy {
 
   OrderExport totalAmount(int totalAmount);
 
+  OrderExport voidNote(String? voidNote);
+
   OrderExport voidReason(String? voidReason);
 
   OrderExport voidedAt(DateTime? voidedAt);
@@ -90,6 +92,7 @@ abstract class _$OrderExportCWProxy {
     int? tipAmount,
     String? tipPaymentMethod,
     int totalAmount,
+    String? voidNote,
     String? voidReason,
     DateTime? voidedAt,
     String? voidedBy,
@@ -178,6 +181,9 @@ class _$OrderExportCWProxyImpl implements _$OrderExportCWProxy {
   OrderExport totalAmount(int totalAmount) => this(totalAmount: totalAmount);
 
   @override
+  OrderExport voidNote(String? voidNote) => this(voidNote: voidNote);
+
+  @override
   OrderExport voidReason(String? voidReason) => this(voidReason: voidReason);
 
   @override
@@ -222,6 +228,7 @@ class _$OrderExportCWProxyImpl implements _$OrderExportCWProxy {
     Object? tipAmount = const $CopyWithPlaceholder(),
     Object? tipPaymentMethod = const $CopyWithPlaceholder(),
     Object? totalAmount = const $CopyWithPlaceholder(),
+    Object? voidNote = const $CopyWithPlaceholder(),
     Object? voidReason = const $CopyWithPlaceholder(),
     Object? voidedAt = const $CopyWithPlaceholder(),
     Object? voidedBy = const $CopyWithPlaceholder(),
@@ -317,6 +324,10 @@ class _$OrderExportCWProxyImpl implements _$OrderExportCWProxy {
           ? _value.totalAmount
           // ignore: cast_nullable_to_non_nullable
           : totalAmount as int,
+      voidNote: voidNote == const $CopyWithPlaceholder()
+          ? _value.voidNote
+          // ignore: cast_nullable_to_non_nullable
+          : voidNote as String?,
       voidReason: voidReason == const $CopyWithPlaceholder()
           ? _value.voidReason
           // ignore: cast_nullable_to_non_nullable
@@ -414,6 +425,7 @@ OrderExport _$OrderExportFromJson(Map<String, dynamic> json) => $checkedCreate(
         (v) => v as String?,
       ),
       totalAmount: $checkedConvert('total_amount', (v) => (v as num).toInt()),
+      voidNote: $checkedConvert('void_note', (v) => v as String?),
       voidReason: $checkedConvert('void_reason', (v) => v as String?),
       voidedAt: $checkedConvert(
         'voided_at',
@@ -454,6 +466,7 @@ OrderExport _$OrderExportFromJson(Map<String, dynamic> json) => $checkedCreate(
     'tipAmount': 'tip_amount',
     'tipPaymentMethod': 'tip_payment_method',
     'totalAmount': 'total_amount',
+    'voidNote': 'void_note',
     'voidReason': 'void_reason',
     'voidedAt': 'voided_at',
     'voidedBy': 'voided_by',
@@ -484,6 +497,7 @@ Map<String, dynamic> _$OrderExportToJson(OrderExport instance) =>
       'tip_amount': ?instance.tipAmount,
       'tip_payment_method': ?instance.tipPaymentMethod,
       'total_amount': instance.totalAmount,
+      'void_note': ?instance.voidNote,
       'void_reason': ?instance.voidReason,
       'voided_at': ?instance.voidedAt?.toIso8601String(),
       'voided_by': ?instance.voidedBy,

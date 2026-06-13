@@ -51,6 +51,8 @@ abstract class _$OrderFullCWProxy {
 
   OrderFull totalAmount(int totalAmount);
 
+  OrderFull voidNote(String? voidNote);
+
   OrderFull voidReason(String? voidReason);
 
   OrderFull voidedAt(DateTime? voidedAt);
@@ -58,6 +60,8 @@ abstract class _$OrderFullCWProxy {
   OrderFull voidedBy(String? voidedBy);
 
   OrderFull items(List<OrderItemFull> items);
+
+  OrderFull warnings(List<String>? warnings);
 
   /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `OrderFull(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
   ///
@@ -88,10 +92,12 @@ abstract class _$OrderFullCWProxy {
     int? tipAmount,
     String? tipPaymentMethod,
     int totalAmount,
+    String? voidNote,
     String? voidReason,
     DateTime? voidedAt,
     String? voidedBy,
     List<OrderItemFull> items,
+    List<String>? warnings,
   });
 }
 
@@ -175,6 +181,9 @@ class _$OrderFullCWProxyImpl implements _$OrderFullCWProxy {
   OrderFull totalAmount(int totalAmount) => this(totalAmount: totalAmount);
 
   @override
+  OrderFull voidNote(String? voidNote) => this(voidNote: voidNote);
+
+  @override
   OrderFull voidReason(String? voidReason) => this(voidReason: voidReason);
 
   @override
@@ -185,6 +194,9 @@ class _$OrderFullCWProxyImpl implements _$OrderFullCWProxy {
 
   @override
   OrderFull items(List<OrderItemFull> items) => this(items: items);
+
+  @override
+  OrderFull warnings(List<String>? warnings) => this(warnings: warnings);
 
   @override
   /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `OrderFull(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
@@ -216,10 +228,12 @@ class _$OrderFullCWProxyImpl implements _$OrderFullCWProxy {
     Object? tipAmount = const $CopyWithPlaceholder(),
     Object? tipPaymentMethod = const $CopyWithPlaceholder(),
     Object? totalAmount = const $CopyWithPlaceholder(),
+    Object? voidNote = const $CopyWithPlaceholder(),
     Object? voidReason = const $CopyWithPlaceholder(),
     Object? voidedAt = const $CopyWithPlaceholder(),
     Object? voidedBy = const $CopyWithPlaceholder(),
     Object? items = const $CopyWithPlaceholder(),
+    Object? warnings = const $CopyWithPlaceholder(),
   }) {
     return OrderFull(
       amountTendered: amountTendered == const $CopyWithPlaceholder()
@@ -310,6 +324,10 @@ class _$OrderFullCWProxyImpl implements _$OrderFullCWProxy {
           ? _value.totalAmount
           // ignore: cast_nullable_to_non_nullable
           : totalAmount as int,
+      voidNote: voidNote == const $CopyWithPlaceholder()
+          ? _value.voidNote
+          // ignore: cast_nullable_to_non_nullable
+          : voidNote as String?,
       voidReason: voidReason == const $CopyWithPlaceholder()
           ? _value.voidReason
           // ignore: cast_nullable_to_non_nullable
@@ -326,6 +344,10 @@ class _$OrderFullCWProxyImpl implements _$OrderFullCWProxy {
           ? _value.items
           // ignore: cast_nullable_to_non_nullable
           : items as List<OrderItemFull>,
+      warnings: warnings == const $CopyWithPlaceholder()
+          ? _value.warnings
+          // ignore: cast_nullable_to_non_nullable
+          : warnings as List<String>?,
     );
   }
 }
@@ -402,6 +424,7 @@ OrderFull _$OrderFullFromJson(Map<String, dynamic> json) => $checkedCreate(
         (v) => v as String?,
       ),
       totalAmount: $checkedConvert('total_amount', (v) => (v as num).toInt()),
+      voidNote: $checkedConvert('void_note', (v) => v as String?),
       voidReason: $checkedConvert('void_reason', (v) => v as String?),
       voidedAt: $checkedConvert(
         'voided_at',
@@ -413,6 +436,10 @@ OrderFull _$OrderFullFromJson(Map<String, dynamic> json) => $checkedCreate(
         (v) => (v as List<dynamic>)
             .map((e) => OrderItemFull.fromJson(e as Map<String, dynamic>))
             .toList(),
+      ),
+      warnings: $checkedConvert(
+        'warnings',
+        (v) => (v as List<dynamic>?)?.map((e) => e as String).toList(),
       ),
     );
     return val;
@@ -436,6 +463,7 @@ OrderFull _$OrderFullFromJson(Map<String, dynamic> json) => $checkedCreate(
     'tipAmount': 'tip_amount',
     'tipPaymentMethod': 'tip_payment_method',
     'totalAmount': 'total_amount',
+    'voidNote': 'void_note',
     'voidReason': 'void_reason',
     'voidedAt': 'voided_at',
     'voidedBy': 'voided_by',
@@ -465,8 +493,10 @@ Map<String, dynamic> _$OrderFullToJson(OrderFull instance) => <String, dynamic>{
   'tip_amount': ?instance.tipAmount,
   'tip_payment_method': ?instance.tipPaymentMethod,
   'total_amount': instance.totalAmount,
+  'void_note': ?instance.voidNote,
   'void_reason': ?instance.voidReason,
   'voided_at': ?instance.voidedAt?.toIso8601String(),
   'voided_by': ?instance.voidedBy,
   'items': instance.items.map((e) => e.toJson()).toList(),
+  'warnings': ?instance.warnings,
 };

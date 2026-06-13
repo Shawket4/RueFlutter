@@ -24,7 +24,7 @@ class BranchInventoryItem {
 
     required  this.branchId,
 
-    required  this.costPerUnit,
+     this.costPerUnit,
 
     required  this.createdAt,
 
@@ -35,6 +35,8 @@ class BranchInventoryItem {
     required  this.id,
 
     required  this.ingredientName,
+
+     this.lastCountedAt,
 
     required  this.orgIngredientId,
 
@@ -69,15 +71,16 @@ class BranchInventoryItem {
 
 
 
+      /// Piastres per unit; `null` ⟺ cost never entered.
   @JsonKey(
     
     name: r'cost_per_unit',
-    required: true,
+    required: false,
     includeIfNull: false,
   )
 
 
-  final double costPerUnit;
+  final double? costPerUnit;
 
 
 
@@ -141,6 +144,19 @@ class BranchInventoryItem {
 
 
 
+      /// When this item was last reconciled by a finalized stock count; `null` = never counted. Drives the \"count due\" signal on the inventory home.
+  @JsonKey(
+    
+    name: r'last_counted_at',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final DateTime? lastCountedAt;
+
+
+
   @JsonKey(
     
     name: r'org_ingredient_id',
@@ -201,6 +217,7 @@ class BranchInventoryItem {
       other.description == description &&
       other.id == id &&
       other.ingredientName == ingredientName &&
+      other.lastCountedAt == lastCountedAt &&
       other.orgIngredientId == orgIngredientId &&
       other.reorderThreshold == reorderThreshold &&
       other.unit == unit &&
@@ -210,12 +227,13 @@ class BranchInventoryItem {
     int get hashCode =>
         belowReorder.hashCode +
         branchId.hashCode +
-        costPerUnit.hashCode +
+        (costPerUnit == null ? 0 : costPerUnit.hashCode) +
         createdAt.hashCode +
         currentStock.hashCode +
         (description == null ? 0 : description.hashCode) +
         id.hashCode +
         ingredientName.hashCode +
+        (lastCountedAt == null ? 0 : lastCountedAt.hashCode) +
         orgIngredientId.hashCode +
         reorderThreshold.hashCode +
         unit.hashCode +

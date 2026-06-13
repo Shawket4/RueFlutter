@@ -20,24 +20,10 @@ class UpsertSizeRequest {
   /// Returns a new [UpsertSizeRequest] instance.
   UpsertSizeRequest({
 
-     this.displayOrder,
-
     required  this.label,
 
     required  this.priceOverride,
   });
-
-  @JsonKey(
-    
-    name: r'display_order',
-    required: false,
-    includeIfNull: false,
-  )
-
-
-  final int? displayOrder;
-
-
 
   @JsonKey(
     
@@ -67,13 +53,11 @@ class UpsertSizeRequest {
 
     @override
     bool operator ==(Object other) => identical(this, other) || other is UpsertSizeRequest &&
-      other.displayOrder == displayOrder &&
       other.label == label &&
       other.priceOverride == priceOverride;
 
     @override
     int get hashCode =>
-        (displayOrder == null ? 0 : displayOrder.hashCode) +
         label.hashCode +
         priceOverride.hashCode;
 

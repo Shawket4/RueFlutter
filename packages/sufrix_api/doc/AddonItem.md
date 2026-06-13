@@ -11,7 +11,6 @@ Name | Type | Description | Notes
 **addonType** | **String** |  | 
 **createdAt** | [**DateTime**](DateTime.md) |  | 
 **defaultPrice** | **int** |  | 
-**displayOrder** | **int** |  | 
 **id** | **String** |  | 
 **ingredients** | [**List&lt;AddonItemIngredient&gt;**](AddonItemIngredient.md) |  | [optional] 
 **isActive** | **bool** |  | 

@@ -20,8 +20,6 @@ class UpdateCategoryRequest {
   /// Returns a new [UpdateCategoryRequest] instance.
   UpdateCategoryRequest({
 
-     this.displayOrder,
-
      this.imageUrl,
 
      this.isActive,
@@ -30,18 +28,6 @@ class UpdateCategoryRequest {
 
      this.nameTranslations,
   });
-
-  @JsonKey(
-    
-    name: r'display_order',
-    required: false,
-    includeIfNull: false,
-  )
-
-
-  final int? displayOrder;
-
-
 
   @JsonKey(
     
@@ -95,7 +81,6 @@ class UpdateCategoryRequest {
 
     @override
     bool operator ==(Object other) => identical(this, other) || other is UpdateCategoryRequest &&
-      other.displayOrder == displayOrder &&
       other.imageUrl == imageUrl &&
       other.isActive == isActive &&
       other.name == name &&
@@ -103,7 +88,6 @@ class UpdateCategoryRequest {
 
     @override
     int get hashCode =>
-        (displayOrder == null ? 0 : displayOrder.hashCode) +
         (imageUrl == null ? 0 : imageUrl.hashCode) +
         (isActive == null ? 0 : isActive.hashCode) +
         (name == null ? 0 : name.hashCode) +

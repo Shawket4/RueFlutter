@@ -22,8 +22,6 @@ class CreatePaymentMethodRequest {
 
     required  this.color,
 
-     this.displayOrder,
-
     required  this.icon,
 
      this.isActive,
@@ -44,18 +42,6 @@ class CreatePaymentMethodRequest {
 
 
   final String color;
-
-
-
-  @JsonKey(
-    
-    name: r'display_order',
-    required: false,
-    includeIfNull: false,
-  )
-
-
-  final int? displayOrder;
 
 
 
@@ -124,7 +110,6 @@ class CreatePaymentMethodRequest {
     @override
     bool operator ==(Object other) => identical(this, other) || other is CreatePaymentMethodRequest &&
       other.color == color &&
-      other.displayOrder == displayOrder &&
       other.icon == icon &&
       other.isActive == isActive &&
       other.isCash == isCash &&
@@ -134,7 +119,6 @@ class CreatePaymentMethodRequest {
     @override
     int get hashCode =>
         color.hashCode +
-        (displayOrder == null ? 0 : displayOrder.hashCode) +
         icon.hashCode +
         (isActive == null ? 0 : isActive.hashCode) +
         isCash.hashCode +

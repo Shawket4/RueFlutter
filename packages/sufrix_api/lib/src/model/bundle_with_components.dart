@@ -38,8 +38,6 @@ class BundleWithComponents {
 
     required  this.descriptionTranslations,
 
-    required  this.displayOrder,
-
     required  this.id,
 
      this.imageUrl,
@@ -156,18 +154,6 @@ class BundleWithComponents {
 
 
   final Object? descriptionTranslations;
-
-
-
-  @JsonKey(
-    
-    name: r'display_order',
-    required: true,
-    includeIfNull: false,
-  )
-
-
-  final int displayOrder;
 
 
 
@@ -316,7 +302,6 @@ class BundleWithComponents {
       other.createdBy == createdBy &&
       other.description == description &&
       other.descriptionTranslations == descriptionTranslations &&
-      other.displayOrder == displayOrder &&
       other.id == id &&
       other.imageUrl == imageUrl &&
       other.name == name &&
@@ -339,7 +324,6 @@ class BundleWithComponents {
         createdBy.hashCode +
         description.hashCode +
         (descriptionTranslations == null ? 0 : descriptionTranslations.hashCode) +
-        displayOrder.hashCode +
         id.hashCode +
         imageUrl.hashCode +
         name.hashCode +

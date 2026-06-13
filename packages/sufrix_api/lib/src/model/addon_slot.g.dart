@@ -11,8 +11,6 @@ abstract class _$AddonSlotCWProxy {
 
   AddonSlot createdAt(DateTime createdAt);
 
-  AddonSlot displayOrder(int displayOrder);
-
   AddonSlot id(String id);
 
   AddonSlot isRequired(bool isRequired);
@@ -36,7 +34,6 @@ abstract class _$AddonSlotCWProxy {
   AddonSlot call({
     String addonType,
     DateTime createdAt,
-    int displayOrder,
     String id,
     bool isRequired,
     String? label,
@@ -58,9 +55,6 @@ class _$AddonSlotCWProxyImpl implements _$AddonSlotCWProxy {
 
   @override
   AddonSlot createdAt(DateTime createdAt) => this(createdAt: createdAt);
-
-  @override
-  AddonSlot displayOrder(int displayOrder) => this(displayOrder: displayOrder);
 
   @override
   AddonSlot id(String id) => this(id: id);
@@ -96,7 +90,6 @@ class _$AddonSlotCWProxyImpl implements _$AddonSlotCWProxy {
   AddonSlot call({
     Object? addonType = const $CopyWithPlaceholder(),
     Object? createdAt = const $CopyWithPlaceholder(),
-    Object? displayOrder = const $CopyWithPlaceholder(),
     Object? id = const $CopyWithPlaceholder(),
     Object? isRequired = const $CopyWithPlaceholder(),
     Object? label = const $CopyWithPlaceholder(),
@@ -114,10 +107,6 @@ class _$AddonSlotCWProxyImpl implements _$AddonSlotCWProxy {
           ? _value.createdAt
           // ignore: cast_nullable_to_non_nullable
           : createdAt as DateTime,
-      displayOrder: displayOrder == const $CopyWithPlaceholder()
-          ? _value.displayOrder
-          // ignore: cast_nullable_to_non_nullable
-          : displayOrder as int,
       id: id == const $CopyWithPlaceholder()
           ? _value.id
           // ignore: cast_nullable_to_non_nullable
@@ -169,7 +158,6 @@ AddonSlot _$AddonSlotFromJson(Map<String, dynamic> json) => $checkedCreate(
       requiredKeys: const [
         'addon_type',
         'created_at',
-        'display_order',
         'id',
         'is_required',
         'label_translations',
@@ -183,7 +171,6 @@ AddonSlot _$AddonSlotFromJson(Map<String, dynamic> json) => $checkedCreate(
         'created_at',
         (v) => DateTime.parse(v as String),
       ),
-      displayOrder: $checkedConvert('display_order', (v) => (v as num).toInt()),
       id: $checkedConvert('id', (v) => v as String),
       isRequired: $checkedConvert('is_required', (v) => v as bool),
       label: $checkedConvert('label', (v) => v as String?),
@@ -206,7 +193,6 @@ AddonSlot _$AddonSlotFromJson(Map<String, dynamic> json) => $checkedCreate(
   fieldKeyMap: const {
     'addonType': 'addon_type',
     'createdAt': 'created_at',
-    'displayOrder': 'display_order',
     'isRequired': 'is_required',
     'labelTranslations': 'label_translations',
     'maxSelections': 'max_selections',
@@ -218,7 +204,6 @@ AddonSlot _$AddonSlotFromJson(Map<String, dynamic> json) => $checkedCreate(
 Map<String, dynamic> _$AddonSlotToJson(AddonSlot instance) => <String, dynamic>{
   'addon_type': instance.addonType,
   'created_at': instance.createdAt.toIso8601String(),
-  'display_order': instance.displayOrder,
   'id': instance.id,
   'is_required': instance.isRequired,
   'label': ?instance.label,

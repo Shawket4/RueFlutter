@@ -1479,4 +1479,25 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get settingsReconfigureConfirm => 'إعادة الضبط';
+
+  @override
+  String get receiptOrderLabel => 'طلب #';
+
+  @override
+  String get receiptDate => 'التاريخ';
+
+  @override
+  String get receiptItems => 'الأصناف';
+
+  @override
+  String get receiptNoItems => 'لا توجد أصناف في السلة';
+
+  @override
+  String get receiptVoidedStamp => '*** ملغي ***';
+
+  @override
+  String get receiptThankYou => 'شكراً لزيارتكم!';
+
+  @override
+  String get receiptDraft => 'مسودة';
 }

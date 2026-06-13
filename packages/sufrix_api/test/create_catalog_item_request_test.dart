@@ -27,6 +27,12 @@ void main() {
       // TODO
     });
 
+    // Optional default supplier for reordering.
+    // String supplierId
+    test('to test the property `supplierId`', () async {
+      // TODO
+    });
+
     // String unit
     test('to test the property `unit`', () async {
       // TODO

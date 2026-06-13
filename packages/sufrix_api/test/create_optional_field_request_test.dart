@@ -7,11 +7,6 @@ void main() {
   // TODO add properties to the entity
 
   group(CreateOptionalFieldRequest, () {
-    // int displayOrder
-    test('to test the property `displayOrder`', () async {
-      // TODO
-    });
-
     // String ingredientName
     test('to test the property `ingredientName`', () async {
       // TODO

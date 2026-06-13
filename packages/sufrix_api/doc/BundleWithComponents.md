@@ -16,7 +16,6 @@ Name | Type | Description | Notes
 **createdBy** | **String** |  | [optional] 
 **description** | **String** |  | [optional] 
 **descriptionTranslations** | **Object** |  | 
-**displayOrder** | **int** |  | 
 **id** | **String** |  | 
 **imageUrl** | **String** |  | [optional] 
 **name** | **String** |  | 

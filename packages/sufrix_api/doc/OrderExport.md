@@ -30,6 +30,7 @@ Name | Type | Description | Notes
 **tipAmount** | **int** |  | [optional] 
 **tipPaymentMethod** | **String** |  | [optional] 
 **totalAmount** | **int** |  | 
+**voidNote** | **String** |  | [optional] 
 **voidReason** | **String** |  | [optional] 
 **voidedAt** | [**DateTime**](DateTime.md) |  | [optional] 
 **voidedBy** | **String** |  | [optional] 

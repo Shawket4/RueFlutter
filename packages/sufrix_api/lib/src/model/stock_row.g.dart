@@ -11,7 +11,7 @@ abstract class _$StockRowCWProxy {
 
   StockRow branchInventoryId(String branchInventoryId);
 
-  StockRow costPerUnit(double costPerUnit);
+  StockRow costPerUnit(double? costPerUnit);
 
   StockRow currentStock(double currentStock);
 
@@ -30,7 +30,7 @@ abstract class _$StockRowCWProxy {
   StockRow call({
     bool belowReorder,
     String branchInventoryId,
-    double costPerUnit,
+    double? costPerUnit,
     double currentStock,
     String ingredientName,
     double reorderThreshold,
@@ -52,7 +52,7 @@ class _$StockRowCWProxyImpl implements _$StockRowCWProxy {
       this(branchInventoryId: branchInventoryId);
 
   @override
-  StockRow costPerUnit(double costPerUnit) => this(costPerUnit: costPerUnit);
+  StockRow costPerUnit(double? costPerUnit) => this(costPerUnit: costPerUnit);
 
   @override
   StockRow currentStock(double currentStock) =>
@@ -97,7 +97,7 @@ class _$StockRowCWProxyImpl implements _$StockRowCWProxy {
       costPerUnit: costPerUnit == const $CopyWithPlaceholder()
           ? _value.costPerUnit
           // ignore: cast_nullable_to_non_nullable
-          : costPerUnit as double,
+          : costPerUnit as double?,
       currentStock: currentStock == const $CopyWithPlaceholder()
           ? _value.currentStock
           // ignore: cast_nullable_to_non_nullable
@@ -137,7 +137,6 @@ StockRow _$StockRowFromJson(Map<String, dynamic> json) => $checkedCreate(
       requiredKeys: const [
         'below_reorder',
         'branch_inventory_id',
-        'cost_per_unit',
         'current_stock',
         'ingredient_name',
         'reorder_threshold',
@@ -152,7 +151,7 @@ StockRow _$StockRowFromJson(Map<String, dynamic> json) => $checkedCreate(
       ),
       costPerUnit: $checkedConvert(
         'cost_per_unit',
-        (v) => (v is String ? double.parse(v) : (v as num).toDouble()),
+        (v) => (v is String ? double.parse(v) : (v as num?)?.toDouble()),
       ),
       currentStock: $checkedConvert(
         'current_stock',
@@ -180,7 +179,7 @@ StockRow _$StockRowFromJson(Map<String, dynamic> json) => $checkedCreate(
 Map<String, dynamic> _$StockRowToJson(StockRow instance) => <String, dynamic>{
   'below_reorder': instance.belowReorder,
   'branch_inventory_id': instance.branchInventoryId,
-  'cost_per_unit': instance.costPerUnit,
+  'cost_per_unit': ?instance.costPerUnit,
   'current_stock': instance.currentStock,
   'ingredient_name': instance.ingredientName,
   'reorder_threshold': instance.reorderThreshold,

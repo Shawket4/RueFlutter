@@ -17,8 +17,6 @@ abstract class _$CreateMenuItemRequestCWProxy {
     Object? descriptionTranslations,
   );
 
-  CreateMenuItemRequest displayOrder(int? displayOrder);
-
   CreateMenuItemRequest imageUrl(String? imageUrl);
 
   CreateMenuItemRequest name(String name);
@@ -38,7 +36,6 @@ abstract class _$CreateMenuItemRequestCWProxy {
     String categoryId,
     String? description,
     Object? descriptionTranslations,
-    int? displayOrder,
     String? imageUrl,
     String name,
     Object? nameTranslations,
@@ -70,10 +67,6 @@ class _$CreateMenuItemRequestCWProxyImpl
   ) => this(descriptionTranslations: descriptionTranslations);
 
   @override
-  CreateMenuItemRequest displayOrder(int? displayOrder) =>
-      this(displayOrder: displayOrder);
-
-  @override
   CreateMenuItemRequest imageUrl(String? imageUrl) => this(imageUrl: imageUrl);
 
   @override
@@ -98,7 +91,6 @@ class _$CreateMenuItemRequestCWProxyImpl
     Object? categoryId = const $CopyWithPlaceholder(),
     Object? description = const $CopyWithPlaceholder(),
     Object? descriptionTranslations = const $CopyWithPlaceholder(),
-    Object? displayOrder = const $CopyWithPlaceholder(),
     Object? imageUrl = const $CopyWithPlaceholder(),
     Object? name = const $CopyWithPlaceholder(),
     Object? nameTranslations = const $CopyWithPlaceholder(),
@@ -122,10 +114,6 @@ class _$CreateMenuItemRequestCWProxyImpl
           ? _value.descriptionTranslations
           // ignore: cast_nullable_to_non_nullable
           : descriptionTranslations as Object?,
-      displayOrder: displayOrder == const $CopyWithPlaceholder()
-          ? _value.displayOrder
-          // ignore: cast_nullable_to_non_nullable
-          : displayOrder as int?,
       imageUrl: imageUrl == const $CopyWithPlaceholder()
           ? _value.imageUrl
           // ignore: cast_nullable_to_non_nullable
@@ -175,10 +163,6 @@ CreateMenuItemRequest _$CreateMenuItemRequestFromJson(
         'description_translations',
         (v) => v,
       ),
-      displayOrder: $checkedConvert(
-        'display_order',
-        (v) => (v as num?)?.toInt(),
-      ),
       imageUrl: $checkedConvert('image_url', (v) => v as String?),
       name: $checkedConvert('name', (v) => v as String),
       nameTranslations: $checkedConvert('name_translations', (v) => v),
@@ -190,7 +174,6 @@ CreateMenuItemRequest _$CreateMenuItemRequestFromJson(
     'basePrice': 'base_price',
     'categoryId': 'category_id',
     'descriptionTranslations': 'description_translations',
-    'displayOrder': 'display_order',
     'imageUrl': 'image_url',
     'nameTranslations': 'name_translations',
     'orgId': 'org_id',
@@ -204,7 +187,6 @@ Map<String, dynamic> _$CreateMenuItemRequestToJson(
   'category_id': instance.categoryId,
   'description': ?instance.description,
   'description_translations': ?instance.descriptionTranslations,
-  'display_order': ?instance.displayOrder,
   'image_url': ?instance.imageUrl,
   'name': instance.name,
   'name_translations': ?instance.nameTranslations,

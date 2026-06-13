@@ -7,11 +7,6 @@ void main() {
   // TODO add properties to the entity
 
   group(UpsertSizeRequest, () {
-    // int displayOrder
-    test('to test the property `displayOrder`', () async {
-      // TODO
-    });
-
     // String label
     test('to test the property `label`', () async {
       // TODO

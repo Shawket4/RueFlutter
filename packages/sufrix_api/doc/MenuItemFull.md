@@ -15,7 +15,6 @@ Name | Type | Description | Notes
 **deletedAt** | [**DateTime**](DateTime.md) |  | [optional] 
 **description** | **String** |  | [optional] 
 **descriptionTranslations** | **Object** |  | 
-**displayOrder** | **int** |  | 
 **id** | **String** |  | 
 **imageUrl** | **String** |  | [optional] 
 **isActive** | **bool** |  | 

@@ -17,8 +17,6 @@ abstract class _$UpdateMenuItemRequestCWProxy {
     Object? descriptionTranslations,
   );
 
-  UpdateMenuItemRequest displayOrder(int? displayOrder);
-
   UpdateMenuItemRequest imageUrl(String? imageUrl);
 
   UpdateMenuItemRequest isActive(bool? isActive);
@@ -38,7 +36,6 @@ abstract class _$UpdateMenuItemRequestCWProxy {
     String? categoryId,
     String? description,
     Object? descriptionTranslations,
-    int? displayOrder,
     String? imageUrl,
     bool? isActive,
     String? name,
@@ -70,10 +67,6 @@ class _$UpdateMenuItemRequestCWProxyImpl
   ) => this(descriptionTranslations: descriptionTranslations);
 
   @override
-  UpdateMenuItemRequest displayOrder(int? displayOrder) =>
-      this(displayOrder: displayOrder);
-
-  @override
   UpdateMenuItemRequest imageUrl(String? imageUrl) => this(imageUrl: imageUrl);
 
   @override
@@ -98,7 +91,6 @@ class _$UpdateMenuItemRequestCWProxyImpl
     Object? categoryId = const $CopyWithPlaceholder(),
     Object? description = const $CopyWithPlaceholder(),
     Object? descriptionTranslations = const $CopyWithPlaceholder(),
-    Object? displayOrder = const $CopyWithPlaceholder(),
     Object? imageUrl = const $CopyWithPlaceholder(),
     Object? isActive = const $CopyWithPlaceholder(),
     Object? name = const $CopyWithPlaceholder(),
@@ -122,10 +114,6 @@ class _$UpdateMenuItemRequestCWProxyImpl
           ? _value.descriptionTranslations
           // ignore: cast_nullable_to_non_nullable
           : descriptionTranslations as Object?,
-      displayOrder: displayOrder == const $CopyWithPlaceholder()
-          ? _value.displayOrder
-          // ignore: cast_nullable_to_non_nullable
-          : displayOrder as int?,
       imageUrl: imageUrl == const $CopyWithPlaceholder()
           ? _value.imageUrl
           // ignore: cast_nullable_to_non_nullable
@@ -171,10 +159,6 @@ UpdateMenuItemRequest _$UpdateMenuItemRequestFromJson(
         'description_translations',
         (v) => v,
       ),
-      displayOrder: $checkedConvert(
-        'display_order',
-        (v) => (v as num?)?.toInt(),
-      ),
       imageUrl: $checkedConvert('image_url', (v) => v as String?),
       isActive: $checkedConvert('is_active', (v) => v as bool?),
       name: $checkedConvert('name', (v) => v as String?),
@@ -186,7 +170,6 @@ UpdateMenuItemRequest _$UpdateMenuItemRequestFromJson(
     'basePrice': 'base_price',
     'categoryId': 'category_id',
     'descriptionTranslations': 'description_translations',
-    'displayOrder': 'display_order',
     'imageUrl': 'image_url',
     'isActive': 'is_active',
     'nameTranslations': 'name_translations',
@@ -200,7 +183,6 @@ Map<String, dynamic> _$UpdateMenuItemRequestToJson(
   'category_id': ?instance.categoryId,
   'description': ?instance.description,
   'description_translations': ?instance.descriptionTranslations,
-  'display_order': ?instance.displayOrder,
   'image_url': ?instance.imageUrl,
   'is_active': ?instance.isActive,
   'name': ?instance.name,

@@ -117,6 +117,11 @@ void main() {
       // TODO
     });
 
+    // String voidNote
+    test('to test the property `voidNote`', () async {
+      // TODO
+    });
+
     // String voidReason
     test('to test the property `voidReason`', () async {
       // TODO

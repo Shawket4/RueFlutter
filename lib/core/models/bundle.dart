@@ -8,7 +8,6 @@
 import 'package:sufrix_api/sufrix_api.dart'
     show BundleWithComponents, BundleComponentHydrated, BundleStatus;
 
-import 'inventory.dart';
 import 'menu.dart';
 
 export 'package:sufrix_api/sufrix_api.dart'
@@ -20,6 +19,19 @@ typedef BundleComponent = BundleComponentHydrated;
 extension BundleX on BundleWithComponents {
   /// Legacy app-side alias for the wire `branch_ids`.
   List<String> get branchAvailability => branchIds;
+
+  /// Localized display name. Falls back to English, then wire `name`.
+  String localizedName(String locale) {
+    final t = nameTranslations;
+    if (t is Map) {
+      final lang = locale.length >= 2 ? locale.substring(0, 2) : locale;
+      final v = t[lang];
+      if (v is String && v.isNotEmpty) return v;
+      final en = t['en'];
+      if (en is String && en.isNotEmpty) return en;
+    }
+    return name;
+  }
 
   /// `available_from_time` ("HH:MM[:SS]") as minutes since midnight.
   int? get availableFromMinutes => _parseTimeMinutes(availableFromTime);
@@ -77,34 +89,20 @@ class MenuGridEntry {
   final MenuGridEntryKind kind;
   final MenuItem? item;
   final Bundle? bundle;
-  final int displayOrder;
-  final bool enabled;
-  final String? disabledReason;
 
   const MenuGridEntry._({
     required this.kind,
     this.item,
     this.bundle,
-    required this.displayOrder,
-    this.enabled = true,
-    this.disabledReason,
   });
 
-  factory MenuGridEntry.item(MenuItem i) => MenuGridEntry._(
-      kind: MenuGridEntryKind.item, item: i, displayOrder: i.displayOrder);
+  // The API dropped `display_order` (lists arrive pre-sorted server-side), so
+  // entries simply render in the order they're added.
+  factory MenuGridEntry.item(MenuItem i) =>
+      MenuGridEntry._(kind: MenuGridEntryKind.item, item: i);
 
-  factory MenuGridEntry.bundle(
-    Bundle b, {
-    bool enabled = true,
-    String? disabledReason,
-  }) =>
-      MenuGridEntry._(
-        kind: MenuGridEntryKind.bundle,
-        bundle: b,
-        displayOrder: b.displayOrder,
-        enabled: enabled,
-        disabledReason: disabledReason,
-      );
+  factory MenuGridEntry.bundle(Bundle b) =>
+      MenuGridEntry._(kind: MenuGridEntryKind.bundle, bundle: b);
 }
 
 // ── Availability & stock predicates ───────────────────────────────────────────
@@ -161,35 +159,6 @@ bool isBundleAvailableNow(Bundle b, String branchId, DateTime now) {
   }
 
   return true;
-}
-
-/// Returns null if in stock; otherwise the first out-of-stock component name.
-String? bundleOutOfStockReason(
-  Bundle bundle,
-  List<MenuItem> menuItems,
-  List<InventoryItem> inventory,
-) {
-  // Keyed by org ingredient — recipes reference org_ingredient_id, NOT the
-  // branch-inventory row id (keying by row id silently disabled all
-  // out-of-stock detection against live data).
-  final invMap = {
-    for (final i in inventory)
-      if (i.orgIngredientId.isNotEmpty) i.orgIngredientId: i.currentStock,
-  };
-
-  for (final comp in bundle.components) {
-    final item = _menuItemById(menuItems, comp.itemId);
-    if (item == null) continue;
-
-    for (final recipe in item.recipes) {
-      final ingId = recipe.orgIngredientId;
-      if (ingId == null || ingId.isEmpty) continue;
-      final stock = invMap[ingId] ?? double.infinity;
-      final needed = recipe.quantityUsed * comp.quantity;
-      if (stock < needed) return item.name;
-    }
-  }
-  return null;
 }
 
 MenuItem? _menuItemById(List<MenuItem> items, String id) {

@@ -48,11 +48,6 @@ void main() {
       // TODO
     });
 
-    // int displayOrder
-    test('to test the property `displayOrder`', () async {
-      // TODO
-    });
-
     // String imageUrl
     test('to test the property `imageUrl`', () async {
       // TODO

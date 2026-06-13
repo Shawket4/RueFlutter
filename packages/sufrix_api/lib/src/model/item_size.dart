@@ -20,8 +20,6 @@ class ItemSize {
   /// Returns a new [ItemSize] instance.
   ItemSize({
 
-    required  this.displayOrder,
-
     required  this.id,
 
     required  this.isActive,
@@ -32,18 +30,6 @@ class ItemSize {
 
     required  this.priceOverride,
   });
-
-  @JsonKey(
-    
-    name: r'display_order',
-    required: true,
-    includeIfNull: false,
-  )
-
-
-  final int displayOrder;
-
-
 
   @JsonKey(
     
@@ -109,7 +95,6 @@ class ItemSize {
 
     @override
     bool operator ==(Object other) => identical(this, other) || other is ItemSize &&
-      other.displayOrder == displayOrder &&
       other.id == id &&
       other.isActive == isActive &&
       other.label == label &&
@@ -118,7 +103,6 @@ class ItemSize {
 
     @override
     int get hashCode =>
-        displayOrder.hashCode +
         id.hashCode +
         isActive.hashCode +
         label.hashCode +

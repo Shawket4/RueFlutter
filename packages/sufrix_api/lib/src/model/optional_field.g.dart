@@ -9,8 +9,6 @@ part of 'optional_field.dart';
 abstract class _$OptionalFieldCWProxy {
   OptionalField createdAt(DateTime createdAt);
 
-  OptionalField displayOrder(int displayOrder);
-
   OptionalField id(String id);
 
   OptionalField ingredientName(String? ingredientName);
@@ -43,7 +41,6 @@ abstract class _$OptionalFieldCWProxy {
   /// ````
   OptionalField call({
     DateTime createdAt,
-    int displayOrder,
     String id,
     String? ingredientName,
     String? ingredientUnit,
@@ -67,10 +64,6 @@ class _$OptionalFieldCWProxyImpl implements _$OptionalFieldCWProxy {
 
   @override
   OptionalField createdAt(DateTime createdAt) => this(createdAt: createdAt);
-
-  @override
-  OptionalField displayOrder(int displayOrder) =>
-      this(displayOrder: displayOrder);
 
   @override
   OptionalField id(String id) => this(id: id);
@@ -122,7 +115,6 @@ class _$OptionalFieldCWProxyImpl implements _$OptionalFieldCWProxy {
   /// ````
   OptionalField call({
     Object? createdAt = const $CopyWithPlaceholder(),
-    Object? displayOrder = const $CopyWithPlaceholder(),
     Object? id = const $CopyWithPlaceholder(),
     Object? ingredientName = const $CopyWithPlaceholder(),
     Object? ingredientUnit = const $CopyWithPlaceholder(),
@@ -141,10 +133,6 @@ class _$OptionalFieldCWProxyImpl implements _$OptionalFieldCWProxy {
           ? _value.createdAt
           // ignore: cast_nullable_to_non_nullable
           : createdAt as DateTime,
-      displayOrder: displayOrder == const $CopyWithPlaceholder()
-          ? _value.displayOrder
-          // ignore: cast_nullable_to_non_nullable
-          : displayOrder as int,
       id: id == const $CopyWithPlaceholder()
           ? _value.id
           // ignore: cast_nullable_to_non_nullable
@@ -217,7 +205,6 @@ OptionalField _$OptionalFieldFromJson(
       json,
       requiredKeys: const [
         'created_at',
-        'display_order',
         'id',
         'is_active',
         'menu_item_id',
@@ -232,7 +219,6 @@ OptionalField _$OptionalFieldFromJson(
         'created_at',
         (v) => DateTime.parse(v as String),
       ),
-      displayOrder: $checkedConvert('display_order', (v) => (v as num).toInt()),
       id: $checkedConvert('id', (v) => v as String),
       ingredientName: $checkedConvert('ingredient_name', (v) => v as String?),
       ingredientUnit: $checkedConvert('ingredient_unit', (v) => v as String?),
@@ -262,7 +248,6 @@ OptionalField _$OptionalFieldFromJson(
   },
   fieldKeyMap: const {
     'createdAt': 'created_at',
-    'displayOrder': 'display_order',
     'ingredientName': 'ingredient_name',
     'ingredientUnit': 'ingredient_unit',
     'isActive': 'is_active',
@@ -278,7 +263,6 @@ OptionalField _$OptionalFieldFromJson(
 Map<String, dynamic> _$OptionalFieldToJson(OptionalField instance) =>
     <String, dynamic>{
       'created_at': instance.createdAt.toIso8601String(),
-      'display_order': instance.displayOrder,
       'id': instance.id,
       'ingredient_name': ?instance.ingredientName,
       'ingredient_unit': ?instance.ingredientUnit,

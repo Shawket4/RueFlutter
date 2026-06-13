@@ -30,8 +30,6 @@ class PublicMenuItem {
 
     required  this.descriptionTranslations,
 
-    required  this.displayOrder,
-
     required  this.id,
 
      this.imageUrl,
@@ -88,18 +86,6 @@ class PublicMenuItem {
 
 
   final Object descriptionTranslations;
-
-
-
-  @JsonKey(
-    
-    name: r'display_order',
-    required: true,
-    includeIfNull: false,
-  )
-
-
-  final int displayOrder;
 
 
 
@@ -171,7 +157,6 @@ class PublicMenuItem {
       other.basePrice == basePrice &&
       other.description == description &&
       other.descriptionTranslations == descriptionTranslations &&
-      other.displayOrder == displayOrder &&
       other.id == id &&
       other.imageUrl == imageUrl &&
       other.name == name &&
@@ -184,7 +169,6 @@ class PublicMenuItem {
         basePrice.hashCode +
         (description == null ? 0 : description.hashCode) +
         descriptionTranslations.hashCode +
-        displayOrder.hashCode +
         id.hashCode +
         (imageUrl == null ? 0 : imageUrl.hashCode) +
         name.hashCode +

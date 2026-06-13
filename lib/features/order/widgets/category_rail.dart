@@ -4,7 +4,6 @@ import '../../../core/l10n/l10n.dart';
 import '../../../core/models/menu.dart';
 import '../../../core/providers/menu_notifier.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../core/utils/formatting.dart';
 import '../helpers/category_style.dart';
 
 class _CatEntry {
@@ -18,6 +17,7 @@ class _CatEntry {
 /// rail/strip don't rebuild when unrelated menu state (loading, items) moves.
 List<_CatEntry> _entries(BuildContext context, WidgetRef ref,
     Brightness brightness) {
+  final locale = Localizations.localeOf(context).languageCode;
   final categories =
       ref.watch(menuProvider.select((m) => m.categories));
   final hasActiveBundles =
@@ -26,7 +26,7 @@ List<_CatEntry> _entries(BuildContext context, WidgetRef ref,
     for (final Category cat in categories)
       _CatEntry(
         id: cat.id,
-        label: normaliseName(cat.name),
+        label: cat.localizedName(locale),
         icon: CatStyle.of(cat.name, brightness: brightness).icon,
       ),
     if (hasActiveBundles)

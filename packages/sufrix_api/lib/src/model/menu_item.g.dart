@@ -21,8 +21,6 @@ abstract class _$MenuItemCWProxy {
 
   MenuItem descriptionTranslations(Object descriptionTranslations);
 
-  MenuItem displayOrder(int displayOrder);
-
   MenuItem id(String id);
 
   MenuItem imageUrl(String? imageUrl);
@@ -51,7 +49,6 @@ abstract class _$MenuItemCWProxy {
     DateTime? deletedAt,
     String? description,
     Object descriptionTranslations,
-    int displayOrder,
     String id,
     String? imageUrl,
     bool isActive,
@@ -92,9 +89,6 @@ class _$MenuItemCWProxyImpl implements _$MenuItemCWProxy {
       this(descriptionTranslations: descriptionTranslations);
 
   @override
-  MenuItem displayOrder(int displayOrder) => this(displayOrder: displayOrder);
-
-  @override
   MenuItem id(String id) => this(id: id);
 
   @override
@@ -131,7 +125,6 @@ class _$MenuItemCWProxyImpl implements _$MenuItemCWProxy {
     Object? deletedAt = const $CopyWithPlaceholder(),
     Object? description = const $CopyWithPlaceholder(),
     Object? descriptionTranslations = const $CopyWithPlaceholder(),
-    Object? displayOrder = const $CopyWithPlaceholder(),
     Object? id = const $CopyWithPlaceholder(),
     Object? imageUrl = const $CopyWithPlaceholder(),
     Object? isActive = const $CopyWithPlaceholder(),
@@ -170,10 +163,6 @@ class _$MenuItemCWProxyImpl implements _$MenuItemCWProxy {
           ? _value.descriptionTranslations
           // ignore: cast_nullable_to_non_nullable
           : descriptionTranslations as Object,
-      displayOrder: displayOrder == const $CopyWithPlaceholder()
-          ? _value.displayOrder
-          // ignore: cast_nullable_to_non_nullable
-          : displayOrder as int,
       id: id == const $CopyWithPlaceholder()
           ? _value.id
           // ignore: cast_nullable_to_non_nullable
@@ -226,7 +215,6 @@ MenuItem _$MenuItemFromJson(Map<String, dynamic> json) => $checkedCreate(
         'base_price',
         'created_at',
         'description_translations',
-        'display_order',
         'id',
         'is_active',
         'name',
@@ -255,7 +243,6 @@ MenuItem _$MenuItemFromJson(Map<String, dynamic> json) => $checkedCreate(
         'description_translations',
         (v) => v as Object,
       ),
-      displayOrder: $checkedConvert('display_order', (v) => (v as num).toInt()),
       id: $checkedConvert('id', (v) => v as String),
       imageUrl: $checkedConvert('image_url', (v) => v as String?),
       isActive: $checkedConvert('is_active', (v) => v as bool),
@@ -279,7 +266,6 @@ MenuItem _$MenuItemFromJson(Map<String, dynamic> json) => $checkedCreate(
     'defaultMilkAddonId': 'default_milk_addon_id',
     'deletedAt': 'deleted_at',
     'descriptionTranslations': 'description_translations',
-    'displayOrder': 'display_order',
     'imageUrl': 'image_url',
     'isActive': 'is_active',
     'nameTranslations': 'name_translations',
@@ -296,7 +282,6 @@ Map<String, dynamic> _$MenuItemToJson(MenuItem instance) => <String, dynamic>{
   'deleted_at': ?instance.deletedAt?.toIso8601String(),
   'description': ?instance.description,
   'description_translations': instance.descriptionTranslations,
-  'display_order': instance.displayOrder,
   'id': instance.id,
   'image_url': ?instance.imageUrl,
   'is_active': instance.isActive,

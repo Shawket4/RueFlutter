@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:crypto/crypto.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:dio/dio.dart';
 import '../api/auth_api.dart';
 import '../api/branch_api.dart';
 import '../api/client.dart';
@@ -13,6 +14,21 @@ import '../storage/storage_service.dart';
 class DeviceSetupError implements Exception {
   final String message;
   const DeviceSetupError(this.message);
+  @override
+  String toString() => message;
+}
+
+/// Thrown when a teller name/PIN combination is rejected by the server.
+class WrongCredentialsError implements Exception {
+  const WrongCredentialsError();
+}
+
+/// Thrown when login is refused because the user already has an OPEN shift.
+/// The open shift must be closed (on its device, or force-closed by an admin)
+/// before a new session can start anywhere. Carries the server's message.
+class OpenShiftBlockError implements Exception {
+  final String message;
+  const OpenShiftBlockError(this.message);
   @override
   String toString() => message;
 }
@@ -55,8 +71,16 @@ class AuthRepository {
     required String email,
     required String password,
   }) async {
-    final data = await _api.loginWithEmailPassword(
-        email: email, password: password);
+    final Map<String, dynamic> data;
+    try {
+      data = await _api.loginWithEmailPassword(
+          email: email, password: password);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) {
+        throw const DeviceSetupError('Incorrect email or password.');
+      }
+      rethrow;
+    }
     final token = data['token'] as String;
     // GET /branches requires the org as a query parameter — take it from the
     // manager's own user object in the login response.
@@ -94,8 +118,22 @@ class AuthRepository {
       // guard rather than a user-facing path.
       throw StateError('Device not configured — complete setup first');
     }
-    final data =
-        await _api.loginWithPin(name: name, pin: pin, branchId: branchId);
+    final Map<String, dynamic> data;
+    try {
+      data = await _api.loginWithPin(name: name, pin: pin, branchId: branchId);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) throw const WrongCredentialsError();
+      // 409 = the backend refused login because this user already has an open
+      // shift. Surface the server's message so the cashier knows to close it.
+      if (e.response?.statusCode == 409) {
+        final body = e.response?.data;
+        final msg = (body is Map && body['error'] is String)
+            ? body['error'] as String
+            : 'You already have an open shift. It must be closed before signing in again.';
+        throw OpenShiftBlockError(msg);
+      }
+      rethrow;
+    }
     final token = data['token'] as String;
     final user  = User.fromJson(data['user'] as Map<String, dynamic>);
     setAuthToken(token);

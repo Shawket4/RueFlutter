@@ -24,7 +24,7 @@ class StockRow {
 
     required  this.branchInventoryId,
 
-    required  this.costPerUnit,
+     this.costPerUnit,
 
     required  this.currentStock,
 
@@ -59,15 +59,16 @@ class StockRow {
 
 
 
+      /// Piastres per unit; `null` ⟺ cost never entered.
   @JsonKey(
     
     name: r'cost_per_unit',
-    required: true,
+    required: false,
     includeIfNull: false,
   )
 
 
-  final double costPerUnit;
+  final double? costPerUnit;
 
 
 
@@ -135,7 +136,7 @@ class StockRow {
     int get hashCode =>
         belowReorder.hashCode +
         branchInventoryId.hashCode +
-        costPerUnit.hashCode +
+        (costPerUnit == null ? 0 : costPerUnit.hashCode) +
         currentStock.hashCode +
         ingredientName.hashCode +
         reorderThreshold.hashCode +

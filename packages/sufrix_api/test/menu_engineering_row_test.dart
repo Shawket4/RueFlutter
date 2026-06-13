@@ -17,13 +17,13 @@ void main() {
       // TODO
     });
 
-    // star | workhorse | challenge | dog (Foodics names) — only for cost-tracked rows; `null` when cost is unknown.
+    // star | workhorse | challenge | dog (Foodics names).
     // String class_
     test('to test the property `class_`', () async {
       // TODO
     });
 
-    // Lines in the window whose cost could not be resolved.
+    // Lines in the window whose sale-time cost could not be resolved. Always reports snapshot data quality, regardless of `cost_basis` — under `current`, an included row can still carry snapshot gaps.
     // int costMissingLines
     test('to test the property `costMissingLines`', () async {
       // TODO
@@ -51,13 +51,13 @@ void main() {
       // TODO
     });
 
-    // Share of units among rows in this report.
+    // Share of units among the rows in this report (cost-tracked only).
     // double popularityPct
     test('to test the property `popularityPct`', () async {
       // TODO
     });
 
-    // \"high\" | \"low\" — vs weighted-average per-unit profit (cost-tracked rows only).
+    // \"high\" | \"low\" — vs weighted-average per-unit profit.
     // String profitCategory
     test('to test the property `profitCategory`', () async {
       // TODO
@@ -81,7 +81,7 @@ void main() {
       // TODO
     });
 
-    // COGS from sale-time snapshots, piastres. `null` ⟺ at least one line in the window had unresolved cost.
+    // Recipe-scope COGS in piastres (additive addons excluded — they have their own revenue and their own report). Snapshot basis: `SUM(unit_cost × quantity)`; current basis: today's recipe rollup × quantity. Rows where this is unresolvable are excluded from the report, so it is always present.
     // int totalCost
     test('to test the property `totalCost`', () async {
       // TODO

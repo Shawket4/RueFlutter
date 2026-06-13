@@ -15,6 +15,8 @@ abstract class _$CreateCatalogItemRequestCWProxy {
 
   CreateCatalogItemRequest name(String name);
 
+  CreateCatalogItemRequest supplierId(String? supplierId);
+
   CreateCatalogItemRequest unit(String unit);
 
   /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `CreateCatalogItemRequest(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
@@ -28,6 +30,7 @@ abstract class _$CreateCatalogItemRequestCWProxy {
     double? costPerUnit,
     String? description,
     String name,
+    String? supplierId,
     String unit,
   });
 }
@@ -55,6 +58,10 @@ class _$CreateCatalogItemRequestCWProxyImpl
   CreateCatalogItemRequest name(String name) => this(name: name);
 
   @override
+  CreateCatalogItemRequest supplierId(String? supplierId) =>
+      this(supplierId: supplierId);
+
+  @override
   CreateCatalogItemRequest unit(String unit) => this(unit: unit);
 
   @override
@@ -69,6 +76,7 @@ class _$CreateCatalogItemRequestCWProxyImpl
     Object? costPerUnit = const $CopyWithPlaceholder(),
     Object? description = const $CopyWithPlaceholder(),
     Object? name = const $CopyWithPlaceholder(),
+    Object? supplierId = const $CopyWithPlaceholder(),
     Object? unit = const $CopyWithPlaceholder(),
   }) {
     return CreateCatalogItemRequest(
@@ -88,6 +96,10 @@ class _$CreateCatalogItemRequestCWProxyImpl
           ? _value.name
           // ignore: cast_nullable_to_non_nullable
           : name as String,
+      supplierId: supplierId == const $CopyWithPlaceholder()
+          ? _value.supplierId
+          // ignore: cast_nullable_to_non_nullable
+          : supplierId as String?,
       unit: unit == const $CopyWithPlaceholder()
           ? _value.unit
           // ignore: cast_nullable_to_non_nullable
@@ -122,11 +134,15 @@ CreateCatalogItemRequest _$CreateCatalogItemRequestFromJson(
       ),
       description: $checkedConvert('description', (v) => v as String?),
       name: $checkedConvert('name', (v) => v as String),
+      supplierId: $checkedConvert('supplier_id', (v) => v as String?),
       unit: $checkedConvert('unit', (v) => v as String),
     );
     return val;
   },
-  fieldKeyMap: const {'costPerUnit': 'cost_per_unit'},
+  fieldKeyMap: const {
+    'costPerUnit': 'cost_per_unit',
+    'supplierId': 'supplier_id',
+  },
 );
 
 Map<String, dynamic> _$CreateCatalogItemRequestToJson(
@@ -136,5 +152,6 @@ Map<String, dynamic> _$CreateCatalogItemRequestToJson(
   'cost_per_unit': ?instance.costPerUnit,
   'description': ?instance.description,
   'name': instance.name,
+  'supplier_id': ?instance.supplierId,
   'unit': instance.unit,
 };

@@ -24,8 +24,6 @@ class AddonSlot {
 
     required  this.createdAt,
 
-    required  this.displayOrder,
-
     required  this.id,
 
     required  this.isRequired,
@@ -62,18 +60,6 @@ class AddonSlot {
 
 
   final DateTime createdAt;
-
-
-
-  @JsonKey(
-    
-    name: r'display_order',
-    required: true,
-    includeIfNull: false,
-  )
-
-
-  final int displayOrder;
 
 
 
@@ -167,7 +153,6 @@ class AddonSlot {
     bool operator ==(Object other) => identical(this, other) || other is AddonSlot &&
       other.addonType == addonType &&
       other.createdAt == createdAt &&
-      other.displayOrder == displayOrder &&
       other.id == id &&
       other.isRequired == isRequired &&
       other.label == label &&
@@ -180,7 +165,6 @@ class AddonSlot {
     int get hashCode =>
         addonType.hashCode +
         createdAt.hashCode +
-        displayOrder.hashCode +
         id.hashCode +
         isRequired.hashCode +
         (label == null ? 0 : label.hashCode) +

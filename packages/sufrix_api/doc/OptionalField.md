@@ -9,7 +9,6 @@ import 'package:sufrix_api/api.dart';
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **createdAt** | [**DateTime**](DateTime.md) |  | 
-**displayOrder** | **int** |  | 
 **id** | **String** |  | 
 **ingredientName** | **String** |  | [optional] 
 **ingredientUnit** | **String** |  | [optional] 

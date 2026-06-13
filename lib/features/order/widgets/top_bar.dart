@@ -31,6 +31,9 @@ class TopBar extends ConsumerWidget {
     // menu freshness stamp, so don't rebuild on unrelated state changes.
     final orderName = ref.watch(cartProvider.select((c) => c.displayName));
     final userName = ref.watch(authProvider.select((a) => a.user?.name));
+    // Branch name FETCHED from the server for this session (from the user's
+    // branch_id → GET /branches/{id}), not the locally-configured device label.
+    final branchName = ref.watch(authProvider.select((a) => a.branch?.name));
     final cachedAt = ref.watch(menuProvider.select((m) => m.cachedAt));
     final lastSynced = cachedAt != null ? timeShort(cachedAt) : '—';
     final isPhone = context.isPhone;
@@ -51,6 +54,18 @@ class TopBar extends ConsumerWidget {
                   children: [
                     const SufrixLogo(size: 30, isRounded: true),
                     const SizedBox(width: 10),
+
+                    // Branch this till is serving — the server-fetched name for
+                    // the signed-in session (authoritative), so a mis-configured
+                    // device can't silently sell under the wrong branch.
+                    if (branchName != null && branchName.isNotEmpty) ...[
+                      StatusChip(
+                        label: branchName,
+                        tone: ChipTone.neutral,
+                        icon: Icons.storefront_rounded,
+                      ),
+                      const SizedBox(width: 10),
+                    ],
 
                     // Manual menu refresh + freshness stamp.
                     const SyncBtn(),

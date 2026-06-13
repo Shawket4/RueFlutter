@@ -23,8 +23,6 @@ abstract class _$BundleCWProxy {
 
   Bundle descriptionTranslations(Object? descriptionTranslations);
 
-  Bundle displayOrder(int displayOrder);
-
   Bundle id(String id);
 
   Bundle imageUrl(String? imageUrl);
@@ -56,7 +54,6 @@ abstract class _$BundleCWProxy {
     String? createdBy,
     String? description,
     Object? descriptionTranslations,
-    int displayOrder,
     String id,
     String? imageUrl,
     String name,
@@ -104,9 +101,6 @@ class _$BundleCWProxyImpl implements _$BundleCWProxy {
       this(descriptionTranslations: descriptionTranslations);
 
   @override
-  Bundle displayOrder(int displayOrder) => this(displayOrder: displayOrder);
-
-  @override
   Bundle id(String id) => this(id: id);
 
   @override
@@ -147,7 +141,6 @@ class _$BundleCWProxyImpl implements _$BundleCWProxy {
     Object? createdBy = const $CopyWithPlaceholder(),
     Object? description = const $CopyWithPlaceholder(),
     Object? descriptionTranslations = const $CopyWithPlaceholder(),
-    Object? displayOrder = const $CopyWithPlaceholder(),
     Object? id = const $CopyWithPlaceholder(),
     Object? imageUrl = const $CopyWithPlaceholder(),
     Object? name = const $CopyWithPlaceholder(),
@@ -191,10 +184,6 @@ class _$BundleCWProxyImpl implements _$BundleCWProxy {
           ? _value.descriptionTranslations
           // ignore: cast_nullable_to_non_nullable
           : descriptionTranslations as Object?,
-      displayOrder: displayOrder == const $CopyWithPlaceholder()
-          ? _value.displayOrder
-          // ignore: cast_nullable_to_non_nullable
-          : displayOrder as int,
       id: id == const $CopyWithPlaceholder()
           ? _value.id
           // ignore: cast_nullable_to_non_nullable
@@ -250,7 +239,6 @@ Bundle _$BundleFromJson(Map<String, dynamic> json) => $checkedCreate(
       requiredKeys: const [
         'created_at',
         'description_translations',
-        'display_order',
         'id',
         'name',
         'name_translations',
@@ -287,7 +275,6 @@ Bundle _$BundleFromJson(Map<String, dynamic> json) => $checkedCreate(
         'description_translations',
         (v) => v,
       ),
-      displayOrder: $checkedConvert('display_order', (v) => (v as num).toInt()),
       id: $checkedConvert('id', (v) => v as String),
       imageUrl: $checkedConvert('image_url', (v) => v as String?),
       name: $checkedConvert('name', (v) => v as String),
@@ -317,7 +304,6 @@ Bundle _$BundleFromJson(Map<String, dynamic> json) => $checkedCreate(
     'createdAt': 'created_at',
     'createdBy': 'created_by',
     'descriptionTranslations': 'description_translations',
-    'displayOrder': 'display_order',
     'imageUrl': 'image_url',
     'nameTranslations': 'name_translations',
     'orgId': 'org_id',
@@ -334,7 +320,6 @@ Map<String, dynamic> _$BundleToJson(Bundle instance) => <String, dynamic>{
   'created_by': ?instance.createdBy,
   'description': ?instance.description,
   'description_translations': instance.descriptionTranslations,
-  'display_order': instance.displayOrder,
   'id': instance.id,
   'image_url': ?instance.imageUrl,
   'name': instance.name,

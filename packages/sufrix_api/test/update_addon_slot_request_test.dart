@@ -7,11 +7,6 @@ void main() {
   // TODO add properties to the entity
 
   group(UpdateAddonSlotRequest, () {
-    // int displayOrder
-    test('to test the property `displayOrder`', () async {
-      // TODO
-    });
-
     // bool isRequired
     test('to test the property `isRequired`', () async {
       // TODO

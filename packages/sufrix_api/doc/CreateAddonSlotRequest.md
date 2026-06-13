@@ -9,7 +9,6 @@ import 'package:sufrix_api/api.dart';
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **addonType** | **String** |  | [optional] 
-**displayOrder** | **int** |  | [optional] 
 **isRequired** | **bool** |  | [optional] 
 **label** | **String** |  | [optional] 
 **labelTranslations** | **Object** |  | [optional] 

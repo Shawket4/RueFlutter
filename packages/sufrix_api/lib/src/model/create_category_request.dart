@@ -20,8 +20,6 @@ class CreateCategoryRequest {
   /// Returns a new [CreateCategoryRequest] instance.
   CreateCategoryRequest({
 
-     this.displayOrder,
-
      this.imageUrl,
 
     required  this.name,
@@ -30,18 +28,6 @@ class CreateCategoryRequest {
 
     required  this.orgId,
   });
-
-  @JsonKey(
-    
-    name: r'display_order',
-    required: false,
-    includeIfNull: false,
-  )
-
-
-  final int? displayOrder;
-
-
 
   @JsonKey(
     
@@ -95,7 +81,6 @@ class CreateCategoryRequest {
 
     @override
     bool operator ==(Object other) => identical(this, other) || other is CreateCategoryRequest &&
-      other.displayOrder == displayOrder &&
       other.imageUrl == imageUrl &&
       other.name == name &&
       other.nameTranslations == nameTranslations &&
@@ -103,7 +88,6 @@ class CreateCategoryRequest {
 
     @override
     int get hashCode =>
-        (displayOrder == null ? 0 : displayOrder.hashCode) +
         (imageUrl == null ? 0 : imageUrl.hashCode) +
         name.hashCode +
         (nameTranslations == null ? 0 : nameTranslations.hashCode) +

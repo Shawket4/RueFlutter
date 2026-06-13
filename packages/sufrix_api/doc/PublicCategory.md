@@ -8,7 +8,6 @@ import 'package:sufrix_api/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**displayOrder** | **int** |  | 
 **id** | **String** |  | 
 **imageUrl** | **String** |  | [optional] 
 **items** | [**List&lt;PublicMenuItem&gt;**](PublicMenuItem.md) |  | 

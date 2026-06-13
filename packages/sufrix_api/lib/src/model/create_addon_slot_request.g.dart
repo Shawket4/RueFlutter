@@ -9,8 +9,6 @@ part of 'create_addon_slot_request.dart';
 abstract class _$CreateAddonSlotRequestCWProxy {
   CreateAddonSlotRequest addonType(String? addonType);
 
-  CreateAddonSlotRequest displayOrder(int? displayOrder);
-
   CreateAddonSlotRequest isRequired(bool? isRequired);
 
   CreateAddonSlotRequest label(String? label);
@@ -29,7 +27,6 @@ abstract class _$CreateAddonSlotRequestCWProxy {
   /// ````
   CreateAddonSlotRequest call({
     String? addonType,
-    int? displayOrder,
     bool? isRequired,
     String? label,
     Object? labelTranslations,
@@ -48,10 +45,6 @@ class _$CreateAddonSlotRequestCWProxyImpl
   @override
   CreateAddonSlotRequest addonType(String? addonType) =>
       this(addonType: addonType);
-
-  @override
-  CreateAddonSlotRequest displayOrder(int? displayOrder) =>
-      this(displayOrder: displayOrder);
 
   @override
   CreateAddonSlotRequest isRequired(bool? isRequired) =>
@@ -81,7 +74,6 @@ class _$CreateAddonSlotRequestCWProxyImpl
   /// ````
   CreateAddonSlotRequest call({
     Object? addonType = const $CopyWithPlaceholder(),
-    Object? displayOrder = const $CopyWithPlaceholder(),
     Object? isRequired = const $CopyWithPlaceholder(),
     Object? label = const $CopyWithPlaceholder(),
     Object? labelTranslations = const $CopyWithPlaceholder(),
@@ -93,10 +85,6 @@ class _$CreateAddonSlotRequestCWProxyImpl
           ? _value.addonType
           // ignore: cast_nullable_to_non_nullable
           : addonType as String?,
-      displayOrder: displayOrder == const $CopyWithPlaceholder()
-          ? _value.displayOrder
-          // ignore: cast_nullable_to_non_nullable
-          : displayOrder as int?,
       isRequired: isRequired == const $CopyWithPlaceholder()
           ? _value.isRequired
           // ignore: cast_nullable_to_non_nullable
@@ -140,10 +128,6 @@ CreateAddonSlotRequest _$CreateAddonSlotRequestFromJson(
   ($checkedConvert) {
     final val = CreateAddonSlotRequest(
       addonType: $checkedConvert('addon_type', (v) => v as String?),
-      displayOrder: $checkedConvert(
-        'display_order',
-        (v) => (v as num?)?.toInt(),
-      ),
       isRequired: $checkedConvert('is_required', (v) => v as bool?),
       label: $checkedConvert('label', (v) => v as String?),
       labelTranslations: $checkedConvert('label_translations', (v) => v),
@@ -160,7 +144,6 @@ CreateAddonSlotRequest _$CreateAddonSlotRequestFromJson(
   },
   fieldKeyMap: const {
     'addonType': 'addon_type',
-    'displayOrder': 'display_order',
     'isRequired': 'is_required',
     'labelTranslations': 'label_translations',
     'maxSelections': 'max_selections',
@@ -172,7 +155,6 @@ Map<String, dynamic> _$CreateAddonSlotRequestToJson(
   CreateAddonSlotRequest instance,
 ) => <String, dynamic>{
   'addon_type': ?instance.addonType,
-  'display_order': ?instance.displayOrder,
   'is_required': ?instance.isRequired,
   'label': ?instance.label,
   'label_translations': ?instance.labelTranslations,

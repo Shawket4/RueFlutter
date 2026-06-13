@@ -43,7 +43,6 @@ MenuItem makeMenuItem({
       imageUrl: imageUrl,
       basePrice: basePrice,
       isActive: isActive,
-      displayOrder: displayOrder,
       sizes: sizes,
       addonSlots: addonSlots,
       optionalFields: optionalFields,
@@ -67,7 +66,6 @@ Category makeCategory({
       name: name,
       nameTranslations: const <String, dynamic>{},
       imageUrl: imageUrl,
-      displayOrder: displayOrder,
       isActive: isActive,
       createdAt: kFixtureTime,
       updatedAt: kFixtureTime,
@@ -86,7 +84,6 @@ ItemSize makeItemSize({
       menuItemId: menuItemId,
       label: label,
       priceOverride: priceOverride,
-      displayOrder: displayOrder,
       isActive: isActive,
     );
 
@@ -109,7 +106,6 @@ AddonItem makeAddonItem({
       addonType: addonType,
       defaultPrice: defaultPrice,
       isActive: isActive,
-      displayOrder: displayOrder,
       primaryIngredientId: primaryIngredientId,
       ingredients: ingredients,
       createdAt: kFixtureTime,
@@ -135,7 +131,6 @@ AddonSlot makeAddonSlot({
       isRequired: isRequired,
       minSelections: minSelections,
       maxSelections: maxSelections,
-      displayOrder: displayOrder,
       createdAt: kFixtureTime,
     );
 
@@ -163,7 +158,6 @@ OptionalField makeOptionalField({
       ingredientUnit: ingredientUnit,
       quantityUsed: quantityUsed,
       sizeLabel: sizeLabel,
-      displayOrder: displayOrder,
       isActive: isActive,
       createdAt: kFixtureTime,
       updatedAt: kFixtureTime,
@@ -213,7 +207,6 @@ Bundle makeBundle({
       price: price,
       status: status,
       imageUrl: imageUrl,
-      displayOrder: displayOrder,
       availableFromDate: availableFromDate,
       availableUntilDate: availableUntilDate,
       availableFromTime: availableFromTime,
@@ -388,7 +381,6 @@ PaymentMethod makePaymentMethod({
       icon: icon,
       isCash: isCash,
       isActive: isActive,
-      displayOrder: displayOrder,
       createdAt: kFixtureTime,
       updatedAt: kFixtureTime,
     );

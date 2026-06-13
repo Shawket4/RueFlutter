@@ -13,8 +13,6 @@ abstract class _$AddonItemCWProxy {
 
   AddonItem defaultPrice(int defaultPrice);
 
-  AddonItem displayOrder(int displayOrder);
-
   AddonItem id(String id);
 
   AddonItem ingredients(List<AddonItemIngredient>? ingredients);
@@ -41,7 +39,6 @@ abstract class _$AddonItemCWProxy {
     String addonType,
     DateTime createdAt,
     int defaultPrice,
-    int displayOrder,
     String id,
     List<AddonItemIngredient>? ingredients,
     bool isActive,
@@ -67,9 +64,6 @@ class _$AddonItemCWProxyImpl implements _$AddonItemCWProxy {
 
   @override
   AddonItem defaultPrice(int defaultPrice) => this(defaultPrice: defaultPrice);
-
-  @override
-  AddonItem displayOrder(int displayOrder) => this(displayOrder: displayOrder);
 
   @override
   AddonItem id(String id) => this(id: id);
@@ -109,7 +103,6 @@ class _$AddonItemCWProxyImpl implements _$AddonItemCWProxy {
     Object? addonType = const $CopyWithPlaceholder(),
     Object? createdAt = const $CopyWithPlaceholder(),
     Object? defaultPrice = const $CopyWithPlaceholder(),
-    Object? displayOrder = const $CopyWithPlaceholder(),
     Object? id = const $CopyWithPlaceholder(),
     Object? ingredients = const $CopyWithPlaceholder(),
     Object? isActive = const $CopyWithPlaceholder(),
@@ -132,10 +125,6 @@ class _$AddonItemCWProxyImpl implements _$AddonItemCWProxy {
           ? _value.defaultPrice
           // ignore: cast_nullable_to_non_nullable
           : defaultPrice as int,
-      displayOrder: displayOrder == const $CopyWithPlaceholder()
-          ? _value.displayOrder
-          // ignore: cast_nullable_to_non_nullable
-          : displayOrder as int,
       id: id == const $CopyWithPlaceholder()
           ? _value.id
           // ignore: cast_nullable_to_non_nullable
@@ -192,7 +181,6 @@ AddonItem _$AddonItemFromJson(Map<String, dynamic> json) => $checkedCreate(
         'addon_type',
         'created_at',
         'default_price',
-        'display_order',
         'id',
         'is_active',
         'name',
@@ -208,7 +196,6 @@ AddonItem _$AddonItemFromJson(Map<String, dynamic> json) => $checkedCreate(
         (v) => DateTime.parse(v as String),
       ),
       defaultPrice: $checkedConvert('default_price', (v) => (v as num).toInt()),
-      displayOrder: $checkedConvert('display_order', (v) => (v as num).toInt()),
       id: $checkedConvert('id', (v) => v as String),
       ingredients: $checkedConvert(
         'ingredients',
@@ -240,7 +227,6 @@ AddonItem _$AddonItemFromJson(Map<String, dynamic> json) => $checkedCreate(
     'addonType': 'addon_type',
     'createdAt': 'created_at',
     'defaultPrice': 'default_price',
-    'displayOrder': 'display_order',
     'isActive': 'is_active',
     'nameTranslations': 'name_translations',
     'orgId': 'org_id',
@@ -253,7 +239,6 @@ Map<String, dynamic> _$AddonItemToJson(AddonItem instance) => <String, dynamic>{
   'addon_type': instance.addonType,
   'created_at': instance.createdAt.toIso8601String(),
   'default_price': instance.defaultPrice,
-  'display_order': instance.displayOrder,
   'id': instance.id,
   'ingredients': ?instance.ingredients?.map((e) => e.toJson()).toList(),
   'is_active': instance.isActive,

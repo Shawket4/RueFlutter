@@ -261,6 +261,7 @@ class PendingShiftClose extends PendingAction {
 class PendingVoidOrder extends PendingAction {
   final String orderId;
   final String reason;
+  final String? note;
   final bool restoreInventory;
   final DateTime voidedAt;
 
@@ -271,19 +272,20 @@ class PendingVoidOrder extends PendingAction {
     super.lastError,
     required this.orderId,
     required this.reason,
+    this.note,
     required this.restoreInventory,
     required this.voidedAt,
   }) : super(type: PendingActionType.voidOrder);
 
   @override
   PendingVoidOrder withIncrementedRetry(String error) => PendingVoidOrder(
-        localId: localId, createdAt: createdAt, orderId: orderId, reason: reason,
+        localId: localId, createdAt: createdAt, orderId: orderId, reason: reason, note: note,
         restoreInventory: restoreInventory, voidedAt: voidedAt, retryCount: retryCount + 1, lastError: error,
       );
 
   @override
   PendingVoidOrder withResetRetry() => PendingVoidOrder(
-        localId: localId, createdAt: createdAt, orderId: orderId, reason: reason,
+        localId: localId, createdAt: createdAt, orderId: orderId, reason: reason, note: note,
         restoreInventory: restoreInventory, voidedAt: voidedAt,
       );
 
@@ -291,6 +293,7 @@ class PendingVoidOrder extends PendingAction {
   Map<String, dynamic> toJson() => {
         'local_id': localId, 'type': type.name, 'created_at': createdAt.toUtc().toIso8601String(),
         'retry_count': retryCount, 'last_error': lastError, 'order_id': orderId, 'reason': reason,
+        'note': note,
         'restore_inventory': restoreInventory, 'voided_at': voidedAt.toUtc().toIso8601String(),
       };
 
@@ -301,6 +304,7 @@ class PendingVoidOrder extends PendingAction {
         lastError: j['last_error'] as String?,
         orderId: j['order_id'] as String,
         reason: j['reason'] as String,
+        note: j['note'] as String?,
         restoreInventory: (j['restore_inventory'] as bool?) ?? false,
         voidedAt: DateTime.parse(j['voided_at'] as String),
       );

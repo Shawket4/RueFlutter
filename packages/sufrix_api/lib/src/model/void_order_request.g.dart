@@ -7,6 +7,8 @@ part of 'void_order_request.dart';
 // **************************************************************************
 
 abstract class _$VoidOrderRequestCWProxy {
+  VoidOrderRequest note(String? note);
+
   VoidOrderRequest reason(String reason);
 
   VoidOrderRequest restoreInventory(bool? restoreInventory);
@@ -20,6 +22,7 @@ abstract class _$VoidOrderRequestCWProxy {
   /// VoidOrderRequest(...).copyWith(id: 12, name: "My name")
   /// ````
   VoidOrderRequest call({
+    String? note,
     String reason,
     bool? restoreInventory,
     DateTime? voidedAt,
@@ -31,6 +34,9 @@ class _$VoidOrderRequestCWProxyImpl implements _$VoidOrderRequestCWProxy {
   const _$VoidOrderRequestCWProxyImpl(this._value);
 
   final VoidOrderRequest _value;
+
+  @override
+  VoidOrderRequest note(String? note) => this(note: note);
 
   @override
   VoidOrderRequest reason(String reason) => this(reason: reason);
@@ -50,11 +56,16 @@ class _$VoidOrderRequestCWProxyImpl implements _$VoidOrderRequestCWProxy {
   /// VoidOrderRequest(...).copyWith(id: 12, name: "My name")
   /// ````
   VoidOrderRequest call({
+    Object? note = const $CopyWithPlaceholder(),
     Object? reason = const $CopyWithPlaceholder(),
     Object? restoreInventory = const $CopyWithPlaceholder(),
     Object? voidedAt = const $CopyWithPlaceholder(),
   }) {
     return VoidOrderRequest(
+      note: note == const $CopyWithPlaceholder()
+          ? _value.note
+          // ignore: cast_nullable_to_non_nullable
+          : note as String?,
       reason: reason == const $CopyWithPlaceholder()
           ? _value.reason
           // ignore: cast_nullable_to_non_nullable
@@ -88,6 +99,7 @@ VoidOrderRequest _$VoidOrderRequestFromJson(Map<String, dynamic> json) =>
       ($checkedConvert) {
         $checkKeys(json, requiredKeys: const ['reason']);
         final val = VoidOrderRequest(
+          note: $checkedConvert('note', (v) => v as String?),
           reason: $checkedConvert('reason', (v) => v as String),
           restoreInventory: $checkedConvert(
             'restore_inventory',
@@ -108,6 +120,7 @@ VoidOrderRequest _$VoidOrderRequestFromJson(Map<String, dynamic> json) =>
 
 Map<String, dynamic> _$VoidOrderRequestToJson(VoidOrderRequest instance) =>
     <String, dynamic>{
+      'note': ?instance.note,
       'reason': instance.reason,
       'restore_inventory': ?instance.restoreInventory,
       'voided_at': ?instance.voidedAt?.toIso8601String(),

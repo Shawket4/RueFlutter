@@ -3,7 +3,6 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:sufrix_api/src/model/inventory_count_input.dart';
 import 'package:copy_with_extension/copy_with_extension.dart';
 import 'package:json_annotation/json_annotation.dart';
 
@@ -26,8 +25,6 @@ class CloseShiftRequest {
      this.closedAt,
 
     required  this.closingCashDeclared,
-
-    required  this.inventoryCounts,
   });
 
   @JsonKey(
@@ -66,33 +63,19 @@ class CloseShiftRequest {
 
 
 
-  @JsonKey(
-    
-    name: r'inventory_counts',
-    required: true,
-    includeIfNull: false,
-  )
-
-
-  final List<InventoryCountInput> inventoryCounts;
-
-
-
 
 
     @override
     bool operator ==(Object other) => identical(this, other) || other is CloseShiftRequest &&
       other.cashNote == cashNote &&
       other.closedAt == closedAt &&
-      other.closingCashDeclared == closingCashDeclared &&
-      other.inventoryCounts == inventoryCounts;
+      other.closingCashDeclared == closingCashDeclared;
 
     @override
     int get hashCode =>
         (cashNote == null ? 0 : cashNote.hashCode) +
         (closedAt == null ? 0 : closedAt.hashCode) +
-        closingCashDeclared.hashCode +
-        inventoryCounts.hashCode;
+        closingCashDeclared.hashCode;
 
   factory CloseShiftRequest.fromJson(Map<String, dynamic> json) => _$CloseShiftRequestFromJson(json);
 

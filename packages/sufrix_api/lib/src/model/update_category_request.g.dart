@@ -7,8 +7,6 @@ part of 'update_category_request.dart';
 // **************************************************************************
 
 abstract class _$UpdateCategoryRequestCWProxy {
-  UpdateCategoryRequest displayOrder(int? displayOrder);
-
   UpdateCategoryRequest imageUrl(String? imageUrl);
 
   UpdateCategoryRequest isActive(bool? isActive);
@@ -24,7 +22,6 @@ abstract class _$UpdateCategoryRequestCWProxy {
   /// UpdateCategoryRequest(...).copyWith(id: 12, name: "My name")
   /// ````
   UpdateCategoryRequest call({
-    int? displayOrder,
     String? imageUrl,
     bool? isActive,
     String? name,
@@ -38,10 +35,6 @@ class _$UpdateCategoryRequestCWProxyImpl
   const _$UpdateCategoryRequestCWProxyImpl(this._value);
 
   final UpdateCategoryRequest _value;
-
-  @override
-  UpdateCategoryRequest displayOrder(int? displayOrder) =>
-      this(displayOrder: displayOrder);
 
   @override
   UpdateCategoryRequest imageUrl(String? imageUrl) => this(imageUrl: imageUrl);
@@ -64,17 +57,12 @@ class _$UpdateCategoryRequestCWProxyImpl
   /// UpdateCategoryRequest(...).copyWith(id: 12, name: "My name")
   /// ````
   UpdateCategoryRequest call({
-    Object? displayOrder = const $CopyWithPlaceholder(),
     Object? imageUrl = const $CopyWithPlaceholder(),
     Object? isActive = const $CopyWithPlaceholder(),
     Object? name = const $CopyWithPlaceholder(),
     Object? nameTranslations = const $CopyWithPlaceholder(),
   }) {
     return UpdateCategoryRequest(
-      displayOrder: displayOrder == const $CopyWithPlaceholder()
-          ? _value.displayOrder
-          // ignore: cast_nullable_to_non_nullable
-          : displayOrder as int?,
       imageUrl: imageUrl == const $CopyWithPlaceholder()
           ? _value.imageUrl
           // ignore: cast_nullable_to_non_nullable
@@ -113,10 +101,6 @@ UpdateCategoryRequest _$UpdateCategoryRequestFromJson(
   json,
   ($checkedConvert) {
     final val = UpdateCategoryRequest(
-      displayOrder: $checkedConvert(
-        'display_order',
-        (v) => (v as num?)?.toInt(),
-      ),
       imageUrl: $checkedConvert('image_url', (v) => v as String?),
       isActive: $checkedConvert('is_active', (v) => v as bool?),
       name: $checkedConvert('name', (v) => v as String?),
@@ -125,7 +109,6 @@ UpdateCategoryRequest _$UpdateCategoryRequestFromJson(
     return val;
   },
   fieldKeyMap: const {
-    'displayOrder': 'display_order',
     'imageUrl': 'image_url',
     'isActive': 'is_active',
     'nameTranslations': 'name_translations',
@@ -135,7 +118,6 @@ UpdateCategoryRequest _$UpdateCategoryRequestFromJson(
 Map<String, dynamic> _$UpdateCategoryRequestToJson(
   UpdateCategoryRequest instance,
 ) => <String, dynamic>{
-  'display_order': ?instance.displayOrder,
   'image_url': ?instance.imageUrl,
   'is_active': ?instance.isActive,
   'name': ?instance.name,

@@ -17,6 +17,7 @@ void main() {
       // TODO
     });
 
+    // Piastres per unit; `null` ⟺ cost never entered.
     // double costPerUnit
     test('to test the property `costPerUnit`', () async {
       // TODO
@@ -44,6 +45,12 @@ void main() {
 
     // String ingredientName
     test('to test the property `ingredientName`', () async {
+      // TODO
+    });
+
+    // When this item was last reconciled by a finalized stock count; `null` = never counted. Drives the \"count due\" signal on the inventory home.
+    // DateTime lastCountedAt
+    test('to test the property `lastCountedAt`', () async {
       // TODO
     });
 

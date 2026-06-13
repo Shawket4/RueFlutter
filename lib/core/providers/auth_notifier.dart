@@ -5,9 +5,11 @@ import '../api/shift_api.dart';
 import '../models/branch.dart';
 import '../models/shift.dart';
 import '../models/user.dart';
-import '../repositories/auth_repository.dart';
+import '../repositories/auth_repository.dart'
+    show authRepositoryProvider, DeviceSetupError, WrongCredentialsError, OpenShiftBlockError;
 import '../services/offline_queue.dart';
 import '../storage/storage_service.dart';
+import '../utils/app_log.dart';
 import 'cart_notifier.dart';
 import 'draft_carts_notifier.dart';
 
@@ -163,8 +165,18 @@ class AuthNotifier extends Notifier<AuthState> {
       final blockError =
           await _hydrateAfterAuth(session.user, emitLoading: true);
       return blockError;
+    } on OpenShiftBlockError catch (e) {
+      // Backend refused login: this user already has an open shift somewhere.
+      // Show it as an error state and log it for diagnostics.
+      AppLog.warn('auth.login', 'blocked — user already has an open shift: ${e.message}');
+      state = state.copyWith(isLoading: false, error: e.message);
+      return e.message;
+    } on WrongCredentialsError {
+      const msg = 'Wrong name or PIN.';
+      state = state.copyWith(isLoading: false, error: msg);
+      return msg;
     } catch (e) {
-      final msg = friendlyError(e); // Task 4.2
+      final msg = friendlyError(e);
       state = state.copyWith(isLoading: false, error: msg);
       return msg;
     }

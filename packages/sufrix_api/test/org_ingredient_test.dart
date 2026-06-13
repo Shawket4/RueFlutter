@@ -12,6 +12,7 @@ void main() {
       // TODO
     });
 
+    // Piastres per unit. `null` ⟺ never entered (unknown, NOT free) — recipes using this ingredient are cost-missing everywhere.
     // double costPerUnit
     test('to test the property `costPerUnit`', () async {
       // TODO
@@ -44,6 +45,17 @@ void main() {
 
     // String orgId
     test('to test the property `orgId`', () async {
+      // TODO
+    });
+
+    // Default supplier for reordering this ingredient; `null` = none set.
+    // String supplierId
+    test('to test the property `supplierId`', () async {
+      // TODO
+    });
+
+    // String supplierName
+    test('to test the property `supplierName`', () async {
       // TODO
     });
 

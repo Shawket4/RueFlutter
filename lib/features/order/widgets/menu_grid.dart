@@ -4,7 +4,6 @@ import '../../../core/l10n/l10n.dart';
 import '../../../core/models/bundle.dart';
 import '../../../core/providers/auth_notifier.dart';
 import '../../../core/providers/menu_notifier.dart';
-import '../../../core/providers/shift_notifier.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/empty_state.dart';
 import 'bundle_card.dart';
@@ -37,11 +36,7 @@ class MenuGrid extends ConsumerWidget {
     // changes (e.g. systemCash refresh after every checkout).
     final branchId =
         ref.watch(authProvider.select((s) => s.user?.branchId ?? ''));
-    final inventory = ref.watch(shiftProvider.select((s) => s.inventory));
-    final entries = menu.gridEntriesForCategory(
-      branchId: branchId,
-      inventory: inventory,
-    );
+    final entries = menu.gridEntriesForCategory(branchId: branchId);
 
     if (menu.isLoading) {
       return _buildGrid(8, (_, __) => const MenuCardSkeleton());
@@ -70,13 +65,7 @@ class MenuGrid extends ConsumerWidget {
         case MenuGridEntryKind.item:
           return MenuCard(item: e.item!);
         case MenuGridEntryKind.bundle:
-          return BundleCard(
-            bundle: e.bundle!,
-            menuItems: menu.items,
-            inventory: inventory,
-            enabled: e.enabled,
-            disabledReason: e.disabledReason,
-          );
+          return BundleCard(bundle: e.bundle!, menuItems: menu.items);
       }
     });
   }
@@ -91,7 +80,6 @@ class SearchResults extends ConsumerWidget {
     final menu = ref.watch(menuProvider);
     final branchId =
         ref.watch(authProvider.select((s) => s.user?.branchId ?? ''));
-    final inventory = ref.watch(shiftProvider.select((s) => s.inventory));
 
     final itemFound = menu.items
         .where((i) =>
@@ -100,11 +88,7 @@ class SearchResults extends ConsumerWidget {
                 (i.description?.toLowerCase().contains(query) ?? false)))
         .toList();
 
-    final bundleFound = menu.searchBundles(
-      query,
-      branchId: branchId,
-      inventory: inventory,
-    );
+    final bundleFound = menu.searchBundles(query, branchId: branchId);
 
     if (itemFound.isEmpty && bundleFound.isEmpty) {
       return EmptyState(
@@ -117,18 +101,14 @@ class SearchResults extends ConsumerWidget {
     final entries = <MenuGridEntry>[
       ...itemFound.map(MenuGridEntry.item),
       ...bundleFound.map((b) => MenuGridEntry.bundle(b)),
-    ]..sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
+    ];
 
     return _buildGrid(entries.length, (_, i) {
       final e = entries[i];
       if (e.kind == MenuGridEntryKind.item) {
         return MenuCard(item: e.item!);
       }
-      return BundleCard(
-        bundle: e.bundle!,
-        menuItems: menu.items,
-        inventory: inventory,
-      );
+      return BundleCard(bundle: e.bundle!, menuItems: menu.items);
     });
   }
 }

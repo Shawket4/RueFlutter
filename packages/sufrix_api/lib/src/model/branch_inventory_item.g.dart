@@ -11,7 +11,7 @@ abstract class _$BranchInventoryItemCWProxy {
 
   BranchInventoryItem branchId(String branchId);
 
-  BranchInventoryItem costPerUnit(double costPerUnit);
+  BranchInventoryItem costPerUnit(double? costPerUnit);
 
   BranchInventoryItem createdAt(DateTime createdAt);
 
@@ -22,6 +22,8 @@ abstract class _$BranchInventoryItemCWProxy {
   BranchInventoryItem id(String id);
 
   BranchInventoryItem ingredientName(String ingredientName);
+
+  BranchInventoryItem lastCountedAt(DateTime? lastCountedAt);
 
   BranchInventoryItem orgIngredientId(String orgIngredientId);
 
@@ -40,12 +42,13 @@ abstract class _$BranchInventoryItemCWProxy {
   BranchInventoryItem call({
     bool belowReorder,
     String branchId,
-    double costPerUnit,
+    double? costPerUnit,
     DateTime createdAt,
     double currentStock,
     String? description,
     String id,
     String ingredientName,
+    DateTime? lastCountedAt,
     String orgIngredientId,
     double reorderThreshold,
     String unit,
@@ -67,7 +70,7 @@ class _$BranchInventoryItemCWProxyImpl implements _$BranchInventoryItemCWProxy {
   BranchInventoryItem branchId(String branchId) => this(branchId: branchId);
 
   @override
-  BranchInventoryItem costPerUnit(double costPerUnit) =>
+  BranchInventoryItem costPerUnit(double? costPerUnit) =>
       this(costPerUnit: costPerUnit);
 
   @override
@@ -88,6 +91,10 @@ class _$BranchInventoryItemCWProxyImpl implements _$BranchInventoryItemCWProxy {
   @override
   BranchInventoryItem ingredientName(String ingredientName) =>
       this(ingredientName: ingredientName);
+
+  @override
+  BranchInventoryItem lastCountedAt(DateTime? lastCountedAt) =>
+      this(lastCountedAt: lastCountedAt);
 
   @override
   BranchInventoryItem orgIngredientId(String orgIngredientId) =>
@@ -120,6 +127,7 @@ class _$BranchInventoryItemCWProxyImpl implements _$BranchInventoryItemCWProxy {
     Object? description = const $CopyWithPlaceholder(),
     Object? id = const $CopyWithPlaceholder(),
     Object? ingredientName = const $CopyWithPlaceholder(),
+    Object? lastCountedAt = const $CopyWithPlaceholder(),
     Object? orgIngredientId = const $CopyWithPlaceholder(),
     Object? reorderThreshold = const $CopyWithPlaceholder(),
     Object? unit = const $CopyWithPlaceholder(),
@@ -137,7 +145,7 @@ class _$BranchInventoryItemCWProxyImpl implements _$BranchInventoryItemCWProxy {
       costPerUnit: costPerUnit == const $CopyWithPlaceholder()
           ? _value.costPerUnit
           // ignore: cast_nullable_to_non_nullable
-          : costPerUnit as double,
+          : costPerUnit as double?,
       createdAt: createdAt == const $CopyWithPlaceholder()
           ? _value.createdAt
           // ignore: cast_nullable_to_non_nullable
@@ -158,6 +166,10 @@ class _$BranchInventoryItemCWProxyImpl implements _$BranchInventoryItemCWProxy {
           ? _value.ingredientName
           // ignore: cast_nullable_to_non_nullable
           : ingredientName as String,
+      lastCountedAt: lastCountedAt == const $CopyWithPlaceholder()
+          ? _value.lastCountedAt
+          // ignore: cast_nullable_to_non_nullable
+          : lastCountedAt as DateTime?,
       orgIngredientId: orgIngredientId == const $CopyWithPlaceholder()
           ? _value.orgIngredientId
           // ignore: cast_nullable_to_non_nullable
@@ -200,7 +212,6 @@ BranchInventoryItem _$BranchInventoryItemFromJson(
       requiredKeys: const [
         'below_reorder',
         'branch_id',
-        'cost_per_unit',
         'created_at',
         'current_stock',
         'id',
@@ -216,7 +227,7 @@ BranchInventoryItem _$BranchInventoryItemFromJson(
       branchId: $checkedConvert('branch_id', (v) => v as String),
       costPerUnit: $checkedConvert(
         'cost_per_unit',
-        (v) => (v is String ? double.parse(v) : (v as num).toDouble()),
+        (v) => (v is String ? double.parse(v) : (v as num?)?.toDouble()),
       ),
       createdAt: $checkedConvert(
         'created_at',
@@ -229,6 +240,10 @@ BranchInventoryItem _$BranchInventoryItemFromJson(
       description: $checkedConvert('description', (v) => v as String?),
       id: $checkedConvert('id', (v) => v as String),
       ingredientName: $checkedConvert('ingredient_name', (v) => v as String),
+      lastCountedAt: $checkedConvert(
+        'last_counted_at',
+        (v) => v == null ? null : DateTime.parse(v as String),
+      ),
       orgIngredientId: $checkedConvert('org_ingredient_id', (v) => v as String),
       reorderThreshold: $checkedConvert(
         'reorder_threshold',
@@ -249,6 +264,7 @@ BranchInventoryItem _$BranchInventoryItemFromJson(
     'createdAt': 'created_at',
     'currentStock': 'current_stock',
     'ingredientName': 'ingredient_name',
+    'lastCountedAt': 'last_counted_at',
     'orgIngredientId': 'org_ingredient_id',
     'reorderThreshold': 'reorder_threshold',
     'updatedAt': 'updated_at',
@@ -260,12 +276,13 @@ Map<String, dynamic> _$BranchInventoryItemToJson(
 ) => <String, dynamic>{
   'below_reorder': instance.belowReorder,
   'branch_id': instance.branchId,
-  'cost_per_unit': instance.costPerUnit,
+  'cost_per_unit': ?instance.costPerUnit,
   'created_at': instance.createdAt.toIso8601String(),
   'current_stock': instance.currentStock,
   'description': ?instance.description,
   'id': instance.id,
   'ingredient_name': instance.ingredientName,
+  'last_counted_at': ?instance.lastCountedAt?.toIso8601String(),
   'org_ingredient_id': instance.orgIngredientId,
   'reorder_threshold': instance.reorderThreshold,
   'unit': instance.unit,

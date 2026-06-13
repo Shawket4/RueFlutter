@@ -10,7 +10,6 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **addonType** | **String** |  | 
 **defaultPrice** | **int** |  | 
-**displayOrder** | **int** |  | [optional] 
 **name** | **String** |  | 
 **nameTranslations** | **Object** |  | [optional] 
 **orgId** | **String** |  | 

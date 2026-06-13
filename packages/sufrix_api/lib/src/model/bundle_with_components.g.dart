@@ -23,8 +23,6 @@ abstract class _$BundleWithComponentsCWProxy {
 
   BundleWithComponents descriptionTranslations(Object? descriptionTranslations);
 
-  BundleWithComponents displayOrder(int displayOrder);
-
   BundleWithComponents id(String id);
 
   BundleWithComponents imageUrl(String? imageUrl);
@@ -62,7 +60,6 @@ abstract class _$BundleWithComponentsCWProxy {
     String? createdBy,
     String? description,
     Object? descriptionTranslations,
-    int displayOrder,
     String id,
     String? imageUrl,
     String name,
@@ -118,10 +115,6 @@ class _$BundleWithComponentsCWProxyImpl
   ) => this(descriptionTranslations: descriptionTranslations);
 
   @override
-  BundleWithComponents displayOrder(int displayOrder) =>
-      this(displayOrder: displayOrder);
-
-  @override
   BundleWithComponents id(String id) => this(id: id);
 
   @override
@@ -175,7 +168,6 @@ class _$BundleWithComponentsCWProxyImpl
     Object? createdBy = const $CopyWithPlaceholder(),
     Object? description = const $CopyWithPlaceholder(),
     Object? descriptionTranslations = const $CopyWithPlaceholder(),
-    Object? displayOrder = const $CopyWithPlaceholder(),
     Object? id = const $CopyWithPlaceholder(),
     Object? imageUrl = const $CopyWithPlaceholder(),
     Object? name = const $CopyWithPlaceholder(),
@@ -222,10 +214,6 @@ class _$BundleWithComponentsCWProxyImpl
           ? _value.descriptionTranslations
           // ignore: cast_nullable_to_non_nullable
           : descriptionTranslations as Object?,
-      displayOrder: displayOrder == const $CopyWithPlaceholder()
-          ? _value.displayOrder
-          // ignore: cast_nullable_to_non_nullable
-          : displayOrder as int,
       id: id == const $CopyWithPlaceholder()
           ? _value.id
           // ignore: cast_nullable_to_non_nullable
@@ -296,7 +284,6 @@ BundleWithComponents _$BundleWithComponentsFromJson(
       requiredKeys: const [
         'created_at',
         'description_translations',
-        'display_order',
         'id',
         'name',
         'name_translations',
@@ -336,7 +323,6 @@ BundleWithComponents _$BundleWithComponentsFromJson(
         'description_translations',
         (v) => v,
       ),
-      displayOrder: $checkedConvert('display_order', (v) => (v as num).toInt()),
       id: $checkedConvert('id', (v) => v as String),
       imageUrl: $checkedConvert('image_url', (v) => v as String?),
       name: $checkedConvert('name', (v) => v as String),
@@ -380,7 +366,6 @@ BundleWithComponents _$BundleWithComponentsFromJson(
     'createdAt': 'created_at',
     'createdBy': 'created_by',
     'descriptionTranslations': 'description_translations',
-    'displayOrder': 'display_order',
     'imageUrl': 'image_url',
     'nameTranslations': 'name_translations',
     'orgId': 'org_id',
@@ -401,7 +386,6 @@ Map<String, dynamic> _$BundleWithComponentsToJson(
   'created_by': ?instance.createdBy,
   'description': ?instance.description,
   'description_translations': instance.descriptionTranslations,
-  'display_order': instance.displayOrder,
   'id': instance.id,
   'image_url': ?instance.imageUrl,
   'name': instance.name,

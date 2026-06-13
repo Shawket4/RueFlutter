@@ -7,8 +7,6 @@ part of 'update_optional_field_request.dart';
 // **************************************************************************
 
 abstract class _$UpdateOptionalFieldRequestCWProxy {
-  UpdateOptionalFieldRequest displayOrder(int? displayOrder);
-
   UpdateOptionalFieldRequest ingredientName(String? ingredientName);
 
   UpdateOptionalFieldRequest ingredientUnit(String? ingredientUnit);
@@ -34,7 +32,6 @@ abstract class _$UpdateOptionalFieldRequestCWProxy {
   /// UpdateOptionalFieldRequest(...).copyWith(id: 12, name: "My name")
   /// ````
   UpdateOptionalFieldRequest call({
-    int? displayOrder,
     String? ingredientName,
     String? ingredientUnit,
     bool? isActive,
@@ -53,10 +50,6 @@ class _$UpdateOptionalFieldRequestCWProxyImpl
   const _$UpdateOptionalFieldRequestCWProxyImpl(this._value);
 
   final UpdateOptionalFieldRequest _value;
-
-  @override
-  UpdateOptionalFieldRequest displayOrder(int? displayOrder) =>
-      this(displayOrder: displayOrder);
 
   @override
   UpdateOptionalFieldRequest ingredientName(String? ingredientName) =>
@@ -100,7 +93,6 @@ class _$UpdateOptionalFieldRequestCWProxyImpl
   /// UpdateOptionalFieldRequest(...).copyWith(id: 12, name: "My name")
   /// ````
   UpdateOptionalFieldRequest call({
-    Object? displayOrder = const $CopyWithPlaceholder(),
     Object? ingredientName = const $CopyWithPlaceholder(),
     Object? ingredientUnit = const $CopyWithPlaceholder(),
     Object? isActive = const $CopyWithPlaceholder(),
@@ -112,10 +104,6 @@ class _$UpdateOptionalFieldRequestCWProxyImpl
     Object? sizeLabel = const $CopyWithPlaceholder(),
   }) {
     return UpdateOptionalFieldRequest(
-      displayOrder: displayOrder == const $CopyWithPlaceholder()
-          ? _value.displayOrder
-          // ignore: cast_nullable_to_non_nullable
-          : displayOrder as int?,
       ingredientName: ingredientName == const $CopyWithPlaceholder()
           ? _value.ingredientName
           // ignore: cast_nullable_to_non_nullable
@@ -174,10 +162,6 @@ UpdateOptionalFieldRequest _$UpdateOptionalFieldRequestFromJson(
   json,
   ($checkedConvert) {
     final val = UpdateOptionalFieldRequest(
-      displayOrder: $checkedConvert(
-        'display_order',
-        (v) => (v as num?)?.toInt(),
-      ),
       ingredientName: $checkedConvert('ingredient_name', (v) => v as String?),
       ingredientUnit: $checkedConvert('ingredient_unit', (v) => v as String?),
       isActive: $checkedConvert('is_active', (v) => v as bool?),
@@ -197,7 +181,6 @@ UpdateOptionalFieldRequest _$UpdateOptionalFieldRequestFromJson(
     return val;
   },
   fieldKeyMap: const {
-    'displayOrder': 'display_order',
     'ingredientName': 'ingredient_name',
     'ingredientUnit': 'ingredient_unit',
     'isActive': 'is_active',
@@ -211,7 +194,6 @@ UpdateOptionalFieldRequest _$UpdateOptionalFieldRequestFromJson(
 Map<String, dynamic> _$UpdateOptionalFieldRequestToJson(
   UpdateOptionalFieldRequest instance,
 ) => <String, dynamic>{
-  'display_order': ?instance.displayOrder,
   'ingredient_name': ?instance.ingredientName,
   'ingredient_unit': ?instance.ingredientUnit,
   'is_active': ?instance.isActive,

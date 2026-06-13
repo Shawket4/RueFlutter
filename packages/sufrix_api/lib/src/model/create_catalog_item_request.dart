@@ -28,6 +28,8 @@ class CreateCatalogItemRequest {
 
     required  this.name,
 
+     this.supplierId,
+
     required  this.unit,
   });
 
@@ -79,6 +81,19 @@ class CreateCatalogItemRequest {
 
 
 
+      /// Optional default supplier for reordering.
+  @JsonKey(
+    
+    name: r'supplier_id',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final String? supplierId;
+
+
+
   @JsonKey(
     
     name: r'unit',
@@ -99,6 +114,7 @@ class CreateCatalogItemRequest {
       other.costPerUnit == costPerUnit &&
       other.description == description &&
       other.name == name &&
+      other.supplierId == supplierId &&
       other.unit == unit;
 
     @override
@@ -107,6 +123,7 @@ class CreateCatalogItemRequest {
         (costPerUnit == null ? 0 : costPerUnit.hashCode) +
         (description == null ? 0 : description.hashCode) +
         name.hashCode +
+        (supplierId == null ? 0 : supplierId.hashCode) +
         unit.hashCode;
 
   factory CreateCatalogItemRequest.fromJson(Map<String, dynamic> json) => _$CreateCatalogItemRequestFromJson(json);

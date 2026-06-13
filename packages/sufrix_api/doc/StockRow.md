@@ -10,7 +10,7 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **belowReorder** | **bool** |  | 
 **branchInventoryId** | **String** |  | 
-**costPerUnit** | **double** |  | 
+**costPerUnit** | **double** | Piastres per unit; `null` ⟺ cost never entered. | [optional] 
 **currentStock** | **double** |  | 
 **ingredientName** | **String** |  | 
 **reorderThreshold** | **double** |  | 

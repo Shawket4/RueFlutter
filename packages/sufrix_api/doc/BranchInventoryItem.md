@@ -10,12 +10,13 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **belowReorder** | **bool** |  | 
 **branchId** | **String** |  | 
-**costPerUnit** | **double** |  | 
+**costPerUnit** | **double** | Piastres per unit; `null` ⟺ cost never entered. | [optional] 
 **createdAt** | [**DateTime**](DateTime.md) |  | 
 **currentStock** | **double** |  | 
 **description** | **String** |  | [optional] 
 **id** | **String** |  | 
 **ingredientName** | **String** |  | 
+**lastCountedAt** | [**DateTime**](DateTime.md) | When this item was last reconciled by a finalized stock count; `null` = never counted. Drives the \"count due\" signal on the inventory home. | [optional] 
 **orgIngredientId** | **String** |  | 
 **reorderThreshold** | **double** |  | 
 **unit** | **String** |  | 

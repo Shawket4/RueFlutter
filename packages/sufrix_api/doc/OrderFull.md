@@ -30,10 +30,12 @@ Name | Type | Description | Notes
 **tipAmount** | **int** |  | [optional] 
 **tipPaymentMethod** | **String** |  | [optional] 
 **totalAmount** | **int** |  | 
+**voidNote** | **String** |  | [optional] 
 **voidReason** | **String** |  | [optional] 
 **voidedAt** | [**DateTime**](DateTime.md) |  | [optional] 
 **voidedBy** | **String** |  | [optional] 
 **items** | [**List&lt;OrderItemFull&gt;**](OrderItemFull.md) |  | 
+**warnings** | **List&lt;String&gt;** | Non-fatal warnings raised while placing the order — currently used to flag ingredients that were oversold (stock driven below zero). Empty for reads/refunds. | [optional] 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

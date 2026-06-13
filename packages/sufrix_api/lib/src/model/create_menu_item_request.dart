@@ -28,8 +28,6 @@ class CreateMenuItemRequest {
 
      this.descriptionTranslations,
 
-     this.displayOrder,
-
      this.imageUrl,
 
     required  this.name,
@@ -89,18 +87,6 @@ class CreateMenuItemRequest {
 
   @JsonKey(
     
-    name: r'display_order',
-    required: false,
-    includeIfNull: false,
-  )
-
-
-  final int? displayOrder;
-
-
-
-  @JsonKey(
-    
     name: r'image_url',
     required: false,
     includeIfNull: false,
@@ -155,7 +141,6 @@ class CreateMenuItemRequest {
       other.categoryId == categoryId &&
       other.description == description &&
       other.descriptionTranslations == descriptionTranslations &&
-      other.displayOrder == displayOrder &&
       other.imageUrl == imageUrl &&
       other.name == name &&
       other.nameTranslations == nameTranslations &&
@@ -167,7 +152,6 @@ class CreateMenuItemRequest {
         categoryId.hashCode +
         (description == null ? 0 : description.hashCode) +
         (descriptionTranslations == null ? 0 : descriptionTranslations.hashCode) +
-        (displayOrder == null ? 0 : displayOrder.hashCode) +
         (imageUrl == null ? 0 : imageUrl.hashCode) +
         name.hashCode +
         (nameTranslations == null ? 0 : nameTranslations.hashCode) +

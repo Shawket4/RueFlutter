@@ -22,10 +22,5 @@ void main() {
       // TODO
     });
 
-    // List<InventoryCountInput> inventoryCounts
-    test('to test the property `inventoryCounts`', () async {
-      // TODO
-    });
-
   });
 }

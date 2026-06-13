@@ -20,8 +20,6 @@ class UpdateAddonSlotRequest {
   /// Returns a new [UpdateAddonSlotRequest] instance.
   UpdateAddonSlotRequest({
 
-     this.displayOrder,
-
      this.isRequired,
 
      this.label,
@@ -32,18 +30,6 @@ class UpdateAddonSlotRequest {
 
      this.minSelections,
   });
-
-  @JsonKey(
-    
-    name: r'display_order',
-    required: false,
-    includeIfNull: false,
-  )
-
-
-  final int? displayOrder;
-
-
 
   @JsonKey(
     
@@ -109,7 +95,6 @@ class UpdateAddonSlotRequest {
 
     @override
     bool operator ==(Object other) => identical(this, other) || other is UpdateAddonSlotRequest &&
-      other.displayOrder == displayOrder &&
       other.isRequired == isRequired &&
       other.label == label &&
       other.labelTranslations == labelTranslations &&
@@ -118,7 +103,6 @@ class UpdateAddonSlotRequest {
 
     @override
     int get hashCode =>
-        (displayOrder == null ? 0 : displayOrder.hashCode) +
         (isRequired == null ? 0 : isRequired.hashCode) +
         (label == null ? 0 : label.hashCode) +
         (labelTranslations == null ? 0 : labelTranslations.hashCode) +

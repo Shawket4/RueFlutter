@@ -66,6 +66,8 @@ class OrderExport {
 
     required  this.totalAmount,
 
+     this.voidNote,
+
      this.voidReason,
 
      this.voidedAt,
@@ -343,6 +345,18 @@ class OrderExport {
 
   @JsonKey(
     
+    name: r'void_note',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final String? voidNote;
+
+
+
+  @JsonKey(
+    
     name: r'void_reason',
     required: false,
     includeIfNull: false,
@@ -427,6 +441,7 @@ class OrderExport {
       other.tipAmount == tipAmount &&
       other.tipPaymentMethod == tipPaymentMethod &&
       other.totalAmount == totalAmount &&
+      other.voidNote == voidNote &&
       other.voidReason == voidReason &&
       other.voidedAt == voidedAt &&
       other.voidedBy == voidedBy &&
@@ -457,6 +472,7 @@ class OrderExport {
         tipAmount.hashCode +
         tipPaymentMethod.hashCode +
         totalAmount.hashCode +
+        voidNote.hashCode +
         voidReason.hashCode +
         voidedAt.hashCode +
         voidedBy.hashCode +

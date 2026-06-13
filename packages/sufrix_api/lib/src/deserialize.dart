@@ -1,3 +1,4 @@
+import 'package:sufrix_api/src/model/absorbed_by.dart';
 import 'package:sufrix_api/src/model/add_to_stock_request.dart';
 import 'package:sufrix_api/src/model/addon_cost.dart';
 import 'package:sufrix_api/src/model/addon_ingredient.dart';
@@ -7,30 +8,45 @@ import 'package:sufrix_api/src/model/addon_item_ingredient.dart';
 import 'package:sufrix_api/src/model/addon_override.dart';
 import 'package:sufrix_api/src/model/addon_sales_row.dart';
 import 'package:sufrix_api/src/model/addon_slot.dart';
+import 'package:sufrix_api/src/model/analysis_config.dart';
 import 'package:sufrix_api/src/model/assign_branch_request.dart';
 import 'package:sufrix_api/src/model/auth_permissions_response.dart';
 import 'package:sufrix_api/src/model/branch.dart';
 import 'package:sufrix_api/src/model/branch_comparison.dart';
 import 'package:sufrix_api/src/model/branch_inventory_adjustment.dart';
 import 'package:sufrix_api/src/model/branch_inventory_item.dart';
+import 'package:sufrix_api/src/model/branch_inventory_movement.dart';
 import 'package:sufrix_api/src/model/branch_inventory_transfer.dart';
 import 'package:sufrix_api/src/model/branch_sales_report.dart';
 import 'package:sufrix_api/src/model/branch_stock_report.dart';
 import 'package:sufrix_api/src/model/bundle.dart';
+import 'package:sufrix_api/src/model/bundle_association.dart';
 import 'package:sufrix_api/src/model/bundle_component_hydrated.dart';
 import 'package:sufrix_api/src/model/bundle_component_input.dart';
+import 'package:sufrix_api/src/model/bundle_forecast.dart';
+import 'package:sufrix_api/src/model/bundle_item_pair.dart';
 import 'package:sufrix_api/src/model/bundle_performance_response.dart';
 import 'package:sufrix_api/src/model/bundle_sales_row.dart';
+import 'package:sufrix_api/src/model/bundle_suggestion.dart';
+import 'package:sufrix_api/src/model/bundle_suggestion_record.dart';
 import 'package:sufrix_api/src/model/bundle_with_components.dart';
+import 'package:sufrix_api/src/model/calibration_point.dart';
+import 'package:sufrix_api/src/model/calibration_summary.dart';
 import 'package:sufrix_api/src/model/cash_movement.dart';
 import 'package:sufrix_api/src/model/cash_movement_request.dart';
 import 'package:sufrix_api/src/model/cash_movement_summary_row.dart';
 import 'package:sufrix_api/src/model/category.dart';
 import 'package:sufrix_api/src/model/category_sales.dart';
+import 'package:sufrix_api/src/model/classification.dart';
+import 'package:sufrix_api/src/model/classification_one_of.dart';
+import 'package:sufrix_api/src/model/classification_one_of1.dart';
+import 'package:sufrix_api/src/model/classification_one_of2.dart';
 import 'package:sufrix_api/src/model/close_shift_request.dart';
 import 'package:sufrix_api/src/model/close_shift_response.dart';
 import 'package:sufrix_api/src/model/combined_item_sales_row.dart';
+import 'package:sufrix_api/src/model/complementary_loss.dart';
 import 'package:sufrix_api/src/model/component_popularity.dart';
+import 'package:sufrix_api/src/model/consumption_row.dart';
 import 'package:sufrix_api/src/model/create_addon_item_request.dart';
 import 'package:sufrix_api/src/model/create_addon_slot_request.dart';
 import 'package:sufrix_api/src/model/create_adjustment_request.dart';
@@ -44,28 +60,38 @@ import 'package:sufrix_api/src/model/create_menu_item_request.dart';
 import 'package:sufrix_api/src/model/create_optional_field_request.dart';
 import 'package:sufrix_api/src/model/create_order_request.dart';
 import 'package:sufrix_api/src/model/create_payment_method_request.dart';
+import 'package:sufrix_api/src/model/create_purchase_order_request.dart';
+import 'package:sufrix_api/src/model/create_run_body.dart';
+import 'package:sufrix_api/src/model/create_run_response.dart';
+import 'package:sufrix_api/src/model/create_stocktake_request.dart';
+import 'package:sufrix_api/src/model/create_supplier_request.dart';
 import 'package:sufrix_api/src/model/create_transfer_request.dart';
 import 'package:sufrix_api/src/model/create_user_request.dart';
 import 'package:sufrix_api/src/model/create_user_response.dart';
+import 'package:sufrix_api/src/model/create_waste_request.dart';
+import 'package:sufrix_api/src/model/decision_record.dart';
 import 'package:sufrix_api/src/model/deduction_log_row.dart';
 import 'package:sufrix_api/src/model/discount.dart';
 import 'package:sufrix_api/src/model/drink_recipe.dart';
 import 'package:sufrix_api/src/model/error_body.dart';
 import 'package:sufrix_api/src/model/export_response.dart';
 import 'package:sufrix_api/src/model/force_close_request.dart';
-import 'package:sufrix_api/src/model/inventory_count_input.dart';
-import 'package:sufrix_api/src/model/inventory_count_row.dart';
-import 'package:sufrix_api/src/model/inventory_discrepancy.dart';
+import 'package:sufrix_api/src/model/inventory_valuation_report.dart';
+import 'package:sufrix_api/src/model/item_count_input.dart';
+import 'package:sufrix_api/src/model/item_key.dart';
 import 'package:sufrix_api/src/model/item_sales.dart';
 import 'package:sufrix_api/src/model/item_size.dart';
 import 'package:sufrix_api/src/model/login_request.dart';
 import 'package:sufrix_api/src/model/login_response.dart';
+import 'package:sufrix_api/src/model/low_stock_row.dart';
 import 'package:sufrix_api/src/model/me_response.dart';
 import 'package:sufrix_api/src/model/menu_engineering_report.dart';
 import 'package:sufrix_api/src/model/menu_engineering_row.dart';
 import 'package:sufrix_api/src/model/menu_item.dart';
 import 'package:sufrix_api/src/model/menu_item_full.dart';
 import 'package:sufrix_api/src/model/menu_item_recipe.dart';
+import 'package:sufrix_api/src/model/menu_item_with_costs.dart';
+import 'package:sufrix_api/src/model/mode_summary.dart';
 import 'package:sufrix_api/src/model/onboarding_status.dart';
 import 'package:sufrix_api/src/model/onboarding_step.dart';
 import 'package:sufrix_api/src/model/open_shift_request.dart';
@@ -86,17 +112,26 @@ import 'package:sufrix_api/src/model/order_summary.dart';
 import 'package:sufrix_api/src/model/org.dart';
 import 'package:sufrix_api/src/model/org_comparison_report.dart';
 import 'package:sufrix_api/src/model/org_ingredient.dart';
+import 'package:sufrix_api/src/model/org_inventory_settings.dart';
 import 'package:sufrix_api/src/model/org_payment_method.dart';
+import 'package:sufrix_api/src/model/po_line_input.dart';
 import 'package:sufrix_api/src/model/paginated_bundles.dart';
+import 'package:sufrix_api/src/model/paginated_menu_items.dart';
 import 'package:sufrix_api/src/model/paginated_orders.dart';
 import 'package:sufrix_api/src/model/paginated_orders_full.dart';
 import 'package:sufrix_api/src/model/payment_split_input.dart';
 import 'package:sufrix_api/src/model/payment_summary_row.dart';
+import 'package:sufrix_api/src/model/peer_comparison.dart';
 import 'package:sufrix_api/src/model/permission.dart';
 import 'package:sufrix_api/src/model/permission_matrix.dart';
+import 'package:sufrix_api/src/model/persisted_run.dart';
 import 'package:sufrix_api/src/model/preview_addon_input.dart';
 import 'package:sufrix_api/src/model/preview_ingredient.dart';
 import 'package:sufrix_api/src/model/preview_recipe_request.dart';
+import 'package:sufrix_api/src/model/price_anchors.dart';
+import 'package:sufrix_api/src/model/price_suggestion.dart';
+import 'package:sufrix_api/src/model/price_suggestion_record.dart';
+import 'package:sufrix_api/src/model/promote_bundle_body.dart';
 import 'package:sufrix_api/src/model/public_addon_item.dart';
 import 'package:sufrix_api/src/model/public_addon_slot.dart';
 import 'package:sufrix_api/src/model/public_category.dart';
@@ -104,6 +139,14 @@ import 'package:sufrix_api/src/model/public_item_size.dart';
 import 'package:sufrix_api/src/model/public_menu_item.dart';
 import 'package:sufrix_api/src/model/public_menu_response.dart';
 import 'package:sufrix_api/src/model/public_org.dart';
+import 'package:sufrix_api/src/model/purchase_order.dart';
+import 'package:sufrix_api/src/model/purchase_order_full.dart';
+import 'package:sufrix_api/src/model/purchase_order_line.dart';
+import 'package:sufrix_api/src/model/receive_line_input.dart';
+import 'package:sufrix_api/src/model/receive_purchase_order_request.dart';
+import 'package:sufrix_api/src/model/record_decision_body.dart';
+import 'package:sufrix_api/src/model/removal_scenario.dart';
+import 'package:sufrix_api/src/model/removal_scenario_record.dart';
 import 'package:sufrix_api/src/model/resolve_branch_request.dart';
 import 'package:sufrix_api/src/model/resolve_branch_response.dart';
 import 'package:sufrix_api/src/model/role_permission.dart';
@@ -111,10 +154,16 @@ import 'package:sufrix_api/src/model/shift.dart';
 import 'package:sufrix_api/src/model/shift_pre_fill.dart';
 import 'package:sufrix_api/src/model/shift_report_response.dart';
 import 'package:sufrix_api/src/model/shift_summary.dart';
+import 'package:sufrix_api/src/model/shrinkage_row.dart';
 import 'package:sufrix_api/src/model/sku_cost.dart';
 import 'package:sufrix_api/src/model/stock_row.dart';
+import 'package:sufrix_api/src/model/stocktake.dart';
+import 'package:sufrix_api/src/model/stocktake_full.dart';
+import 'package:sufrix_api/src/model/stocktake_item.dart';
+import 'package:sufrix_api/src/model/supplier.dart';
 import 'package:sufrix_api/src/model/teller_stats.dart';
 import 'package:sufrix_api/src/model/timeseries_point.dart';
+import 'package:sufrix_api/src/model/triplet.dart';
 import 'package:sufrix_api/src/model/update_addon_item_request.dart';
 import 'package:sufrix_api/src/model/update_addon_slot_request.dart';
 import 'package:sufrix_api/src/model/update_branch_request.dart';
@@ -122,24 +171,31 @@ import 'package:sufrix_api/src/model/update_bundle_request.dart';
 import 'package:sufrix_api/src/model/update_catalog_item_request.dart';
 import 'package:sufrix_api/src/model/update_category_request.dart';
 import 'package:sufrix_api/src/model/update_discount_request.dart';
+import 'package:sufrix_api/src/model/update_inventory_settings_request.dart';
 import 'package:sufrix_api/src/model/update_menu_item_request.dart';
 import 'package:sufrix_api/src/model/update_optional_field_request.dart';
 import 'package:sufrix_api/src/model/update_org_request.dart';
 import 'package:sufrix_api/src/model/update_payment_method_request.dart';
 import 'package:sufrix_api/src/model/update_stock_request.dart';
+import 'package:sufrix_api/src/model/update_supplier_request.dart';
 import 'package:sufrix_api/src/model/update_transfer_request.dart';
 import 'package:sufrix_api/src/model/update_user_request.dart';
 import 'package:sufrix_api/src/model/upload_response.dart';
 import 'package:sufrix_api/src/model/upsert_addon_ingredient_request.dart';
 import 'package:sufrix_api/src/model/upsert_addon_override_request.dart';
 import 'package:sufrix_api/src/model/upsert_drink_recipe_request.dart';
+import 'package:sufrix_api/src/model/upsert_items_request.dart';
 import 'package:sufrix_api/src/model/upsert_permission_request.dart';
 import 'package:sufrix_api/src/model/upsert_role_permission_request.dart';
 import 'package:sufrix_api/src/model/upsert_size_request.dart';
 import 'package:sufrix_api/src/model/user_branch.dart';
 import 'package:sufrix_api/src/model/user_permission_item.dart';
 import 'package:sufrix_api/src/model/user_public.dart';
+import 'package:sufrix_api/src/model/valuation_row.dart';
+import 'package:sufrix_api/src/model/variance_report.dart';
+import 'package:sufrix_api/src/model/variance_row.dart';
 import 'package:sufrix_api/src/model/void_order_request.dart';
+import 'package:sufrix_api/src/model/waste_report_row.dart';
 
 final _regList = RegExp(r'^List<(.*)>$');
 final _regSet = RegExp(r'^Set<(.*)>$');
@@ -159,6 +215,11 @@ final _regMap = RegExp(r'^Map<String,(.*)>$');
           return (valueString == 'true' || valueString == '1') as ReturnType;
         case 'double':
           return (value is double ? value : double.parse('$value')) as ReturnType;
+        case 'AbsorbedBy':
+          return AbsorbedBy.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'Action':
+          
+          
         case 'AddToStockRequest':
           return AddToStockRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'AddonCost':
@@ -177,6 +238,8 @@ final _regMap = RegExp(r'^Map<String,(.*)>$');
           return AddonSalesRow.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'AddonSlot':
           return AddonSlot.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'AnalysisConfig':
+          return AnalysisConfig.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'AssignBranchRequest':
           return AssignBranchRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'AuthPermissionsResponse':
@@ -189,6 +252,8 @@ final _regMap = RegExp(r'^Map<String,(.*)>$');
           return BranchInventoryAdjustment.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'BranchInventoryItem':
           return BranchInventoryItem.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'BranchInventoryMovement':
+          return BranchInventoryMovement.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'BranchInventoryTransfer':
           return BranchInventoryTransfer.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'BranchSalesReport':
@@ -197,10 +262,16 @@ final _regMap = RegExp(r'^Map<String,(.*)>$');
           return BranchStockReport.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'Bundle':
           return Bundle.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'BundleAssociation':
+          return BundleAssociation.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'BundleComponentHydrated':
           return BundleComponentHydrated.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'BundleComponentInput':
           return BundleComponentInput.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'BundleForecast':
+          return BundleForecast.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'BundleItemPair':
+          return BundleItemPair.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'BundlePerformanceResponse':
           return BundlePerformanceResponse.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'BundleSalesRow':
@@ -208,8 +279,16 @@ final _regMap = RegExp(r'^Map<String,(.*)>$');
         case 'BundleStatus':
           
           
+        case 'BundleSuggestion':
+          return BundleSuggestion.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'BundleSuggestionRecord':
+          return BundleSuggestionRecord.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'BundleWithComponents':
           return BundleWithComponents.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'CalibrationPoint':
+          return CalibrationPoint.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'CalibrationSummary':
+          return CalibrationSummary.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'CashMovement':
           return CashMovement.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'CashMovementRequest':
@@ -220,14 +299,32 @@ final _regMap = RegExp(r'^Map<String,(.*)>$');
           return Category.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'CategorySales':
           return CategorySales.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'Classification':
+          return Classification.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'ClassificationOneOf':
+          return ClassificationOneOf.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'ClassificationOneOf1':
+          return ClassificationOneOf1.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'ClassificationOneOf2':
+          return ClassificationOneOf2.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'CloseShiftRequest':
           return CloseShiftRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'CloseShiftResponse':
           return CloseShiftResponse.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'CmQuadrant':
+          
+          
         case 'CombinedItemSalesRow':
           return CombinedItemSalesRow.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'ComplementaryLoss':
+          return ComplementaryLoss.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'ComponentPopularity':
           return ComponentPopularity.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'Confidence':
+          
+          
+        case 'ConsumptionRow':
+          return ConsumptionRow.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'CreateAddonItemRequest':
           return CreateAddonItemRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'CreateAddonSlotRequest':
@@ -254,12 +351,29 @@ final _regMap = RegExp(r'^Map<String,(.*)>$');
           return CreateOrderRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'CreatePaymentMethodRequest':
           return CreatePaymentMethodRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'CreatePurchaseOrderRequest':
+          return CreatePurchaseOrderRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'CreateRunBody':
+          return CreateRunBody.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'CreateRunResponse':
+          return CreateRunResponse.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'CreateStocktakeRequest':
+          return CreateStocktakeRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'CreateSupplierRequest':
+          return CreateSupplierRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'CreateTransferRequest':
           return CreateTransferRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'CreateUserRequest':
           return CreateUserRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'CreateUserResponse':
           return CreateUserResponse.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'CreateWasteRequest':
+          return CreateWasteRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'Decision':
+          
+          
+        case 'DecisionRecord':
+          return DecisionRecord.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'DeductionLogRow':
           return DeductionLogRow.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'Discount':
@@ -272,12 +386,15 @@ final _regMap = RegExp(r'^Map<String,(.*)>$');
           return ExportResponse.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'ForceCloseRequest':
           return ForceCloseRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'InventoryCountInput':
-          return InventoryCountInput.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'InventoryCountRow':
-          return InventoryCountRow.fromJson(value as Map<String, dynamic>) as ReturnType;
-        case 'InventoryDiscrepancy':
-          return InventoryDiscrepancy.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'GuardClip':
+          
+          
+        case 'InventoryValuationReport':
+          return InventoryValuationReport.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'ItemCountInput':
+          return ItemCountInput.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'ItemKey':
+          return ItemKey.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'ItemSales':
           return ItemSales.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'ItemSize':
@@ -286,6 +403,8 @@ final _regMap = RegExp(r'^Map<String,(.*)>$');
           return LoginRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'LoginResponse':
           return LoginResponse.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'LowStockRow':
+          return LowStockRow.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'MeResponse':
           return MeResponse.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'MenuEngineeringReport':
@@ -298,6 +417,10 @@ final _regMap = RegExp(r'^Map<String,(.*)>$');
           return MenuItemFull.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'MenuItemRecipe':
           return MenuItemRecipe.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'MenuItemWithCosts':
+          return MenuItemWithCosts.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'ModeSummary':
+          return ModeSummary.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'OnboardingStatus':
           return OnboardingStatus.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'OnboardingStep':
@@ -338,10 +461,16 @@ final _regMap = RegExp(r'^Map<String,(.*)>$');
           return OrgComparisonReport.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'OrgIngredient':
           return OrgIngredient.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'OrgInventorySettings':
+          return OrgInventorySettings.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'OrgPaymentMethod':
           return OrgPaymentMethod.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'POLineInput':
+          return POLineInput.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'PaginatedBundles':
           return PaginatedBundles.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'PaginatedMenuItems':
+          return PaginatedMenuItems.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'PaginatedOrders':
           return PaginatedOrders.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'PaginatedOrdersFull':
@@ -350,19 +479,37 @@ final _regMap = RegExp(r'^Map<String,(.*)>$');
           return PaymentSplitInput.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'PaymentSummaryRow':
           return PaymentSummaryRow.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'PeerComparison':
+          return PeerComparison.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'PeerPosition':
+          
+          
         case 'Permission':
           return Permission.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'PermissionMatrix':
           return PermissionMatrix.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'PersistedRun':
+          return PersistedRun.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'PreviewAddonInput':
           return PreviewAddonInput.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'PreviewIngredient':
           return PreviewIngredient.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'PreviewRecipeRequest':
           return PreviewRecipeRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'PriceAnchors':
+          return PriceAnchors.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'PriceRoundingRule':
+          
+          
+        case 'PriceSuggestion':
+          return PriceSuggestion.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'PriceSuggestionRecord':
+          return PriceSuggestionRecord.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'PrinterBrand':
           
           
+        case 'PromoteBundleBody':
+          return PromoteBundleBody.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'PublicAddonItem':
           return PublicAddonItem.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'PublicAddonSlot':
@@ -377,12 +524,37 @@ final _regMap = RegExp(r'^Map<String,(.*)>$');
           return PublicMenuResponse.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'PublicOrg':
           return PublicOrg.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'PurchaseOrder':
+          return PurchaseOrder.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'PurchaseOrderFull':
+          return PurchaseOrderFull.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'PurchaseOrderLine':
+          return PurchaseOrderLine.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'ReceiveLineInput':
+          return ReceiveLineInput.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'ReceivePurchaseOrderRequest':
+          return ReceivePurchaseOrderRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RecordDecisionBody':
+          return RecordDecisionBody.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RemovalRecommendation':
+          
+          
+        case 'RemovalScenario':
+          return RemovalScenario.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RemovalScenarioRecord':
+          return RemovalScenarioRecord.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'ResolveBranchRequest':
           return ResolveBranchRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'ResolveBranchResponse':
           return ResolveBranchResponse.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RevenueClass':
+          
+          
         case 'RolePermission':
           return RolePermission.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'RunStatus':
+          
+          
         case 'Shift':
           return Shift.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'ShiftPreFill':
@@ -391,14 +563,29 @@ final _regMap = RegExp(r'^Map<String,(.*)>$');
           return ShiftReportResponse.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'ShiftSummary':
           return ShiftSummary.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'ShrinkageRow':
+          return ShrinkageRow.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'SkuCost':
           return SkuCost.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'StockRow':
           return StockRow.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'Stocktake':
+          return Stocktake.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'StocktakeFull':
+          return StocktakeFull.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'StocktakeItem':
+          return StocktakeItem.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'SuggestionKind':
+          
+          
+        case 'Supplier':
+          return Supplier.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'TellerStats':
           return TellerStats.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'TimeseriesPoint':
           return TimeseriesPoint.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'Triplet':
+          return Triplet.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'UpdateAddonItemRequest':
           return UpdateAddonItemRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'UpdateAddonSlotRequest':
@@ -413,6 +600,8 @@ final _regMap = RegExp(r'^Map<String,(.*)>$');
           return UpdateCategoryRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'UpdateDiscountRequest':
           return UpdateDiscountRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'UpdateInventorySettingsRequest':
+          return UpdateInventorySettingsRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'UpdateMenuItemRequest':
           return UpdateMenuItemRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'UpdateOptionalFieldRequest':
@@ -423,6 +612,8 @@ final _regMap = RegExp(r'^Map<String,(.*)>$');
           return UpdatePaymentMethodRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'UpdateStockRequest':
           return UpdateStockRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'UpdateSupplierRequest':
+          return UpdateSupplierRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'UpdateTransferRequest':
           return UpdateTransferRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'UpdateUserRequest':
@@ -435,6 +626,8 @@ final _regMap = RegExp(r'^Map<String,(.*)>$');
           return UpsertAddonOverrideRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'UpsertDrinkRecipeRequest':
           return UpsertDrinkRecipeRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'UpsertItemsRequest':
+          return UpsertItemsRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'UpsertPermissionRequest':
           return UpsertPermissionRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'UpsertRolePermissionRequest':
@@ -450,8 +643,16 @@ final _regMap = RegExp(r'^Map<String,(.*)>$');
         case 'UserRole':
           
           
+        case 'ValuationRow':
+          return ValuationRow.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'VarianceReport':
+          return VarianceReport.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'VarianceRow':
+          return VarianceRow.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'VoidOrderRequest':
           return VoidOrderRequest.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'WasteReportRow':
+          return WasteReportRow.fromJson(value as Map<String, dynamic>) as ReturnType;
         default:
           RegExpMatch? match;
 

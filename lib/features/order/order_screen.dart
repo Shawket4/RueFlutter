@@ -141,10 +141,6 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
               .read(orderHistoryProvider.notifier)
               .loadForShift(shift.id) // This serves local cache first
               .catchError((_) {}),
-        ref
-            .read(shiftProvider.notifier)
-            .loadInventory(branchId)
-            .catchError((_) {}),
         ref.read(menuProvider.notifier).load(orgId).catchError((_) {}),
         ref.read(discountProvider.notifier).load(orgId).catchError((_) {}),
         ref.read(paymentMethodProvider.notifier).load(orgId).catchError((_) {}),
@@ -170,27 +166,41 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
 
     return Scaffold(
       backgroundColor: t.bg,
-      floatingActionButton: showCartPanel ? null : const MobileCartFab(),
-      body: SafeArea(
-        child: Column(children: [
-          TopBar(ctrl: _searchCtrl, query: query, searchFocus: _searchFocus),
-          const OfflineBanner(
-              margin: EdgeInsetsDirectional.fromSTEB(10, 6, 10, 0)),
-          Expanded(
-            child: Row(children: [
-              if (showRail && query.isEmpty) const CategoryRail(),
-              Expanded(
+      body: Column(children: [
+        Expanded(
+          child: Stack(
+            children: [
+              SafeArea(
+                bottom: false,
                 child: Column(children: [
-                  if (!showRail && query.isEmpty) const CategoryStrip(),
-                  Expanded(child: _contentArea(query)),
+                  TopBar(ctrl: _searchCtrl, query: query, searchFocus: _searchFocus),
+                  const OfflineBanner(
+                      margin: EdgeInsetsDirectional.fromSTEB(10, 6, 10, 0)),
+                  Expanded(
+                    child: Row(children: [
+                      if (showRail && query.isEmpty) const CategoryRail(),
+                      Expanded(
+                        child: Column(children: [
+                          if (!showRail && query.isEmpty) const CategoryStrip(),
+                          Expanded(child: _contentArea(query)),
+                        ]),
+                      ),
+                      if (showCartPanel) const CartPanel(),
+                    ]),
+                  ),
                 ]),
               ),
-              if (showCartPanel) const CartPanel(),
-            ]),
+              if (!showCartPanel)
+                const PositionedDirectional(
+                  bottom: AppSpace.lg,
+                  end: AppSpace.lg,
+                  child: MobileCartFab(),
+                ),
+            ],
           ),
-          const _BottomActionBar(),
-        ]),
-      ),
+        ),
+        const _BottomActionBar(),
+      ]),
     );
   }
 
@@ -236,6 +246,7 @@ class _BottomActionBar extends ConsumerWidget {
     final isOnline = ref.watch(isOnlineProvider);
     final shift = ref.watch(shiftProvider.select((s) => s.shift));
 
+    final bottomInset = MediaQuery.of(context).padding.bottom;
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -246,8 +257,11 @@ class _BottomActionBar extends ConsumerWidget {
               color: t.shadow, blurRadius: 12, offset: const Offset(0, -2)),
         ],
       ),
-      padding: const EdgeInsetsDirectional.fromSTEB(
-          AppSpace.md, AppSpace.sm - 2, AppSpace.md, AppSpace.sm - 2),
+      padding: EdgeInsetsDirectional.fromSTEB(
+          AppSpace.md,
+          AppSpace.sm - 2,
+          AppSpace.md,
+          AppSpace.sm - 2 + bottomInset),
       child: LayoutBuilder(builder: (context, constraints) {
         return SingleChildScrollView(
           scrollDirection: Axis.horizontal,

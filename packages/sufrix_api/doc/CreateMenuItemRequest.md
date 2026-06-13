@@ -12,7 +12,6 @@ Name | Type | Description | Notes
 **categoryId** | **String** |  | 
 **description** | **String** |  | [optional] 
 **descriptionTranslations** | **Object** |  | [optional] 
-**displayOrder** | **int** |  | [optional] 
 **imageUrl** | **String** |  | [optional] 
 **name** | **String** |  | 
 **nameTranslations** | **Object** |  | [optional] 

@@ -7,8 +7,6 @@ part of 'item_size.dart';
 // **************************************************************************
 
 abstract class _$ItemSizeCWProxy {
-  ItemSize displayOrder(int displayOrder);
-
   ItemSize id(String id);
 
   ItemSize isActive(bool isActive);
@@ -26,7 +24,6 @@ abstract class _$ItemSizeCWProxy {
   /// ItemSize(...).copyWith(id: 12, name: "My name")
   /// ````
   ItemSize call({
-    int displayOrder,
     String id,
     bool isActive,
     String label,
@@ -40,9 +37,6 @@ class _$ItemSizeCWProxyImpl implements _$ItemSizeCWProxy {
   const _$ItemSizeCWProxyImpl(this._value);
 
   final ItemSize _value;
-
-  @override
-  ItemSize displayOrder(int displayOrder) => this(displayOrder: displayOrder);
 
   @override
   ItemSize id(String id) => this(id: id);
@@ -68,7 +62,6 @@ class _$ItemSizeCWProxyImpl implements _$ItemSizeCWProxy {
   /// ItemSize(...).copyWith(id: 12, name: "My name")
   /// ````
   ItemSize call({
-    Object? displayOrder = const $CopyWithPlaceholder(),
     Object? id = const $CopyWithPlaceholder(),
     Object? isActive = const $CopyWithPlaceholder(),
     Object? label = const $CopyWithPlaceholder(),
@@ -76,10 +69,6 @@ class _$ItemSizeCWProxyImpl implements _$ItemSizeCWProxy {
     Object? priceOverride = const $CopyWithPlaceholder(),
   }) {
     return ItemSize(
-      displayOrder: displayOrder == const $CopyWithPlaceholder()
-          ? _value.displayOrder
-          // ignore: cast_nullable_to_non_nullable
-          : displayOrder as int,
       id: id == const $CopyWithPlaceholder()
           ? _value.id
           // ignore: cast_nullable_to_non_nullable
@@ -121,7 +110,6 @@ ItemSize _$ItemSizeFromJson(Map<String, dynamic> json) => $checkedCreate(
     $checkKeys(
       json,
       requiredKeys: const [
-        'display_order',
         'id',
         'is_active',
         'label',
@@ -130,7 +118,6 @@ ItemSize _$ItemSizeFromJson(Map<String, dynamic> json) => $checkedCreate(
       ],
     );
     final val = ItemSize(
-      displayOrder: $checkedConvert('display_order', (v) => (v as num).toInt()),
       id: $checkedConvert('id', (v) => v as String),
       isActive: $checkedConvert('is_active', (v) => v as bool),
       label: $checkedConvert('label', (v) => v as String),
@@ -143,7 +130,6 @@ ItemSize _$ItemSizeFromJson(Map<String, dynamic> json) => $checkedCreate(
     return val;
   },
   fieldKeyMap: const {
-    'displayOrder': 'display_order',
     'isActive': 'is_active',
     'menuItemId': 'menu_item_id',
     'priceOverride': 'price_override',
@@ -151,7 +137,6 @@ ItemSize _$ItemSizeFromJson(Map<String, dynamic> json) => $checkedCreate(
 );
 
 Map<String, dynamic> _$ItemSizeToJson(ItemSize instance) => <String, dynamic>{
-  'display_order': instance.displayOrder,
   'id': instance.id,
   'is_active': instance.isActive,
   'label': instance.label,

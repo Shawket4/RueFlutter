@@ -13,6 +13,7 @@ Name | Type | Description | Notes
 **description** | **String** |  | [optional] 
 **isActive** | **bool** |  | [optional] 
 **name** | **String** |  | [optional] 
+**supplierId** | **String** | Set/replace the default supplier. (Omitted = unchanged; clearing to none is not supported via this field.) | [optional] 
 **unit** | **String** |  | [optional] 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

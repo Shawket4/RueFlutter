@@ -114,7 +114,7 @@ void main() {
       );
 
       final entries =
-          state.gridEntriesForCategory(branchId: 'b1', inventory: []);
+          state.gridEntriesForCategory(branchId: 'b1');
       expect(entries.length, 2);
       expect(entries[0].kind == MenuGridEntryKind.bundle, true);
       expect(entries[0].bundle!.id, 'b2'); // Sorted by displayOrder
@@ -131,7 +131,7 @@ void main() {
       );
 
       final entries =
-          state.gridEntriesForCategory(branchId: 'b1', inventory: []);
+          state.gridEntriesForCategory(branchId: 'b1');
       expect(entries.length, 2);
       expect(entries[0].item!.id, 'm2'); // Sorted by displayOrder
       expect(entries[1].item!.id, 'm1');
@@ -145,7 +145,7 @@ void main() {
         ],
       );
 
-      final result = state.searchBundles('meal', branchId: 'b1', inventory: []);
+      final result = state.searchBundles('meal', branchId: 'b1');
       expect(result.length, 1);
       expect(result[0].id, 'b1');
     });

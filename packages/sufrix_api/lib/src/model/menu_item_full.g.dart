@@ -21,8 +21,6 @@ abstract class _$MenuItemFullCWProxy {
 
   MenuItemFull descriptionTranslations(Object descriptionTranslations);
 
-  MenuItemFull displayOrder(int displayOrder);
-
   MenuItemFull id(String id);
 
   MenuItemFull imageUrl(String? imageUrl);
@@ -59,7 +57,6 @@ abstract class _$MenuItemFullCWProxy {
     DateTime? deletedAt,
     String? description,
     Object descriptionTranslations,
-    int displayOrder,
     String id,
     String? imageUrl,
     bool isActive,
@@ -103,10 +100,6 @@ class _$MenuItemFullCWProxyImpl implements _$MenuItemFullCWProxy {
   @override
   MenuItemFull descriptionTranslations(Object descriptionTranslations) =>
       this(descriptionTranslations: descriptionTranslations);
-
-  @override
-  MenuItemFull displayOrder(int displayOrder) =>
-      this(displayOrder: displayOrder);
 
   @override
   MenuItemFull id(String id) => this(id: id);
@@ -159,7 +152,6 @@ class _$MenuItemFullCWProxyImpl implements _$MenuItemFullCWProxy {
     Object? deletedAt = const $CopyWithPlaceholder(),
     Object? description = const $CopyWithPlaceholder(),
     Object? descriptionTranslations = const $CopyWithPlaceholder(),
-    Object? displayOrder = const $CopyWithPlaceholder(),
     Object? id = const $CopyWithPlaceholder(),
     Object? imageUrl = const $CopyWithPlaceholder(),
     Object? isActive = const $CopyWithPlaceholder(),
@@ -202,10 +194,6 @@ class _$MenuItemFullCWProxyImpl implements _$MenuItemFullCWProxy {
           ? _value.descriptionTranslations
           // ignore: cast_nullable_to_non_nullable
           : descriptionTranslations as Object,
-      displayOrder: displayOrder == const $CopyWithPlaceholder()
-          ? _value.displayOrder
-          // ignore: cast_nullable_to_non_nullable
-          : displayOrder as int,
       id: id == const $CopyWithPlaceholder()
           ? _value.id
           // ignore: cast_nullable_to_non_nullable
@@ -275,7 +263,6 @@ MenuItemFull _$MenuItemFullFromJson(Map<String, dynamic> json) =>
             'base_price',
             'created_at',
             'description_translations',
-            'display_order',
             'id',
             'is_active',
             'name',
@@ -307,10 +294,6 @@ MenuItemFull _$MenuItemFullFromJson(Map<String, dynamic> json) =>
           descriptionTranslations: $checkedConvert(
             'description_translations',
             (v) => v as Object,
-          ),
-          displayOrder: $checkedConvert(
-            'display_order',
-            (v) => (v as num).toInt(),
           ),
           id: $checkedConvert('id', (v) => v as String),
           imageUrl: $checkedConvert('image_url', (v) => v as String?),
@@ -359,7 +342,6 @@ MenuItemFull _$MenuItemFullFromJson(Map<String, dynamic> json) =>
         'defaultMilkAddonId': 'default_milk_addon_id',
         'deletedAt': 'deleted_at',
         'descriptionTranslations': 'description_translations',
-        'displayOrder': 'display_order',
         'imageUrl': 'image_url',
         'isActive': 'is_active',
         'nameTranslations': 'name_translations',
@@ -380,7 +362,6 @@ Map<String, dynamic> _$MenuItemFullToJson(
   'deleted_at': ?instance.deletedAt?.toIso8601String(),
   'description': ?instance.description,
   'description_translations': instance.descriptionTranslations,
-  'display_order': instance.displayOrder,
   'id': instance.id,
   'image_url': ?instance.imageUrl,
   'is_active': instance.isActive,

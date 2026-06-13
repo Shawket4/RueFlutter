@@ -10,7 +10,6 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **createdAt** | [**DateTime**](DateTime.md) |  | 
 **deletedAt** | [**DateTime**](DateTime.md) |  | [optional] 
-**displayOrder** | **int** |  | 
 **id** | **String** |  | 
 **imageUrl** | **String** |  | [optional] 
 **isActive** | **bool** |  | 

@@ -24,8 +24,6 @@ class UpdateAddonItemRequest {
 
      this.defaultPrice,
 
-     this.displayOrder,
-
      this.isActive,
 
      this.name,
@@ -54,18 +52,6 @@ class UpdateAddonItemRequest {
 
 
   final int? defaultPrice;
-
-
-
-  @JsonKey(
-    
-    name: r'display_order',
-    required: false,
-    includeIfNull: false,
-  )
-
-
-  final int? displayOrder;
 
 
 
@@ -111,7 +97,6 @@ class UpdateAddonItemRequest {
     bool operator ==(Object other) => identical(this, other) || other is UpdateAddonItemRequest &&
       other.addonType == addonType &&
       other.defaultPrice == defaultPrice &&
-      other.displayOrder == displayOrder &&
       other.isActive == isActive &&
       other.name == name &&
       other.nameTranslations == nameTranslations;
@@ -120,7 +105,6 @@ class UpdateAddonItemRequest {
     int get hashCode =>
         (addonType == null ? 0 : addonType.hashCode) +
         (defaultPrice == null ? 0 : defaultPrice.hashCode) +
-        (displayOrder == null ? 0 : displayOrder.hashCode) +
         (isActive == null ? 0 : isActive.hashCode) +
         (name == null ? 0 : name.hashCode) +
         (nameTranslations == null ? 0 : nameTranslations.hashCode);

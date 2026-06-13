@@ -9,7 +9,6 @@ import 'package:sufrix_api/api.dart';
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **color** | **String** |  | 
-**displayOrder** | **int** |  | [optional] 
 **icon** | **String** |  | 
 **isActive** | **bool** |  | [optional] 
 **isCash** | **bool** |  | 

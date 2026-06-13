@@ -11,8 +11,6 @@ abstract class _$UpdateAddonItemRequestCWProxy {
 
   UpdateAddonItemRequest defaultPrice(int? defaultPrice);
 
-  UpdateAddonItemRequest displayOrder(int? displayOrder);
-
   UpdateAddonItemRequest isActive(bool? isActive);
 
   UpdateAddonItemRequest name(String? name);
@@ -28,7 +26,6 @@ abstract class _$UpdateAddonItemRequestCWProxy {
   UpdateAddonItemRequest call({
     String? addonType,
     int? defaultPrice,
-    int? displayOrder,
     bool? isActive,
     String? name,
     Object? nameTranslations,
@@ -51,10 +48,6 @@ class _$UpdateAddonItemRequestCWProxyImpl
       this(defaultPrice: defaultPrice);
 
   @override
-  UpdateAddonItemRequest displayOrder(int? displayOrder) =>
-      this(displayOrder: displayOrder);
-
-  @override
   UpdateAddonItemRequest isActive(bool? isActive) => this(isActive: isActive);
 
   @override
@@ -74,7 +67,6 @@ class _$UpdateAddonItemRequestCWProxyImpl
   UpdateAddonItemRequest call({
     Object? addonType = const $CopyWithPlaceholder(),
     Object? defaultPrice = const $CopyWithPlaceholder(),
-    Object? displayOrder = const $CopyWithPlaceholder(),
     Object? isActive = const $CopyWithPlaceholder(),
     Object? name = const $CopyWithPlaceholder(),
     Object? nameTranslations = const $CopyWithPlaceholder(),
@@ -88,10 +80,6 @@ class _$UpdateAddonItemRequestCWProxyImpl
           ? _value.defaultPrice
           // ignore: cast_nullable_to_non_nullable
           : defaultPrice as int?,
-      displayOrder: displayOrder == const $CopyWithPlaceholder()
-          ? _value.displayOrder
-          // ignore: cast_nullable_to_non_nullable
-          : displayOrder as int?,
       isActive: isActive == const $CopyWithPlaceholder()
           ? _value.isActive
           // ignore: cast_nullable_to_non_nullable
@@ -131,10 +119,6 @@ UpdateAddonItemRequest _$UpdateAddonItemRequestFromJson(
         'default_price',
         (v) => (v as num?)?.toInt(),
       ),
-      displayOrder: $checkedConvert(
-        'display_order',
-        (v) => (v as num?)?.toInt(),
-      ),
       isActive: $checkedConvert('is_active', (v) => v as bool?),
       name: $checkedConvert('name', (v) => v as String?),
       nameTranslations: $checkedConvert('name_translations', (v) => v),
@@ -144,7 +128,6 @@ UpdateAddonItemRequest _$UpdateAddonItemRequestFromJson(
   fieldKeyMap: const {
     'addonType': 'addon_type',
     'defaultPrice': 'default_price',
-    'displayOrder': 'display_order',
     'isActive': 'is_active',
     'nameTranslations': 'name_translations',
   },
@@ -155,7 +138,6 @@ Map<String, dynamic> _$UpdateAddonItemRequestToJson(
 ) => <String, dynamic>{
   'addon_type': ?instance.addonType,
   'default_price': ?instance.defaultPrice,
-  'display_order': ?instance.displayOrder,
   'is_active': ?instance.isActive,
   'name': ?instance.name,
   'name_translations': ?instance.nameTranslations,

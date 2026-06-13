@@ -9,6 +9,10 @@ part of 'menu_engineering_report.dart';
 abstract class _$MenuEngineeringReportCWProxy {
   MenuEngineeringReport branchId(String branchId);
 
+  MenuEngineeringReport costBasis(String costBasis);
+
+  MenuEngineeringReport excludedSales(int excludedSales);
+
   MenuEngineeringReport from(DateTime? from);
 
   MenuEngineeringReport rows(List<MenuEngineeringRow> rows);
@@ -31,6 +35,8 @@ abstract class _$MenuEngineeringReportCWProxy {
   /// ````
   MenuEngineeringReport call({
     String branchId,
+    String costBasis,
+    int excludedSales,
     DateTime? from,
     List<MenuEngineeringRow> rows,
     int rowsCostMissing,
@@ -50,6 +56,14 @@ class _$MenuEngineeringReportCWProxyImpl
 
   @override
   MenuEngineeringReport branchId(String branchId) => this(branchId: branchId);
+
+  @override
+  MenuEngineeringReport costBasis(String costBasis) =>
+      this(costBasis: costBasis);
+
+  @override
+  MenuEngineeringReport excludedSales(int excludedSales) =>
+      this(excludedSales: excludedSales);
 
   @override
   MenuEngineeringReport from(DateTime? from) => this(from: from);
@@ -84,6 +98,8 @@ class _$MenuEngineeringReportCWProxyImpl
   /// ````
   MenuEngineeringReport call({
     Object? branchId = const $CopyWithPlaceholder(),
+    Object? costBasis = const $CopyWithPlaceholder(),
+    Object? excludedSales = const $CopyWithPlaceholder(),
     Object? from = const $CopyWithPlaceholder(),
     Object? rows = const $CopyWithPlaceholder(),
     Object? rowsCostMissing = const $CopyWithPlaceholder(),
@@ -97,6 +113,14 @@ class _$MenuEngineeringReportCWProxyImpl
           ? _value.branchId
           // ignore: cast_nullable_to_non_nullable
           : branchId as String,
+      costBasis: costBasis == const $CopyWithPlaceholder()
+          ? _value.costBasis
+          // ignore: cast_nullable_to_non_nullable
+          : costBasis as String,
+      excludedSales: excludedSales == const $CopyWithPlaceholder()
+          ? _value.excludedSales
+          // ignore: cast_nullable_to_non_nullable
+          : excludedSales as int,
       from: from == const $CopyWithPlaceholder()
           ? _value.from
           // ignore: cast_nullable_to_non_nullable
@@ -150,6 +174,8 @@ MenuEngineeringReport _$MenuEngineeringReportFromJson(
       json,
       requiredKeys: const [
         'branch_id',
+        'cost_basis',
+        'excluded_sales',
         'rows',
         'rows_cost_missing',
         'total_cost',
@@ -159,6 +185,11 @@ MenuEngineeringReport _$MenuEngineeringReportFromJson(
     );
     final val = MenuEngineeringReport(
       branchId: $checkedConvert('branch_id', (v) => v as String),
+      costBasis: $checkedConvert('cost_basis', (v) => v as String),
+      excludedSales: $checkedConvert(
+        'excluded_sales',
+        (v) => (v as num).toInt(),
+      ),
       from: $checkedConvert(
         'from',
         (v) => v == null ? null : DateTime.parse(v as String),
@@ -185,6 +216,8 @@ MenuEngineeringReport _$MenuEngineeringReportFromJson(
   },
   fieldKeyMap: const {
     'branchId': 'branch_id',
+    'costBasis': 'cost_basis',
+    'excludedSales': 'excluded_sales',
     'rowsCostMissing': 'rows_cost_missing',
     'totalCost': 'total_cost',
     'totalProfit': 'total_profit',
@@ -196,6 +229,8 @@ Map<String, dynamic> _$MenuEngineeringReportToJson(
   MenuEngineeringReport instance,
 ) => <String, dynamic>{
   'branch_id': instance.branchId,
+  'cost_basis': instance.costBasis,
+  'excluded_sales': instance.excludedSales,
   'from': ?instance.from?.toIso8601String(),
   'rows': instance.rows.map((e) => e.toJson()).toList(),
   'rows_cost_missing': instance.rowsCostMissing,

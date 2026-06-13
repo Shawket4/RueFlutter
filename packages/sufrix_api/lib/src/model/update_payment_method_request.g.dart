@@ -9,8 +9,6 @@ part of 'update_payment_method_request.dart';
 abstract class _$UpdatePaymentMethodRequestCWProxy {
   UpdatePaymentMethodRequest color(String? color);
 
-  UpdatePaymentMethodRequest displayOrder(int? displayOrder);
-
   UpdatePaymentMethodRequest icon(String? icon);
 
   UpdatePaymentMethodRequest isActive(bool? isActive);
@@ -31,7 +29,6 @@ abstract class _$UpdatePaymentMethodRequestCWProxy {
   /// ````
   UpdatePaymentMethodRequest call({
     String? color,
-    int? displayOrder,
     String? icon,
     bool? isActive,
     bool? isCash,
@@ -49,10 +46,6 @@ class _$UpdatePaymentMethodRequestCWProxyImpl
 
   @override
   UpdatePaymentMethodRequest color(String? color) => this(color: color);
-
-  @override
-  UpdatePaymentMethodRequest displayOrder(int? displayOrder) =>
-      this(displayOrder: displayOrder);
 
   @override
   UpdatePaymentMethodRequest icon(String? icon) => this(icon: icon);
@@ -81,7 +74,6 @@ class _$UpdatePaymentMethodRequestCWProxyImpl
   /// ````
   UpdatePaymentMethodRequest call({
     Object? color = const $CopyWithPlaceholder(),
-    Object? displayOrder = const $CopyWithPlaceholder(),
     Object? icon = const $CopyWithPlaceholder(),
     Object? isActive = const $CopyWithPlaceholder(),
     Object? isCash = const $CopyWithPlaceholder(),
@@ -93,10 +85,6 @@ class _$UpdatePaymentMethodRequestCWProxyImpl
           ? _value.color
           // ignore: cast_nullable_to_non_nullable
           : color as String?,
-      displayOrder: displayOrder == const $CopyWithPlaceholder()
-          ? _value.displayOrder
-          // ignore: cast_nullable_to_non_nullable
-          : displayOrder as int?,
       icon: icon == const $CopyWithPlaceholder()
           ? _value.icon
           // ignore: cast_nullable_to_non_nullable
@@ -140,10 +128,6 @@ UpdatePaymentMethodRequest _$UpdatePaymentMethodRequestFromJson(
   ($checkedConvert) {
     final val = UpdatePaymentMethodRequest(
       color: $checkedConvert('color', (v) => v as String?),
-      displayOrder: $checkedConvert(
-        'display_order',
-        (v) => (v as num?)?.toInt(),
-      ),
       icon: $checkedConvert('icon', (v) => v as String?),
       isActive: $checkedConvert('is_active', (v) => v as bool?),
       isCash: $checkedConvert('is_cash', (v) => v as bool?),
@@ -158,7 +142,6 @@ UpdatePaymentMethodRequest _$UpdatePaymentMethodRequestFromJson(
     return val;
   },
   fieldKeyMap: const {
-    'displayOrder': 'display_order',
     'isActive': 'is_active',
     'isCash': 'is_cash',
     'labelTranslations': 'label_translations',
@@ -169,7 +152,6 @@ Map<String, dynamic> _$UpdatePaymentMethodRequestToJson(
   UpdatePaymentMethodRequest instance,
 ) => <String, dynamic>{
   'color': ?instance.color,
-  'display_order': ?instance.displayOrder,
   'icon': ?instance.icon,
   'is_active': ?instance.isActive,
   'is_cash': ?instance.isCash,

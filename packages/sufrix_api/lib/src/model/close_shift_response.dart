@@ -4,7 +4,6 @@
 
 // ignore_for_file: unused_element
 import 'package:sufrix_api/src/model/shift.dart';
-import 'package:sufrix_api/src/model/inventory_count_row.dart';
 import 'package:copy_with_extension/copy_with_extension.dart';
 import 'package:json_annotation/json_annotation.dart';
 
@@ -22,22 +21,8 @@ class CloseShiftResponse {
   /// Returns a new [CloseShiftResponse] instance.
   CloseShiftResponse({
 
-    required  this.inventoryCounts,
-
     required  this.shift,
   });
-
-  @JsonKey(
-    
-    name: r'inventory_counts',
-    required: true,
-    includeIfNull: false,
-  )
-
-
-  final List<InventoryCountRow> inventoryCounts;
-
-
 
   @JsonKey(
     
@@ -55,12 +40,10 @@ class CloseShiftResponse {
 
     @override
     bool operator ==(Object other) => identical(this, other) || other is CloseShiftResponse &&
-      other.inventoryCounts == inventoryCounts &&
       other.shift == shift;
 
     @override
     int get hashCode =>
-        inventoryCounts.hashCode +
         shift.hashCode;
 
   factory CloseShiftResponse.fromJson(Map<String, dynamic> json) => _$CloseShiftResponseFromJson(json);

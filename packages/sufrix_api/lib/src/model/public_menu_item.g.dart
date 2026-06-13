@@ -15,8 +15,6 @@ abstract class _$PublicMenuItemCWProxy {
 
   PublicMenuItem descriptionTranslations(Object descriptionTranslations);
 
-  PublicMenuItem displayOrder(int displayOrder);
-
   PublicMenuItem id(String id);
 
   PublicMenuItem imageUrl(String? imageUrl);
@@ -38,7 +36,6 @@ abstract class _$PublicMenuItemCWProxy {
     int basePrice,
     String? description,
     Object descriptionTranslations,
-    int displayOrder,
     String id,
     String? imageUrl,
     String name,
@@ -69,10 +66,6 @@ class _$PublicMenuItemCWProxyImpl implements _$PublicMenuItemCWProxy {
       this(descriptionTranslations: descriptionTranslations);
 
   @override
-  PublicMenuItem displayOrder(int displayOrder) =>
-      this(displayOrder: displayOrder);
-
-  @override
   PublicMenuItem id(String id) => this(id: id);
 
   @override
@@ -100,7 +93,6 @@ class _$PublicMenuItemCWProxyImpl implements _$PublicMenuItemCWProxy {
     Object? basePrice = const $CopyWithPlaceholder(),
     Object? description = const $CopyWithPlaceholder(),
     Object? descriptionTranslations = const $CopyWithPlaceholder(),
-    Object? displayOrder = const $CopyWithPlaceholder(),
     Object? id = const $CopyWithPlaceholder(),
     Object? imageUrl = const $CopyWithPlaceholder(),
     Object? name = const $CopyWithPlaceholder(),
@@ -125,10 +117,6 @@ class _$PublicMenuItemCWProxyImpl implements _$PublicMenuItemCWProxy {
           ? _value.descriptionTranslations
           // ignore: cast_nullable_to_non_nullable
           : descriptionTranslations as Object,
-      displayOrder: displayOrder == const $CopyWithPlaceholder()
-          ? _value.displayOrder
-          // ignore: cast_nullable_to_non_nullable
-          : displayOrder as int,
       id: id == const $CopyWithPlaceholder()
           ? _value.id
           // ignore: cast_nullable_to_non_nullable
@@ -174,7 +162,6 @@ PublicMenuItem _$PublicMenuItemFromJson(Map<String, dynamic> json) =>
             'addon_slots',
             'base_price',
             'description_translations',
-            'display_order',
             'id',
             'name',
             'name_translations',
@@ -193,10 +180,6 @@ PublicMenuItem _$PublicMenuItemFromJson(Map<String, dynamic> json) =>
           descriptionTranslations: $checkedConvert(
             'description_translations',
             (v) => v as Object,
-          ),
-          displayOrder: $checkedConvert(
-            'display_order',
-            (v) => (v as num).toInt(),
           ),
           id: $checkedConvert('id', (v) => v as String),
           imageUrl: $checkedConvert('image_url', (v) => v as String?),
@@ -218,7 +201,6 @@ PublicMenuItem _$PublicMenuItemFromJson(Map<String, dynamic> json) =>
         'addonSlots': 'addon_slots',
         'basePrice': 'base_price',
         'descriptionTranslations': 'description_translations',
-        'displayOrder': 'display_order',
         'imageUrl': 'image_url',
         'nameTranslations': 'name_translations',
       },
@@ -230,7 +212,6 @@ Map<String, dynamic> _$PublicMenuItemToJson(PublicMenuItem instance) =>
       'base_price': instance.basePrice,
       'description': ?instance.description,
       'description_translations': instance.descriptionTranslations,
-      'display_order': instance.displayOrder,
       'id': instance.id,
       'image_url': ?instance.imageUrl,
       'name': instance.name,

@@ -89,7 +89,6 @@ void main() {
                 displayOrder: 0,
               ),
             ],
-            inventory: const [],
           ),
           storage,
         ),

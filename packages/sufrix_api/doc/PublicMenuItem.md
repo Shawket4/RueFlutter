@@ -12,7 +12,6 @@ Name | Type | Description | Notes
 **basePrice** | **int** |  | 
 **description** | **String** |  | [optional] 
 **descriptionTranslations** | **Object** |  | 
-**displayOrder** | **int** |  | 
 **id** | **String** |  | 
 **imageUrl** | **String** |  | [optional] 
 **name** | **String** |  | 

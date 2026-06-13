@@ -7,8 +7,6 @@ part of 'upsert_size_request.dart';
 // **************************************************************************
 
 abstract class _$UpsertSizeRequestCWProxy {
-  UpsertSizeRequest displayOrder(int? displayOrder);
-
   UpsertSizeRequest label(String label);
 
   UpsertSizeRequest priceOverride(int priceOverride);
@@ -19,7 +17,7 @@ abstract class _$UpsertSizeRequestCWProxy {
   /// ```dart
   /// UpsertSizeRequest(...).copyWith(id: 12, name: "My name")
   /// ````
-  UpsertSizeRequest call({int? displayOrder, String label, int priceOverride});
+  UpsertSizeRequest call({String label, int priceOverride});
 }
 
 /// Proxy class for `copyWith` functionality. This is a callable class and can be used as follows: `instanceOfUpsertSizeRequest.copyWith(...)`. Additionally contains functions for specific fields e.g. `instanceOfUpsertSizeRequest.copyWith.fieldName(...)`
@@ -27,10 +25,6 @@ class _$UpsertSizeRequestCWProxyImpl implements _$UpsertSizeRequestCWProxy {
   const _$UpsertSizeRequestCWProxyImpl(this._value);
 
   final UpsertSizeRequest _value;
-
-  @override
-  UpsertSizeRequest displayOrder(int? displayOrder) =>
-      this(displayOrder: displayOrder);
 
   @override
   UpsertSizeRequest label(String label) => this(label: label);
@@ -47,15 +41,10 @@ class _$UpsertSizeRequestCWProxyImpl implements _$UpsertSizeRequestCWProxy {
   /// UpsertSizeRequest(...).copyWith(id: 12, name: "My name")
   /// ````
   UpsertSizeRequest call({
-    Object? displayOrder = const $CopyWithPlaceholder(),
     Object? label = const $CopyWithPlaceholder(),
     Object? priceOverride = const $CopyWithPlaceholder(),
   }) {
     return UpsertSizeRequest(
-      displayOrder: displayOrder == const $CopyWithPlaceholder()
-          ? _value.displayOrder
-          // ignore: cast_nullable_to_non_nullable
-          : displayOrder as int?,
       label: label == const $CopyWithPlaceholder()
           ? _value.label
           // ignore: cast_nullable_to_non_nullable
@@ -80,33 +69,20 @@ extension $UpsertSizeRequestCopyWith on UpsertSizeRequest {
 // **************************************************************************
 
 UpsertSizeRequest _$UpsertSizeRequestFromJson(Map<String, dynamic> json) =>
-    $checkedCreate(
-      'UpsertSizeRequest',
-      json,
-      ($checkedConvert) {
-        $checkKeys(json, requiredKeys: const ['label', 'price_override']);
-        final val = UpsertSizeRequest(
-          displayOrder: $checkedConvert(
-            'display_order',
-            (v) => (v as num?)?.toInt(),
-          ),
-          label: $checkedConvert('label', (v) => v as String),
-          priceOverride: $checkedConvert(
-            'price_override',
-            (v) => (v as num).toInt(),
-          ),
-        );
-        return val;
-      },
-      fieldKeyMap: const {
-        'displayOrder': 'display_order',
-        'priceOverride': 'price_override',
-      },
-    );
+    $checkedCreate('UpsertSizeRequest', json, ($checkedConvert) {
+      $checkKeys(json, requiredKeys: const ['label', 'price_override']);
+      final val = UpsertSizeRequest(
+        label: $checkedConvert('label', (v) => v as String),
+        priceOverride: $checkedConvert(
+          'price_override',
+          (v) => (v as num).toInt(),
+        ),
+      );
+      return val;
+    }, fieldKeyMap: const {'priceOverride': 'price_override'});
 
 Map<String, dynamic> _$UpsertSizeRequestToJson(UpsertSizeRequest instance) =>
     <String, dynamic>{
-      'display_order': ?instance.displayOrder,
       'label': instance.label,
       'price_override': instance.priceOverride,
     };

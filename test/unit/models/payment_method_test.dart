@@ -26,7 +26,6 @@ void main() {
       expect(method.wireFormat, 'cash');
       expect(method.isCash, true);
       expect(method.isActive, true);
-      expect(method.displayOrder, 1);
     });
 
     test('toJson keeps wire key names', () {

@@ -29,6 +29,22 @@ extension MenuItemX on MenuItemFull {
 
   /// True if this item has enough embedded recipe data to compute offline.
   bool get hasLocalRecipes => recipes.isNotEmpty;
+
+  /// Localized display name. Falls back to English, then wire `name`.
+  String localizedName(String locale) =>
+      _localizedStr(nameTranslations, locale, name);
+}
+
+extension CategoryX on Category {
+  /// Localized display name. Falls back to English, then wire `name`.
+  String localizedName(String locale) =>
+      _localizedStr(nameTranslations, locale, name);
+}
+
+extension AddonItemX on AddonItem {
+  /// Localized display name. Falls back to English, then wire `name`.
+  String localizedName(String locale) =>
+      _localizedStr(nameTranslations, locale, name);
 }
 
 extension ItemSizeX on ItemSize {
@@ -50,4 +66,17 @@ extension AddonSlotX on AddonSlot {
 extension OptionalFieldX on OptionalField {
   bool get hasIngredient => ingredientName != null;
   bool get isFree => price == 0;
+}
+
+/// Picks the best translation from a wire `*_translations` field.
+/// Falls back: requested locale → English → [fallback].
+String _localizedStr(Object translations, String locale, String fallback) {
+  if (translations is Map) {
+    final lang = locale.length >= 2 ? locale.substring(0, 2) : locale;
+    final v = translations[lang];
+    if (v is String && v.isNotEmpty) return v;
+    final en = translations['en'];
+    if (en is String && en.isNotEmpty) return en;
+  }
+  return fallback;
 }

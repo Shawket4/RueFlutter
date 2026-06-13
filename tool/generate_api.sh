@@ -38,6 +38,21 @@ EOF
 # json_serializable >=6.9 emits null-aware elements (needs Dart >=3.8).
 sed -i '' "s/sdk: '>=3.5.0 <4.0.0'/sdk: '>=3.8.0 <4.0.0'/" "$PKG_DIR/pubspec.yaml"
 
+# openapi-generator emits array/object schema defaults as NON-const literals in
+# the constructor (e.g. `this.x = [0.1, 0.25]`). Default parameter values must
+# be const, so `flutter build` fails on them (the analyzer tolerates it — which
+# is why this slips past `flutter analyze`). Prefix such defaults with `const`.
+python3 - "$PKG_DIR" <<'EOF'
+import glob, re, sys
+for p in glob.glob(sys.argv[1] + '/lib/src/model/*.dart'):
+    if p.endswith('.g.dart'):
+        continue
+    src = open(p).read()
+    out = re.sub(r'(^\s*this\.\w+\s*=\s*)([\[{])', r'\1const \2', src, flags=re.M)
+    if out != src:
+        open(p, 'w').write(out)
+EOF
+
 echo "── 4/5 build_runner…"
 (cd "$PKG_DIR" && flutter pub get && dart run build_runner build --delete-conflicting-outputs)
 

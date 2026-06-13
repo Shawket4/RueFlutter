@@ -23,7 +23,7 @@ class AnalysisConfig {
 
      this.analysisWindowDays = 30.0,
 
-     this.bundleDiscountPctRange = [0.1, 0.25],
+     this.bundleDiscountPctRange = const [0.1, 0.25],
 
      this.bundleMaxSize = 3,
 

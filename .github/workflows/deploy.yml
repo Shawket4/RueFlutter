@@ -61,12 +61,14 @@ jobs:
           if [ -z "$DIAWI_TOKEN" ]; then
             echo "DIAWI_TOKEN not set — skipping diawi upload."; exit 0
           fi
-          echo "Uploading $APK to diawi…"
-          job=$(curl -s https://upload.diawi.com/ \
+          echo "Uploading $APK ($(du -h "$APK" | cut -f1)) to diawi…"
+          http=$(curl -s -o /tmp/diawi_up.json -w '%{http_code}' https://upload.diawi.com/ \
             -F token="$DIAWI_TOKEN" \
             -F file=@"$APK" \
-            -F comment="Sufrix POS $GITHUB_REF_NAME" | jq -r '.job // empty')
-          if [ -z "$job" ]; then echo "diawi upload failed (no job id)"; exit 1; fi
+            -F comment="Sufrix POS $GITHUB_REF_NAME")
+          echo "diawi upload → HTTP $http; response: $(cat /tmp/diawi_up.json)"
+          job=$(jq -r '.job // empty' /tmp/diawi_up.json 2>/dev/null)
+          if [ -z "$job" ]; then echo "diawi upload failed (no job id) — see response above"; exit 1; fi
           echo "diawi job=$job; polling for the install link…"
           for i in $(seq 1 60); do
             sleep 5

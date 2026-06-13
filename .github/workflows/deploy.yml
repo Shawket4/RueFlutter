@@ -10,6 +10,8 @@ jobs:
   build-android:
     name: Build Android APK
     runs-on: ubuntu-latest
+    outputs:
+      diawi_url: ${{ steps.diawi.outputs.diawi_url }}
     steps:
       - uses: actions/checkout@v4
 
@@ -44,6 +46,43 @@ jobs:
 
       - name: Build APK
         run: flutter build apk --release
+
+      # Upload the signed APK to diawi → a shareable OTA install link that works
+      # regardless of whether the GitHub repo is public or private. Skipped
+      # gracefully (and never fails the release) if DIAWI_TOKEN isn't set yet.
+      - name: Upload APK to diawi (OTA install link)
+        id: diawi
+        continue-on-error: true
+        env:
+          DIAWI_TOKEN: ${{ secrets.DIAWI_TOKEN }}
+        run: |
+          set +e
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          if [ -z "$DIAWI_TOKEN" ]; then
+            echo "DIAWI_TOKEN not set — skipping diawi upload."; exit 0
+          fi
+          echo "Uploading $APK to diawi…"
+          job=$(curl -s https://upload.diawi.com/ \
+            -F token="$DIAWI_TOKEN" \
+            -F file=@"$APK" \
+            -F comment="Sufrix POS $GITHUB_REF_NAME" | jq -r '.job // empty')
+          if [ -z "$job" ]; then echo "diawi upload failed (no job id)"; exit 1; fi
+          echo "diawi job=$job; polling for the install link…"
+          for i in $(seq 1 60); do
+            sleep 5
+            resp=$(curl -s "https://upload.diawi.com/status?token=$DIAWI_TOKEN&job=$job")
+            status=$(echo "$resp" | jq -r '.status // empty')
+            case "$status" in
+              2000)
+                link="https://i.diawi.com/$(echo "$resp" | jq -r '.hash')"
+                echo "diawi_url=$link" >> "$GITHUB_OUTPUT"
+                { echo "## 📱 Android install link (diawi)"; echo ""; echo "**$link**"; } >> "$GITHUB_STEP_SUMMARY"
+                echo "diawi link: $link"; exit 0 ;;
+              2001) echo "  …processing ($i/60)" ;;
+              *)    echo "diawi error: $resp"; exit 1 ;;
+            esac
+          done
+          echo "diawi timed out"; exit 1
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
@@ -139,6 +178,46 @@ jobs:
           name: Sufrix POS ${{ github.ref_name }}
           tag_name: ${{ github.ref_name }}
           generate_release_notes: true
+          files: |
+            artifacts/android-apk/app-release.apk
+            artifacts/windows-build/SufrixPOS-Windows.zip
+            artifacts/macos-build/SufrixPOS-macOS.zip
+
+      # Mirror to a PUBLIC repo so the download/install links keep working when
+      # SufrixFlutter is private. This is the page to share: the diawi OTA link
+      # for Android (+QR) and direct desktop downloads.
+      - name: Compose public release notes
+        env:
+          DIAWI_URL: ${{ needs.build-android.outputs.diawi_url }}
+        run: |
+          {
+            echo "## 📱 Android — install over the air"
+            if [ -n "$DIAWI_URL" ]; then
+              echo ""
+              echo "**[Install on Android]($DIAWI_URL)**  (diawi OTA)"
+              echo ""
+              echo "![Install QR](https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=$DIAWI_URL)"
+            else
+              echo ""
+              echo "_diawi link unavailable — set the \`DIAWI_TOKEN\` secret to enable it._"
+            fi
+            echo ""
+            echo "## 🖥 Desktop — direct download (attached below)"
+            echo "- Windows: \`SufrixPOS-Windows.zip\`"
+            echo "- macOS: \`SufrixPOS-macOS.zip\`"
+            echo ""
+            echo "_The Android \`app-release.apk\` is also attached below as a permanent direct download._"
+          } > public_release_notes.md
+          cat public_release_notes.md
+
+      - name: Publish to public releases repo
+        uses: softprops/action-gh-release@v2
+        with:
+          repository: Shawket4/SufrixPOS-Releases
+          token: ${{ secrets.RELEASES_REPO_PAT }}
+          tag_name: ${{ github.ref_name }}
+          name: Sufrix POS ${{ github.ref_name }}
+          body_path: public_release_notes.md
           files: |
             artifacts/android-apk/app-release.apk
             artifacts/windows-build/SufrixPOS-Windows.zip

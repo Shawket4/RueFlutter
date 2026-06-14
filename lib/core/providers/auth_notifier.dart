@@ -6,7 +6,7 @@ import '../models/branch.dart';
 import '../models/shift.dart';
 import '../models/user.dart';
 import '../repositories/auth_repository.dart'
-    show authRepositoryProvider, DeviceSetupError, WrongCredentialsError, OpenShiftBlockError;
+    show authRepositoryProvider, DeviceSetupError, WrongCredentialsError, OpenShiftBlockError, BranchAccessError;
 import '../services/offline_queue.dart';
 import '../storage/storage_service.dart';
 import '../utils/app_log.dart';
@@ -184,6 +184,11 @@ class AuthNotifier extends Notifier<AuthState> {
       const msg = 'Wrong name or PIN.';
       state = state.copyWith(isLoading: false, error: msg);
       return msg;
+    } on BranchAccessError catch (e) {
+      // Valid teller for this org, but not assigned to this device's branch.
+      AppLog.warn('auth.login', 'blocked — no access to this branch: ${e.message}');
+      state = state.copyWith(isLoading: false, error: e.message);
+      return e.message;
     } catch (e) {
       final msg = friendlyError(e);
       state = state.copyWith(isLoading: false, error: msg);

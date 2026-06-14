@@ -174,6 +174,45 @@ void main() {
       verify(() => mockStorage.saveOfflineUser('User 3', any())).called(1);
     });
 
+    test('login maps 403 to BranchAccessError with the server message', () async {
+      when(() => mockStorage.deviceBranchId).thenReturn('b1');
+      final reqOpts = RequestOptions(path: '/auth/login');
+      when(() => mockApi.loginWithPin(name: 'User 5', pin: '1234', branchId: 'b1'))
+          .thenThrow(DioException(
+            requestOptions: reqOpts,
+            response: Response(
+              requestOptions: reqOpts,
+              statusCode: 403,
+              data: {'error': 'Your account is not assigned to this branch.'},
+            ),
+            type: DioExceptionType.badResponse,
+          ));
+
+      final repo = container.read(authRepositoryProvider);
+      await expectLater(
+        () => repo.login(name: 'User 5', pin: '1234'),
+        throwsA(isA<BranchAccessError>().having(
+            (e) => e.message, 'message', contains('not assigned to this branch'))),
+      );
+    });
+
+    test('login maps 401 to WrongCredentialsError', () async {
+      when(() => mockStorage.deviceBranchId).thenReturn('b1');
+      final reqOpts = RequestOptions(path: '/auth/login');
+      when(() => mockApi.loginWithPin(name: 'User 6', pin: '0000', branchId: 'b1'))
+          .thenThrow(DioException(
+            requestOptions: reqOpts,
+            response: Response(requestOptions: reqOpts, statusCode: 401),
+            type: DioExceptionType.badResponse,
+          ));
+
+      final repo = container.read(authRepositoryProvider);
+      await expectLater(
+        () => repo.login(name: 'User 6', pin: '0000'),
+        throwsA(isA<WrongCredentialsError>()),
+      );
+    });
+
     test('verifyOfflineUnlock accepts the hash written by login', () async {
       final user =
           User(id: 'u4', name: 'User 4', role: UserRole.teller, isActive: true);

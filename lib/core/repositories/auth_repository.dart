@@ -33,6 +33,16 @@ class OpenShiftBlockError implements Exception {
   String toString() => message;
 }
 
+/// Thrown when the credentials are valid for this org but the teller is not
+/// assigned to this device's branch (HTTP 403) — distinct from wrong name/PIN.
+/// Carries the server's message.
+class BranchAccessError implements Exception {
+  final String message;
+  const BranchAccessError(this.message);
+  @override
+  String toString() => message;
+}
+
 class AuthRepository {
   final AuthApi        _api;
   final BranchApi      _branchApi;
@@ -125,6 +135,16 @@ class AuthRepository {
       data = await _api.loginWithPin(name: name, pin: pin, branchId: branchId);
     } on DioException catch (e) {
       if (e.response?.statusCode == 401) throw const WrongCredentialsError();
+      // 403 = valid credentials for this org, but the teller isn't assigned to
+      // this device's branch — surface the server's specific message rather than
+      // the misleading "wrong name or PIN".
+      if (e.response?.statusCode == 403) {
+        final body = e.response?.data;
+        final msg = (body is Map && body['error'] is String)
+            ? body['error'] as String
+            : 'Your account is not assigned to this branch.';
+        throw BranchAccessError(msg);
+      }
       // 409 = the backend refused login because this user already has an open
       // shift. Surface the server's message so the cashier knows to close it.
       if (e.response?.statusCode == 409) {

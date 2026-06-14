@@ -38,7 +38,6 @@ void main() {
         'icon': 'credit_card',
         'is_cash': false,
         'is_active': true,
-        'display_order': 2,
         'created_at': '2026-01-01T00:00:00.000Z',
         'updated_at': '2026-01-01T00:00:00.000Z',
       };
@@ -51,7 +50,8 @@ void main() {
       expect(out['icon'], 'credit_card');
       expect(out['is_cash'], false);
       expect(out['is_active'], true);
-      expect(out['display_order'], 2);
+      // display_order was removed from the payment-method contract.
+      expect(out.containsKey('display_order'), false);
     });
 
     test('label falls back to English then wire name', () {

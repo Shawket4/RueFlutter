@@ -112,6 +112,9 @@ void main() {
         'last_error': null,
         'order_id': 'o1',
         'reason': 'wrong order',
+        // PendingVoidOrder gained an optional `note` field; toJson emits it
+        // (null here) so the round-trip fixture must include the key.
+        'note': null,
         'restore_inventory': true,
         'voided_at': now.toIso8601String(),
       };
@@ -119,6 +122,7 @@ void main() {
       final action = PendingVoidOrder.fromJson(json);
       expect(action.orderId, 'o1');
       expect(action.reason, 'wrong order');
+      expect(action.note, isNull);
       expect(action.restoreInventory, true);
 
       expect(action.toJson(), json);

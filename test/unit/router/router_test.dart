@@ -83,7 +83,7 @@ void main() {
 
     testWidgets(
         'authed session on an UNCONFIGURED device keeps working (no '
-        '/device-setup ⇄ /home redirect loop)', (tester) async {
+        '/device-setup ⇄ /open-shift redirect loop)', (tester) async {
       final container = makeContainer(
         auth: AuthState(
             isLoading: false,
@@ -95,11 +95,13 @@ void main() {
       await tester.pumpAndSettle();
 
       final router = container.read(routerProvider);
-      // From initial /login an authed user lands home and STAYS there.
-      expect(router.routerDelegate.currentConfiguration.uri.path, '/home');
+      // From initial /login an authed user with no open shift lands on
+      // /open-shift and STAYS there (no loop back to /device-setup).
+      expect(router.routerDelegate.currentConfiguration.uri.path,
+          '/open-shift');
     });
 
-    testWidgets('redirects to /home when authenticated and visiting /login', (tester) async {
+    testWidgets('redirects to /open-shift when authenticated, visiting /login, with no open shift', (tester) async {
       final container = makeContainer(
         auth: AuthState(
             isLoading: false,
@@ -110,8 +112,10 @@ void main() {
       await tester.pumpAndSettle();
 
       final router = container.read(routerProvider);
-      // Since initialLocation is /login, but user is authenticated, it should redirect to /home
-      expect(router.routerDelegate.currentConfiguration.uri.path, '/home');
+      // initialLocation is /login; an authenticated user with no cached open
+      // shift is routed to the open-shift flow (not straight to /home).
+      expect(router.routerDelegate.currentConfiguration.uri.path,
+          '/open-shift');
     });
 
     testWidgets('does not redirect while loading', (tester) async {

@@ -87,28 +87,29 @@ void main() {
       ]).hasActiveBundles, true);
     });
 
-    test('addonsByType groups and sorts', () {
+    test('addonsByType groups and preserves server order', () {
       final state = MenuState(
         allAddons: <AddonItem>[
-          makeAddonItem(id: '1', name: 'A1', addonType: 't1', defaultPrice: 1, displayOrder: 2),
-          makeAddonItem(id: '2', name: 'A2', addonType: 't1', defaultPrice: 1, displayOrder: 1),
-          makeAddonItem(id: '3', name: 'A3', addonType: 't2', defaultPrice: 1, isActive: false, displayOrder: 1),
+          makeAddonItem(id: '1', name: 'A1', addonType: 't1', defaultPrice: 1),
+          makeAddonItem(id: '2', name: 'A2', addonType: 't1', defaultPrice: 1),
+          makeAddonItem(id: '3', name: 'A3', addonType: 't2', defaultPrice: 1, isActive: false),
         ],
       );
 
       final map = state.addonsByType;
       expect(map.keys.length, 1);
       expect(map['t1']!.length, 2);
-      expect(map['t1']![0].id, '2'); // displayOrder 1 comes first
-      expect(map['t1']![1].id, '1'); // displayOrder 2
+      // display_order was removed; addons keep the server (insertion) order.
+      expect(map['t1']![0].id, '1');
+      expect(map['t1']![1].id, '2');
     });
 
-    test('gridEntriesForCategory Combos view sorts bundles by displayOrder',
+    test('gridEntriesForCategory Combos view preserves server order of bundles',
         () {
       final state = MenuState(
         bundles: [
-          makeBundle(id: 'b1', orgId: 'o', name: 'B1', price: 10, status: BundleStatus.active, displayOrder: 2),
-          makeBundle(id: 'b2', orgId: 'o', name: 'B2', price: 10, status: BundleStatus.active, displayOrder: 1),
+          makeBundle(id: 'b1', orgId: 'o', name: 'B1', price: 10, status: BundleStatus.active),
+          makeBundle(id: 'b2', orgId: 'o', name: 'B2', price: 10, status: BundleStatus.active),
         ],
         selectedCategoryId: kComboCategoryId,
       );
@@ -117,15 +118,17 @@ void main() {
           state.gridEntriesForCategory(branchId: 'b1');
       expect(entries.length, 2);
       expect(entries[0].kind == MenuGridEntryKind.bundle, true);
-      expect(entries[0].bundle!.id, 'b2'); // Sorted by displayOrder
+      // display_order was removed; bundles keep the server (insertion) order.
+      expect(entries[0].bundle!.id, 'b1');
+      expect(entries[1].bundle!.id, 'b2');
     });
 
-    test('gridEntriesForCategory regular view filters and sorts items', () {
+    test('gridEntriesForCategory regular view filters and preserves server order', () {
       final state = MenuState(
         items: <MenuItem>[
-          makeMenuItem(id: 'm1', orgId: 'o', categoryId: 'c1', name: 'M1', basePrice: 1, displayOrder: 2),
-          makeMenuItem(id: 'm2', orgId: 'o', categoryId: 'c1', name: 'M2', basePrice: 1, displayOrder: 1),
-          makeMenuItem(id: 'm3', orgId: 'o', categoryId: 'c2', name: 'M3', basePrice: 1, displayOrder: 1),
+          makeMenuItem(id: 'm1', orgId: 'o', categoryId: 'c1', name: 'M1', basePrice: 1),
+          makeMenuItem(id: 'm2', orgId: 'o', categoryId: 'c1', name: 'M2', basePrice: 1),
+          makeMenuItem(id: 'm3', orgId: 'o', categoryId: 'c2', name: 'M3', basePrice: 1),
         ],
         selectedCategoryId: 'c1',
       );
@@ -133,8 +136,9 @@ void main() {
       final entries =
           state.gridEntriesForCategory(branchId: 'b1');
       expect(entries.length, 2);
-      expect(entries[0].item!.id, 'm2'); // Sorted by displayOrder
-      expect(entries[1].item!.id, 'm1');
+      // display_order was removed; items keep the server (insertion) order.
+      expect(entries[0].item!.id, 'm1');
+      expect(entries[1].item!.id, 'm2');
     });
 
     test('searchBundles matches by name', () {

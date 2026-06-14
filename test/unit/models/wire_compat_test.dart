@@ -247,14 +247,18 @@ void main() {
       final out = MenuItem.fromJson(wire).toJson();
       for (final key in [
         'id', 'org_id', 'category_id', 'name', 'base_price', 'is_active',
-        'display_order', 'sizes', 'addon_slots', 'optional_fields', 'recipes',
+        'sizes', 'addon_slots', 'optional_fields', 'recipes',
         'default_milk_addon_id',
       ]) {
         expect(out.containsKey(key), true, reason: 'menu item key $key');
       }
+      // display_order was removed from the contract; the menu renders in
+      // server order, so neither the item nor its sizes emit the key.
+      expect(out.containsKey('display_order'), false);
       final size = (out['sizes'] as List).single as Map<String, dynamic>;
       expect(size['label'], 'L');
       expect(size['price_override'], 5500);
+      expect(size.containsKey('display_order'), false);
 
       final restored = MenuItem.fromJson(out);
       expect(restored.priceForSize('L'), 5500);
@@ -359,10 +363,12 @@ void main() {
       final out = method.toJson();
       for (final key in [
         'id', 'org_id', 'name', 'label_translations', 'color', 'icon',
-        'is_cash', 'is_active', 'display_order',
+        'is_cash', 'is_active',
       ]) {
         expect(out.containsKey(key), true, reason: 'payment method key $key');
       }
+      // display_order was removed from the payment-method contract.
+      expect(out.containsKey('display_order'), false);
 
       final restored = PaymentMethod.fromJson(out);
       expect(restored.wireFormat, 'talabat_cash');

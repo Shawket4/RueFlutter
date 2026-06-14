@@ -12,7 +12,6 @@ void main() {
         'name': 'Drinks',
         'name_translations': {'en': 'Drinks'},
         'image_url': 'url',
-        'display_order': 1,
         'is_active': true,
         'created_at': '2026-01-01T00:00:00.000Z',
         'updated_at': '2026-01-01T00:00:00.000Z',
@@ -26,7 +25,9 @@ void main() {
       expect(out['id'], 'c1');
       expect(out['name'], 'Drinks');
       expect(out['image_url'], 'url');
-      expect(out['display_order'], 1);
+      // display_order was removed from the contract; the menu renders in
+      // server order, so the key must not be emitted.
+      expect(out.containsKey('display_order'), false);
       expect(out['is_active'], true);
     });
   });
@@ -38,7 +39,6 @@ void main() {
         'menu_item_id': 'm1',
         'label': 'Large',
         'price_override': 100,
-        'display_order': 0,
         'is_active': true,
       };
       final size = ItemSize.fromJson(json);
@@ -46,7 +46,9 @@ void main() {
       expect(size.label, 'Large');
       expect(size.price, 100);
       expect(size.priceOverride, 100);
+      // display_order was removed from the contract; round-trip omits it.
       expect(size.toJson(), json);
+      expect(size.toJson().containsKey('display_order'), false);
     });
   });
 
@@ -88,7 +90,6 @@ void main() {
         'addon_type': 'coffee',
         'default_price': 50,
         'is_active': true,
-        'display_order': 1,
         'ingredients': <Map<String, dynamic>>[],
         'created_at': '2026-01-01T00:00:00.000Z',
         'updated_at': '2026-01-01T00:00:00.000Z',
@@ -103,7 +104,8 @@ void main() {
       expect(out['addon_type'], 'coffee');
       expect(out['default_price'], 50);
       expect(out['is_active'], true);
-      expect(out['display_order'], 1);
+      // display_order was removed from the contract.
+      expect(out.containsKey('display_order'), false);
     });
   });
 
@@ -166,7 +168,6 @@ void main() {
         'image_url': 'url',
         'base_price': 200,
         'is_active': true,
-        'display_order': 1,
         'sizes': <Map<String, dynamic>>[],
         'addon_slots': <Map<String, dynamic>>[],
         'optional_fields': <Map<String, dynamic>>[],
@@ -185,7 +186,8 @@ void main() {
       expect(out['category_id'], 'c1');
       expect(out['base_price'], 200);
       expect(out['is_active'], true);
-      expect(out['display_order'], 1);
+      // display_order was removed from the contract.
+      expect(out.containsKey('display_order'), false);
       expect(out['sizes'], isEmpty);
       expect(out['addon_slots'], isEmpty);
       expect(out['optional_fields'], isEmpty);

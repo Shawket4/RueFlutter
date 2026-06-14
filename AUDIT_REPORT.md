@@ -21,8 +21,7 @@ These are real observations from the map, but each is either a **feature** (out 
 - **Backend 403 "different branch" / 409 "shift open" can be swallowed during login/resume** (`auth_notifier.dart:230` `catch (_)` in the post-login shift check; `client.dart:76` already maps 403/409 to friendly messages).
   The backend now returns these crisply (see the backend audit V26 + single-open-shift). The POS's shift-check `catch (_)` treats a 403 there as a network error and allows login silently. **Recommended:** in that catch, distinguish a `DioException` with status 403/409 from a connectivity error and surface it. Not changed here — it's an auth-flow UX change that needs app-level verification.
 
-- **Percentage discount rounds in the POS but truncates in the backend** (`cart.dart:378` `.round()` vs backend `(subtotal*v/100) as i32`).
-  Up to a 1-piastre mismatch between the POS-displayed total and the backend-charged total on percentage discounts. **Recommended:** standardize on one rounding rule across POS + backend (a coordinated change). Low severity; not touched to avoid changing validated money math piecemeal.
+- **Percentage discount rounds in the POS but truncated in the backend** (`cart.dart:378` `.round()` vs backend `(subtotal*v/100) as i32`) — **RESOLVED on the backend side**: the backend now rounds percentage discount + tax (half away from zero), matching the POS preview to the piastre. No POS change needed (it already rounds).
 
 - **Offline void of an offline-created order can be lost** (`offline_queue.dart:338` — void carries the localId, the server order has a DB-generated id → 404 → dead-letter). Real but lives in the offline-queue reconciliation logic; needs careful design + offline integration testing. Logged for a focused offline-sync pass.
 

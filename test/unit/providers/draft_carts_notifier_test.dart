@@ -14,6 +14,7 @@ class MockCartNotifier extends Notifier<CartState> implements CartNotifier {
   @override void startNewOrder({String? id, String? displayName}) {}
   @override void add(CartItem incoming) {}
   @override void addBundle(dynamic bundle, dynamic components) {}
+  @override void applyTaxRate(double rate) {}
   @override void applyCheckoutFields({int? amountTendered, String? customerName, String? discountId, dynamic discountType, int? discountValue, required String payment, List<dynamic>? paymentSplits, int? tipAmount}) {}
   @override void clear() {}
   @override void clearDiscount() {}

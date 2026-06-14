@@ -183,6 +183,81 @@ void main() {
       expect(state.total, 0);
     });
 
+    test('tax: rate applied to subtotal with no discount', () {
+      const state = CartState(
+        items: [
+          CartItem(menuItemId: 'm1', itemName: 'Burger', unitPrice: 1000, quantity: 1),
+        ],
+        taxRate: 0.14,
+        amountTendered: 1200,
+      );
+      expect(state.subtotal, 1000);
+      expect(state.taxableAmount, 1000);
+      expect(state.taxAmount, 140); // round(1000 * 0.14)
+      expect(state.total, 1140);
+      expect(state.changeGiven, 60); // 1200 - 1140
+    });
+
+    test('tax: applied to discounted (taxable) amount', () {
+      const state = CartState(
+        items: [
+          CartItem(menuItemId: 'm1', itemName: 'Burger', unitPrice: 1000, quantity: 1),
+        ],
+        discountType: DiscountType.fixed,
+        discountValue: 100,
+        taxRate: 0.14,
+      );
+      expect(state.subtotal, 1000);
+      expect(state.discountAmount, 100);
+      expect(state.taxableAmount, 900);
+      expect(state.taxAmount, 126); // round(900 * 0.14)
+      expect(state.total, 1026);
+    });
+
+    test('tax: rounds to the nearest piastre (matches backend round())', () {
+      const state = CartState(
+        items: [
+          CartItem(menuItemId: 'm1', itemName: 'Burger', unitPrice: 995, quantity: 1),
+        ],
+        taxRate: 0.14,
+      );
+      expect(state.taxableAmount, 995);
+      expect(state.taxAmount, 139); // round(139.3) == 139
+      expect(state.total, 1134);
+    });
+
+    test('tax: zero rate keeps total = subtotal - discount (backward compat)', () {
+      const state = CartState(
+        items: [
+          CartItem(menuItemId: 'm1', itemName: 'Burger', unitPrice: 1000, quantity: 1),
+        ],
+        discountType: DiscountType.fixed,
+        discountValue: 100,
+        // taxRate defaults to 0.0
+      );
+      expect(state.taxAmount, 0);
+      expect(state.total, state.subtotal - state.discountAmount); // 900
+    });
+
+    test('tax: copyWith carries the tax rate', () {
+      const state = CartState(taxRate: 0.14);
+      final copied = state.copyWith(payment: 'card');
+      expect(copied.taxRate, 0.14);
+      final reapplied = state.copyWith(taxRate: 0.10);
+      expect(reapplied.taxRate, 0.10);
+    });
+
+    test('tax: not persisted in storage (re-injected on load)', () {
+      const state = CartState(
+        id: 'c1',
+        items: [CartItem(menuItemId: 'm1', itemName: 'Burger', unitPrice: 500)],
+        taxRate: 0.14,
+      );
+      final restored = CartState.fromStorageJson(state.toStorageJson());
+      // Storage never carries the session tax rate — defaults back to 0.0.
+      expect(restored.taxRate, 0.0);
+    });
+
     test('copyWith clears fields', () {
       const state = CartState(
         customerName: 'John',

@@ -29,9 +29,14 @@ class AuthApi {
     return res.data as Map<String, dynamic>;
   }
 
-  Future<User> me() async {
+  /// GET /auth/me — returns the caller plus the org tax rate so the cart can
+  /// compute a tax-inclusive total. `tax_rate` is absent on older servers, so
+  /// it defaults to 0.0 (tax-free) rather than crashing.
+  Future<({User user, double taxRate})> me() async {
     final res = await _c.dio.get('/auth/me');
-    return User.fromJson(res.data['user'] as Map<String, dynamic>);
+    final user = User.fromJson(res.data['user'] as Map<String, dynamic>);
+    final taxRate = (res.data['tax_rate'] as num?)?.toDouble() ?? 0.0;
+    return (user: user, taxRate: taxRate);
   }
 }
 

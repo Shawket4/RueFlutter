@@ -352,6 +352,12 @@ class CartState {
   final int?                tipAmount;
   final List<PaymentSplit>? paymentSplits;
 
+  /// Org tax rate as a decimal (e.g. 0.14 = 14%). Session config injected
+  /// from auth — NOT persisted in storage (re-applied when the cart loads).
+  /// Defaults to 0.0 so a cart built without it computes a tax-free total,
+  /// exactly matching the legacy behaviour.
+  final double              taxRate;
+
   const CartState({
     this.id,
     this.displayName,
@@ -366,6 +372,7 @@ class CartState {
     this.amountTendered,
     this.tipAmount,
     this.paymentSplits,
+    this.taxRate        = 0.0,
   });
 
   bool get isEmpty  => items.isEmpty;
@@ -380,7 +387,14 @@ class CartState {
     return discountValue!.clamp(0, subtotal);
   }
 
-  int get total => subtotal - discountAmount;
+  /// Base the tax is charged on — subtotal net of discount.
+  int get taxableAmount => subtotal - discountAmount;
+
+  /// Tax in piastres, rounded to match the backend, which computes
+  /// `round((subtotal - discount) * tax_rate)` at order time.
+  int get taxAmount => (taxableAmount * taxRate).round();
+
+  int get total => taxableAmount + taxAmount;
 
   int get changeGiven {
     if (amountTendered == null) return 0;
@@ -404,6 +418,7 @@ class CartState {
     int?                 amountTendered,
     int?                 tipAmount,
     List<PaymentSplit>?  paymentSplits,
+    double?              taxRate,
     bool clearDiscount   = false,
     bool clearCustomer   = false,
     bool clearTendered   = false,
@@ -423,6 +438,7 @@ class CartState {
     amountTendered: clearTendered   ? null : (amountTendered ?? this.amountTendered),
     tipAmount:      tipAmount       ?? this.tipAmount,
     paymentSplits:  clearSplits     ? null : (paymentSplits ?? this.paymentSplits),
+    taxRate:        taxRate         ?? this.taxRate,
   );
 
   Map<String, dynamic> toStorageJson() => {

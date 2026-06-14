@@ -58,7 +58,7 @@ void main() {
     test('init restores session if available', () async {
       final user = makeUser(id: 'u1', name: 'John', role: UserRole.orgAdmin, branchId: 'b1');
       when(() => mockAuthRepo.restoreSession())
-          .thenAnswer((_) async => (token: 'token', user: user));
+          .thenAnswer((_) async => (token: 'token', user: user, taxRate: 0.14));
 
       final branch = makeBranch(id: 'b1', orgId: 'org1', name: 'Branch 1');
       when(() => mockBranchApi.get('b1')).thenAnswer((_) async => branch);
@@ -75,6 +75,7 @@ void main() {
       expect(state.isAuthenticated, true);
       expect(state.user?.id, 'u1');
       expect(state.branch?.id, 'b1');
+      expect(state.taxRate, 0.14);
     });
 
     test('init sets loading false if no session', () async {
@@ -91,7 +92,7 @@ void main() {
     test('login blocks if another teller has open shift', () async {
       final user = makeUser(id: 'u1', name: 'John', role: UserRole.orgAdmin, branchId: 'b1');
       when(() => mockAuthRepo.login(name: 'John', pin: '1234'))
-          .thenAnswer((_) async => (token: 'token', user: user));
+          .thenAnswer((_) async => (token: 'token', user: user, taxRate: 0.0));
 
       when(() => mockBranchApi.get('b1')).thenAnswer((_) async => makeBranch(id: 'b1', orgId: 'org1', name: 'Branch 1'));
       when(() => mockStorageService.saveBranch('b1', any())).thenAnswer((_) async {});
@@ -117,7 +118,7 @@ void main() {
     test('canLogout checks if shift is open', () async {
       final user = makeUser(id: 'u1', name: 'John', role: UserRole.orgAdmin, branchId: 'b1');
       when(() => mockAuthRepo.restoreSession())
-          .thenAnswer((_) async => (token: 'token', user: user));
+          .thenAnswer((_) async => (token: 'token', user: user, taxRate: 0.0));
       when(() => mockBranchApi.get('b1')).thenAnswer((_) async => makeBranch(id: 'b1', orgId: 'org1', name: 'Branch 1'));
       when(() => mockStorageService.saveBranch('b1', any())).thenAnswer((_) async {});
 

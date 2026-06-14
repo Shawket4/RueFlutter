@@ -42,19 +42,21 @@ class AuthRepository {
   String? get storedToken => _storage.token;
 
   /// Restore session from disk. Returns null if invalid / no token.
-  Future<({String token, User user})?> restoreSession() async {
+  Future<({String token, User user, double taxRate})?> restoreSession() async {
     final token = _storage.token;
     if (token == null) return null;
     setAuthToken(token);
     try {
-      final user = await _api.me();
-      await _storage.saveUser(user.toJson());
-      return (token: token, user: user);
+      final me = await _api.me();
+      await _storage.saveUser(me.user.toJson());
+      return (token: token, user: me.user, taxRate: me.taxRate);
     } catch (e) {
       if (isNetworkError(e)) {
         final cached = _storage.loadUser();
         if (cached != null) {
-          return (token: token, user: User.fromJson(cached));
+          // Offline restore: no fresh tax_rate available, fall back to 0.0
+          // (tax-free) rather than blocking the session.
+          return (token: token, user: User.fromJson(cached), taxRate: 0.0);
         }
       }
       // 401 or no cache → clear
@@ -110,7 +112,7 @@ class AuthRepository {
     );
   }
 
-  Future<({String token, User user})> login(
+  Future<({String token, User user, double taxRate})> login(
       {required String name, required String pin}) async {
     final branchId = _storage.deviceBranchId;
     if (branchId == null) {
@@ -136,6 +138,9 @@ class AuthRepository {
     }
     final token = data['token'] as String;
     final user  = User.fromJson(data['user'] as Map<String, dynamic>);
+    // `tax_rate` is a top-level field on the login response; absent on older
+    // servers, so default to 0.0 (tax-free) rather than crashing.
+    final taxRate = (data['tax_rate'] as num?)?.toDouble() ?? 0.0;
     setAuthToken(token);
     await _storage.saveToken(token);
     await _storage.saveUser(user.toJson());
@@ -146,7 +151,7 @@ class AuthRepository {
     // way an expired session can keep selling through an outage.
     await _storage.saveOfflineUnlock(name, _saltedHash(name, pin));
     await _storage.saveOfflineUser(name, user.toJson());
-    return (token: token, user: user);
+    return (token: token, user: user, taxRate: taxRate);
   }
 
   /// Validates [pin] against the locally stored salted hash and returns the

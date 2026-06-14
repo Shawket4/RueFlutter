@@ -3,6 +3,7 @@ import '../models/bundle.dart';
 import '../models/cart.dart';
 import '../storage/storage_service.dart';
 import '../utils/time_utils.dart';
+import 'auth_notifier.dart';
 import 'cart_storage.dart';
 import 'shift_notifier.dart';
 
@@ -19,6 +20,16 @@ class CartNotifier extends Notifier<CartState> {
 
   String? _scope() => cartStorageScope(ref.read(shiftProvider).shift);
 
+  /// Session tax rate (org config). Never persisted with the cart — re-read
+  /// from auth and re-applied on every (re)build/load so the getters compute
+  /// a tax-inclusive total. 0.0 ⟹ tax-free total (legacy behaviour).
+  ///
+  /// Read with `ref.read` (NOT watch/listen): AuthNotifier invalidates the
+  /// cart on logout, so a build-time dependency edge cart→auth would be a
+  /// circular dependency. Auth instead *pushes* rate changes via
+  /// [applyTaxRate].
+  double get _taxRate => ref.read(authProvider).taxRate;
+
   @override
   CartState build() {
     ref.listen(shiftProvider, (prev, next) {
@@ -34,7 +45,21 @@ class CartNotifier extends Notifier<CartState> {
     return _loadForScope(_loadedScope);
   }
 
+  /// Pushed by [AuthNotifier] when the session tax rate becomes known/changes
+  /// (e.g. the first /auth/me lands after the cart was already built). Pure
+  /// config update — does not persist (taxRate is never stored).
+  void applyTaxRate(double rate) {
+    if (state.taxRate != rate) state = state.copyWith(taxRate: rate);
+  }
+
   CartState _loadForScope(String? scope) {
+    final loaded = _buildForScope(scope);
+    // Storage never carries taxRate (it's session config) — inject it here so
+    // every load path produces a tax-aware cart.
+    return loaded.copyWith(taxRate: _taxRate);
+  }
+
+  CartState _buildForScope(String? scope) {
     if (scope == null) return _defaultCart();
     final raw = ref.read(storageServiceProvider).loadActiveCart(scope);
     if (raw == null) return _defaultCart();
@@ -205,13 +230,15 @@ class CartNotifier extends Notifier<CartState> {
       id: state.id,
       displayName: state.displayName,
       createdAt: state.createdAt ?? TimeUtils.now(),
+      taxRate: _taxRate,
     ));
   }
 
   void replaceWith(CartState newState) {
     _lastRemovedItem = null;
     _lastRemovedIndex = null;
-    _update(newState);
+    // Drafts come from storage without a tax rate — inject the session rate.
+    _update(newState.copyWith(taxRate: _taxRate));
   }
 
   void startNewOrder({String? id, String? displayName}) {
@@ -221,6 +248,7 @@ class CartNotifier extends Notifier<CartState> {
       id: id ?? 'order_${TimeUtils.now().millisecondsSinceEpoch}',
       displayName: displayName ?? 'Order 1',
       createdAt: TimeUtils.now(),
+      taxRate: _taxRate,
     ));
   }
 

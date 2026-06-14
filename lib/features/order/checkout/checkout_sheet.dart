@@ -332,7 +332,7 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
       discountType: discountType,
       discountValue: discountValue ?? 0,
       discountAmount: cart.discountAmount,
-      taxAmount: 0,
+      taxAmount: cart.taxAmount,
       totalAmount: cart.total,
       customerName: customer,
       notes: cart.notes,
@@ -588,7 +588,7 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
         discountType: discountTypeApi,
         discountValue: discountValue ?? 0,
         discountAmount: cart.discountAmount,
-        taxAmount: 0,
+        taxAmount: cart.taxAmount,
         totalAmount: cart.total,
         customerName: customer,
         notes: cart.notes,
@@ -956,6 +956,7 @@ class _SummaryCard extends ConsumerWidget {
     final subtotal = ref.watch(cartProvider.select((c) => c.subtotal));
     final discountAmount =
         ref.watch(cartProvider.select((c) => c.discountAmount));
+    final taxAmount = ref.watch(cartProvider.select((c) => c.taxAmount));
     final total = ref.watch(cartProvider.select((c) => c.total));
     return SurfaceCard(
       padding: const EdgeInsets.all(AppSpace.lg),
@@ -966,6 +967,8 @@ class _SummaryCard extends ConsumerWidget {
               label: s.orderDiscount,
               value: '− ${egp(discountAmount)}',
               valueColor: t.success),
+        if (taxAmount > 0)
+          _SummaryRow(label: s.orderTax, value: egp(taxAmount)),
         const Padding(
           padding: EdgeInsets.symmetric(vertical: AppSpace.sm),
           child: Divider(),

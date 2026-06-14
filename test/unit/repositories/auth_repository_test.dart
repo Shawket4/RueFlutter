@@ -90,7 +90,8 @@ void main() {
         id: 'u1', name: 'User 1', role: UserRole.orgAdmin,
         isActive: true,
       );
-      when(() => mockApi.me()).thenAnswer((_) async => user);
+      when(() => mockApi.me())
+          .thenAnswer((_) async => (user: user, taxRate: 0.14));
       when(() => mockStorage.saveUser(any())).thenAnswer((_) async {});
 
       final repo = container.read(authRepositoryProvider);
@@ -99,6 +100,7 @@ void main() {
       expect(result, isNotNull);
       expect(result!.token, 'token_123');
       expect(result.user.id, 'u1');
+      expect(result.taxRate, 0.14);
       verify(() => mockStorage.saveUser(any())).called(1);
     });
 
@@ -148,7 +150,8 @@ void main() {
       when(() => mockStorage.deviceBranchId).thenReturn('b1');
       when(() => mockApi.loginWithPin(
               name: 'User 3', pin: '1234', branchId: 'b1'))
-          .thenAnswer((_) async => {'token': 'new_token', 'user': user.toJson()});
+          .thenAnswer((_) async =>
+              {'token': 'new_token', 'tax_rate': 0.14, 'user': user.toJson()});
 
       when(() => mockStorage.saveToken('new_token')).thenAnswer((_) async {});
       when(() => mockStorage.saveUser(any())).thenAnswer((_) async {});
@@ -162,6 +165,7 @@ void main() {
 
       expect(result.token, 'new_token');
       expect(result.user.id, 'u3');
+      expect(result.taxRate, 0.14);
       verify(() => mockStorage.saveToken('new_token')).called(1);
       verify(() => mockStorage.saveUser(any())).called(1);
       // Login must also persist the offline unlock credentials (salted PIN

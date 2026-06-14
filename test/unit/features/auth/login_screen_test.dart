@@ -69,7 +69,7 @@ void main() {
 
   testWidgets('calls login when name and pin are entered', (tester) async {
     when(() => mockRepo.login(name: 'Teller', pin: '111111')).thenAnswer(
-        (_) async => (token: 'token', user: makeUser(id: '1', orgId: 'org1', branchId: 'b1', name: 'Teller', role: UserRole.teller)));
+        (_) async => (token: 'token', user: makeUser(id: '1', orgId: 'org1', branchId: 'b1', name: 'Teller', role: UserRole.teller), taxRate: 0.0));
     when(() => mockStorage.saveToken(any())).thenAnswer((_) async {});
     when(() => mockStorage.saveUser(any())).thenAnswer((_) async {});
 

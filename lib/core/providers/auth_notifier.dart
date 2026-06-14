@@ -28,6 +28,11 @@ class AuthState {
   /// real online login happens.
   final bool isOfflineSession;
 
+  /// Org tax rate as a decimal (e.g. 0.14 = 14%). Carried from /auth/login &
+  /// /auth/me so the cart can compute a tax-inclusive total. 0.0 when the org
+  /// has no tax or the server predates the field.
+  final double taxRate;
+
   const AuthState({
     this.isLoading = true,
     this.user,
@@ -36,6 +41,7 @@ class AuthState {
     this.sessionExpiry = SessionExpiry.none,
     this.blockedByName,
     this.isOfflineSession = false,
+    this.taxRate = 0.0,
   });
 
   bool get isAuthenticated => user != null;
@@ -48,6 +54,7 @@ class AuthState {
     SessionExpiry? sessionExpiry,
     String? blockedByName,
     bool? isOfflineSession,
+    double? taxRate,
     bool clearUser = false,
     bool clearBranch = false,
     bool clearError = false,
@@ -62,6 +69,7 @@ class AuthState {
         blockedByName:
             clearBlocked ? null : (blockedByName ?? this.blockedByName),
         isOfflineSession: isOfflineSession ?? this.isOfflineSession,
+        taxRate: taxRate ?? this.taxRate,
       );
 }
 
@@ -126,7 +134,8 @@ class AuthNotifier extends Notifier<AuthState> {
       state = const AuthState(isLoading: false);
       return;
     }
-    await _hydrateAfterAuth(session.user, emitLoading: false);
+    await _hydrateAfterAuth(session.user,
+        taxRate: session.taxRate, emitLoading: false);
   }
 
   /// Step 1 of device setup: manager credentials → branch list.
@@ -162,8 +171,8 @@ class AuthNotifier extends Notifier<AuthState> {
     try {
       final session =
           await ref.read(authRepositoryProvider).login(name: name, pin: pin);
-      final blockError =
-          await _hydrateAfterAuth(session.user, emitLoading: true);
+      final blockError = await _hydrateAfterAuth(session.user,
+          taxRate: session.taxRate, emitLoading: true);
       return blockError;
     } on OpenShiftBlockError catch (e) {
       // Backend refused login: this user already has an open shift somewhere.
@@ -183,7 +192,7 @@ class AuthNotifier extends Notifier<AuthState> {
   }
 
   Future<String?> _hydrateAfterAuth(User user,
-      {required bool emitLoading}) async {
+      {required double taxRate, required bool emitLoading}) async {
     if (emitLoading) state = state.copyWith(isLoading: true);
 
     Branch? branch;
@@ -236,11 +245,17 @@ class AuthNotifier extends Notifier<AuthState> {
       isLoading: false,
       user: user,
       branch: branch,
+      taxRate: taxRate,
       clearError: true,
       clearBlocked: true,
       sessionExpiry: SessionExpiry.none,
       isOfflineSession: false,
     );
+
+    // Push the session tax rate into the cart so its getters produce a
+    // tax-inclusive total. The cart can't depend on auth (auth invalidates
+    // the cart on logout — that would be circular), so auth pushes instead.
+    ref.read(cartProvider.notifier).applyTaxRate(taxRate);
 
     // A fresh token means a 401-parked outbox can sync again.
     ref.read(offlineQueueProvider.notifier).resumeAfterAuth();

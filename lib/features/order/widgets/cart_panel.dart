@@ -95,8 +95,9 @@ class CartFooter extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final t = context.tokens;
     final s = l10n(context);
-    final (subtotal, discountAmount, total) = ref.watch(
-        cartProvider.select((c) => (c.subtotal, c.discountAmount, c.total)));
+    final (subtotal, discountAmount, taxAmount, total) = ref.watch(
+        cartProvider.select(
+            (c) => (c.subtotal, c.discountAmount, c.taxAmount, c.total)));
 
     Widget line(String label, String value,
         {Color? valueColor, double size = 13}) {
@@ -128,6 +129,7 @@ class CartFooter extends ConsumerWidget {
         if (discountAmount > 0)
           line(s.orderDiscount, '− ${egp(discountAmount)}',
               valueColor: t.success),
+        if (taxAmount > 0) line(s.orderTax, egp(taxAmount)),
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 6),
           child: Divider(height: 1, color: t.borderLight),

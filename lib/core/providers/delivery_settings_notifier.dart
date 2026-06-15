@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../api/client.dart';
 import '../api/delivery_api.dart';
 import '../models/delivery_settings.dart';
 
@@ -40,8 +41,10 @@ class DeliverySettingsNotifier extends Notifier<DeliverySettingsState> {
       final s = await ref.read(deliveryApiProvider).getSettings(branchId);
       state = state.copyWith(settings: s, isLoading: false);
     } catch (e) {
-      // Non-fatal: the queue still works without the accepting bar.
-      state = state.copyWith(isLoading: false, error: e.toString());
+      // Non-fatal for the queue, but surface the SPECIFIC reason (e.g. the
+      // server's "Permission denied: …" or "signed in to a different branch")
+      // so a permission/branch problem isn't an invisible missing toggle.
+      state = state.copyWith(isLoading: false, error: friendlyError(e));
     }
   }
 

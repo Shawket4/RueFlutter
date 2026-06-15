@@ -26,6 +26,10 @@ Name | Type | Description | Notes
 **deliveryNotes** | **String** |  | [optional] 
 **deliveryRef** | **String** |  | [optional] 
 **deliveryZoneId** | **String** |  | [optional] 
+**discountAmount** | **int** |  | [optional] 
+**discountId** | **String** | Frozen channel discount on the item subtotal (`total == subtotal - discount_amount + delivery_fee`). `discount_amount` is 0 when none. | [optional] 
+**discountType** | **String** |  | [optional] 
+**discountValue** | **int** |  | [optional] 
 **extraPrepMinutes** | **int** | Extra prep minutes the teller added on top of the branch base (multiples of 5). | 
 **floor** | **String** |  | [optional] 
 **id** | **String** |  | 

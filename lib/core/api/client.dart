@@ -13,6 +13,12 @@ String? get currentToken => _currentToken;
 /// Set by AuthNotifier so the Dio layer can trigger logout on 401.
 void Function()? onUnauthorizedCallback;
 
+/// Set by AuthNotifier so the Dio layer can revalidate the session on a 403.
+/// A genuinely-dead token can surface as Forbidden, so we probe `/auth/me` once
+/// to tell an expired session (→ logout) apart from a true permission denial
+/// (→ leave the session intact and surface a specific message).
+void Function()? onForbiddenCallback;
+
 class DioClient {
   late final Dio _dio;
 
@@ -38,8 +44,14 @@ class DioClient {
         handler.next(response);
       },
       onError: (err, handler) {
-        if (err.response?.statusCode == 401) {
+        final status = err.response?.statusCode;
+        if (status == 401) {
           onUnauthorizedCallback?.call();
+        } else if (status == 403) {
+          // A 403 may be a dead session masquerading as Forbidden — let auth
+          // probe /auth/me once and decide whether to log out or treat it as a
+          // real permission denial.
+          onForbiddenCallback?.call();
         }
         // Only count network-layer failures (not server 4xx/5xx) as offline signal.
         if (_isNetworkLevelError(err)) {
@@ -73,7 +85,9 @@ String friendlyError(Object e) {
 
     final code = e.response?.statusCode;
     if (code == 401) return 'Session expired — please sign in again';
-    if (code == 403) return 'You do not have permission to do that';
+    // Prefer the server's specific reason (e.g. "Permission denied: read
+    // delivery_settings") over the generic line, so a real denial reads clearly.
+    if (code == 403) return serverMsg ?? 'You do not have permission to do that';
     if (code == 404) return serverMsg ?? 'Not found';
     if (code == 409) return serverMsg ?? 'A conflict occurred — resource already exists';
     if (code == 422) return serverMsg ?? 'Invalid data — please check your input';

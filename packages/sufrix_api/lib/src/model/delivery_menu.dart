@@ -5,6 +5,7 @@
 // ignore_for_file: unused_element
 import 'package:sufrix_api/src/model/delivery_menu_category.dart';
 import 'package:sufrix_api/src/model/delivery_addon_option.dart';
+import 'package:sufrix_api/src/model/delivery_menu_discount.dart';
 import 'package:sufrix_api/src/model/delivery_menu_item.dart';
 import 'package:copy_with_extension/copy_with_extension.dart';
 import 'package:json_annotation/json_annotation.dart';
@@ -26,6 +27,8 @@ class DeliveryMenu {
     required  this.addons,
 
     required  this.categories,
+
+     this.discount,
 
     required  this.items,
   });
@@ -55,6 +58,19 @@ class DeliveryMenu {
 
 
 
+      /// The active discount for this channel (customer-facing) or `null`. Applies to the item subtotal only — the delivery fee is always charged in full.
+  @JsonKey(
+    
+    name: r'discount',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final DeliveryMenuDiscount? discount;
+
+
+
   @JsonKey(
     
     name: r'items',
@@ -73,12 +89,14 @@ class DeliveryMenu {
     bool operator ==(Object other) => identical(this, other) || other is DeliveryMenu &&
       other.addons == addons &&
       other.categories == categories &&
+      other.discount == discount &&
       other.items == items;
 
     @override
     int get hashCode =>
         addons.hashCode +
         categories.hashCode +
+        (discount == null ? 0 : discount.hashCode) +
         items.hashCode;
 
   factory DeliveryMenu.fromJson(Map<String, dynamic> json) => _$DeliveryMenuFromJson(json);

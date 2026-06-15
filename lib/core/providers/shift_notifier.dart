@@ -270,6 +270,21 @@ class ShiftNotifier extends Notifier<ShiftState> {
     }
   }
 
+  /// A queued offline shift-open was permanently rejected by the server (another
+  /// shift already holds this branch/teller open). Clear the phantom local shift
+  /// so the teller is routed back to the open-shift screen instead of continuing
+  /// to sell against a shift the server will never accept.
+  Future<void> handleOpenRejected(String branchId) async {
+    await ref.read(storageServiceProvider).removeShift(branchId);
+    state = state.copyWith(
+      clearShift: true,
+      isLocalShift: false,
+      systemCash: 0,
+      error: 'Your shift could not be opened — another shift is already open for '
+          'this branch. Please reconcile, then open a new shift.',
+    );
+  }
+
   void addLocalCash(int amount) {
     state = state.copyWith(systemCash: state.systemCash + amount);
   }

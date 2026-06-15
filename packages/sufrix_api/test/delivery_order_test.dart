@@ -98,6 +98,27 @@ void main() {
       // TODO
     });
 
+    // int discountAmount
+    test('to test the property `discountAmount`', () async {
+      // TODO
+    });
+
+    // Frozen channel discount on the item subtotal (`total == subtotal - discount_amount + delivery_fee`). `discount_amount` is 0 when none.
+    // String discountId
+    test('to test the property `discountId`', () async {
+      // TODO
+    });
+
+    // String discountType
+    test('to test the property `discountType`', () async {
+      // TODO
+    });
+
+    // int discountValue
+    test('to test the property `discountValue`', () async {
+      // TODO
+    });
+
     // Extra prep minutes the teller added on top of the branch base (multiples of 5).
     // int extraPrepMinutes
     test('to test the property `extraPrepMinutes`', () async {

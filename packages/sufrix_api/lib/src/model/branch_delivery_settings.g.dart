@@ -11,6 +11,8 @@ abstract class _$BranchDeliverySettingsCWProxy {
 
   BranchDeliverySettings inMallCloseTime(String? inMallCloseTime);
 
+  BranchDeliverySettings inMallDiscountId(String? inMallDiscountId);
+
   BranchDeliverySettings inMallEnabled(bool inMallEnabled);
 
   BranchDeliverySettings inMallFee(int inMallFee);
@@ -22,6 +24,8 @@ abstract class _$BranchDeliverySettingsCWProxy {
   BranchDeliverySettings maxRoadDistanceMeters(int? maxRoadDistanceMeters);
 
   BranchDeliverySettings outsideCloseTime(String? outsideCloseTime);
+
+  BranchDeliverySettings outsideDiscountId(String? outsideDiscountId);
 
   BranchDeliverySettings outsideEnabled(bool outsideEnabled);
 
@@ -40,12 +44,14 @@ abstract class _$BranchDeliverySettingsCWProxy {
   BranchDeliverySettings call({
     String branchId,
     String? inMallCloseTime,
+    String? inMallDiscountId,
     bool inMallEnabled,
     int inMallFee,
     String? inMallOpenTime,
     String inMallOverride,
     int? maxRoadDistanceMeters,
     String? outsideCloseTime,
+    String? outsideDiscountId,
     bool outsideEnabled,
     String? outsideOpenTime,
     String outsideOverride,
@@ -66,6 +72,10 @@ class _$BranchDeliverySettingsCWProxyImpl
   @override
   BranchDeliverySettings inMallCloseTime(String? inMallCloseTime) =>
       this(inMallCloseTime: inMallCloseTime);
+
+  @override
+  BranchDeliverySettings inMallDiscountId(String? inMallDiscountId) =>
+      this(inMallDiscountId: inMallDiscountId);
 
   @override
   BranchDeliverySettings inMallEnabled(bool inMallEnabled) =>
@@ -89,6 +99,10 @@ class _$BranchDeliverySettingsCWProxyImpl
   @override
   BranchDeliverySettings outsideCloseTime(String? outsideCloseTime) =>
       this(outsideCloseTime: outsideCloseTime);
+
+  @override
+  BranchDeliverySettings outsideDiscountId(String? outsideDiscountId) =>
+      this(outsideDiscountId: outsideDiscountId);
 
   @override
   BranchDeliverySettings outsideEnabled(bool outsideEnabled) =>
@@ -116,12 +130,14 @@ class _$BranchDeliverySettingsCWProxyImpl
   BranchDeliverySettings call({
     Object? branchId = const $CopyWithPlaceholder(),
     Object? inMallCloseTime = const $CopyWithPlaceholder(),
+    Object? inMallDiscountId = const $CopyWithPlaceholder(),
     Object? inMallEnabled = const $CopyWithPlaceholder(),
     Object? inMallFee = const $CopyWithPlaceholder(),
     Object? inMallOpenTime = const $CopyWithPlaceholder(),
     Object? inMallOverride = const $CopyWithPlaceholder(),
     Object? maxRoadDistanceMeters = const $CopyWithPlaceholder(),
     Object? outsideCloseTime = const $CopyWithPlaceholder(),
+    Object? outsideDiscountId = const $CopyWithPlaceholder(),
     Object? outsideEnabled = const $CopyWithPlaceholder(),
     Object? outsideOpenTime = const $CopyWithPlaceholder(),
     Object? outsideOverride = const $CopyWithPlaceholder(),
@@ -136,6 +152,10 @@ class _$BranchDeliverySettingsCWProxyImpl
           ? _value.inMallCloseTime
           // ignore: cast_nullable_to_non_nullable
           : inMallCloseTime as String?,
+      inMallDiscountId: inMallDiscountId == const $CopyWithPlaceholder()
+          ? _value.inMallDiscountId
+          // ignore: cast_nullable_to_non_nullable
+          : inMallDiscountId as String?,
       inMallEnabled: inMallEnabled == const $CopyWithPlaceholder()
           ? _value.inMallEnabled
           // ignore: cast_nullable_to_non_nullable
@@ -161,6 +181,10 @@ class _$BranchDeliverySettingsCWProxyImpl
           ? _value.outsideCloseTime
           // ignore: cast_nullable_to_non_nullable
           : outsideCloseTime as String?,
+      outsideDiscountId: outsideDiscountId == const $CopyWithPlaceholder()
+          ? _value.outsideDiscountId
+          // ignore: cast_nullable_to_non_nullable
+          : outsideDiscountId as String?,
       outsideEnabled: outsideEnabled == const $CopyWithPlaceholder()
           ? _value.outsideEnabled
           // ignore: cast_nullable_to_non_nullable
@@ -216,6 +240,10 @@ BranchDeliverySettings _$BranchDeliverySettingsFromJson(
         'in_mall_close_time',
         (v) => v as String?,
       ),
+      inMallDiscountId: $checkedConvert(
+        'in_mall_discount_id',
+        (v) => v as String?,
+      ),
       inMallEnabled: $checkedConvert('in_mall_enabled', (v) => v as bool),
       inMallFee: $checkedConvert('in_mall_fee', (v) => (v as num).toInt()),
       inMallOpenTime: $checkedConvert('in_mall_open_time', (v) => v as String?),
@@ -226,6 +254,10 @@ BranchDeliverySettings _$BranchDeliverySettingsFromJson(
       ),
       outsideCloseTime: $checkedConvert(
         'outside_close_time',
+        (v) => v as String?,
+      ),
+      outsideDiscountId: $checkedConvert(
+        'outside_discount_id',
         (v) => v as String?,
       ),
       outsideEnabled: $checkedConvert('outside_enabled', (v) => v as bool),
@@ -244,12 +276,14 @@ BranchDeliverySettings _$BranchDeliverySettingsFromJson(
   fieldKeyMap: const {
     'branchId': 'branch_id',
     'inMallCloseTime': 'in_mall_close_time',
+    'inMallDiscountId': 'in_mall_discount_id',
     'inMallEnabled': 'in_mall_enabled',
     'inMallFee': 'in_mall_fee',
     'inMallOpenTime': 'in_mall_open_time',
     'inMallOverride': 'in_mall_override',
     'maxRoadDistanceMeters': 'max_road_distance_meters',
     'outsideCloseTime': 'outside_close_time',
+    'outsideDiscountId': 'outside_discount_id',
     'outsideEnabled': 'outside_enabled',
     'outsideOpenTime': 'outside_open_time',
     'outsideOverride': 'outside_override',
@@ -262,12 +296,14 @@ Map<String, dynamic> _$BranchDeliverySettingsToJson(
 ) => <String, dynamic>{
   'branch_id': instance.branchId,
   'in_mall_close_time': ?instance.inMallCloseTime,
+  'in_mall_discount_id': ?instance.inMallDiscountId,
   'in_mall_enabled': instance.inMallEnabled,
   'in_mall_fee': instance.inMallFee,
   'in_mall_open_time': ?instance.inMallOpenTime,
   'in_mall_override': instance.inMallOverride,
   'max_road_distance_meters': ?instance.maxRoadDistanceMeters,
   'outside_close_time': ?instance.outsideCloseTime,
+  'outside_discount_id': ?instance.outsideDiscountId,
   'outside_enabled': instance.outsideEnabled,
   'outside_open_time': ?instance.outsideOpenTime,
   'outside_override': instance.outsideOverride,

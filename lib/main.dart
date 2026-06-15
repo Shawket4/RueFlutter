@@ -93,6 +93,15 @@ class _AppState extends ConsumerState<_App> with WidgetsBindingObserver {
         }
       };
       queue.onShiftCloseSynced = (_) {};
+      // A queued offline shift-open was permanently rejected (another shift
+      // already holds this branch/teller open) — clear the phantom local shift
+      // so the teller stops selling against a shift the server will never accept.
+      queue.onShiftOpenRejected = (shiftId, branchId) {
+        final current = ref.read(shiftProvider).shift;
+        if (current != null && current.id == shiftId) {
+          shiftNotif.handleOpenRejected(branchId);
+        }
+      };
 
       queue.init();
     });

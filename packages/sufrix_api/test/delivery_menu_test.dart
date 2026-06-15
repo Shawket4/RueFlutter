@@ -18,6 +18,12 @@ void main() {
       // TODO
     });
 
+    // The active discount for this channel (customer-facing) or `null`. Applies to the item subtotal only — the delivery fee is always charged in full.
+    // DeliveryMenuDiscount discount
+    test('to test the property `discount`', () async {
+      // TODO
+    });
+
     // List<DeliveryMenuItem> items
     test('to test the property `items`', () async {
       // TODO

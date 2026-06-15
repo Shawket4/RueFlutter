@@ -24,6 +24,8 @@ class BranchDeliverySettings {
 
      this.inMallCloseTime,
 
+     this.inMallDiscountId,
+
     required  this.inMallEnabled,
 
     required  this.inMallFee,
@@ -35,6 +37,8 @@ class BranchDeliverySettings {
      this.maxRoadDistanceMeters,
 
      this.outsideCloseTime,
+
+     this.outsideDiscountId,
 
     required  this.outsideEnabled,
 
@@ -66,6 +70,19 @@ class BranchDeliverySettings {
 
 
   final String? inMallCloseTime;
+
+
+
+      /// Optional discount applied to each channel's item subtotal (reuses the org `discounts` table). Frozen onto the order at intake. `null` = none.
+  @JsonKey(
+    
+    name: r'in_mall_discount_id',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final String? inMallDiscountId;
 
 
 
@@ -143,6 +160,18 @@ class BranchDeliverySettings {
 
   @JsonKey(
     
+    name: r'outside_discount_id',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final String? outsideDiscountId;
+
+
+
+  @JsonKey(
+    
     name: r'outside_enabled',
     required: true,
     includeIfNull: false,
@@ -195,12 +224,14 @@ class BranchDeliverySettings {
     bool operator ==(Object other) => identical(this, other) || other is BranchDeliverySettings &&
       other.branchId == branchId &&
       other.inMallCloseTime == inMallCloseTime &&
+      other.inMallDiscountId == inMallDiscountId &&
       other.inMallEnabled == inMallEnabled &&
       other.inMallFee == inMallFee &&
       other.inMallOpenTime == inMallOpenTime &&
       other.inMallOverride == inMallOverride &&
       other.maxRoadDistanceMeters == maxRoadDistanceMeters &&
       other.outsideCloseTime == outsideCloseTime &&
+      other.outsideDiscountId == outsideDiscountId &&
       other.outsideEnabled == outsideEnabled &&
       other.outsideOpenTime == outsideOpenTime &&
       other.outsideOverride == outsideOverride &&
@@ -210,12 +241,14 @@ class BranchDeliverySettings {
     int get hashCode =>
         branchId.hashCode +
         (inMallCloseTime == null ? 0 : inMallCloseTime.hashCode) +
+        (inMallDiscountId == null ? 0 : inMallDiscountId.hashCode) +
         inMallEnabled.hashCode +
         inMallFee.hashCode +
         (inMallOpenTime == null ? 0 : inMallOpenTime.hashCode) +
         inMallOverride.hashCode +
         (maxRoadDistanceMeters == null ? 0 : maxRoadDistanceMeters.hashCode) +
         (outsideCloseTime == null ? 0 : outsideCloseTime.hashCode) +
+        (outsideDiscountId == null ? 0 : outsideDiscountId.hashCode) +
         outsideEnabled.hashCode +
         (outsideOpenTime == null ? 0 : outsideOpenTime.hashCode) +
         outsideOverride.hashCode +

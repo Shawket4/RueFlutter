@@ -24,6 +24,8 @@ class BranchSettingsInput {
 
      this.inMallCloseTime,
 
+     this.inMallDiscountId,
+
     required  this.inMallEnabled,
 
     required  this.inMallFee,
@@ -33,6 +35,8 @@ class BranchSettingsInput {
      this.maxRoadDistanceMeters,
 
      this.outsideCloseTime,
+
+     this.outsideDiscountId,
 
     required  this.outsideEnabled,
 
@@ -62,6 +66,19 @@ class BranchSettingsInput {
 
 
   final String? inMallCloseTime;
+
+
+
+      /// Optional per-channel discount ids (must be active discounts in the caller's org). `null` clears the channel's discount.
+  @JsonKey(
+    
+    name: r'in_mall_discount_id',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final String? inMallDiscountId;
 
 
 
@@ -127,6 +144,18 @@ class BranchSettingsInput {
 
   @JsonKey(
     
+    name: r'outside_discount_id',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final String? outsideDiscountId;
+
+
+
+  @JsonKey(
+    
     name: r'outside_enabled',
     required: true,
     includeIfNull: false,
@@ -167,11 +196,13 @@ class BranchSettingsInput {
     bool operator ==(Object other) => identical(this, other) || other is BranchSettingsInput &&
       other.branchId == branchId &&
       other.inMallCloseTime == inMallCloseTime &&
+      other.inMallDiscountId == inMallDiscountId &&
       other.inMallEnabled == inMallEnabled &&
       other.inMallFee == inMallFee &&
       other.inMallOpenTime == inMallOpenTime &&
       other.maxRoadDistanceMeters == maxRoadDistanceMeters &&
       other.outsideCloseTime == outsideCloseTime &&
+      other.outsideDiscountId == outsideDiscountId &&
       other.outsideEnabled == outsideEnabled &&
       other.outsideOpenTime == outsideOpenTime &&
       other.prepTimeMinutes == prepTimeMinutes;
@@ -180,11 +211,13 @@ class BranchSettingsInput {
     int get hashCode =>
         branchId.hashCode +
         (inMallCloseTime == null ? 0 : inMallCloseTime.hashCode) +
+        (inMallDiscountId == null ? 0 : inMallDiscountId.hashCode) +
         inMallEnabled.hashCode +
         inMallFee.hashCode +
         (inMallOpenTime == null ? 0 : inMallOpenTime.hashCode) +
         (maxRoadDistanceMeters == null ? 0 : maxRoadDistanceMeters.hashCode) +
         (outsideCloseTime == null ? 0 : outsideCloseTime.hashCode) +
+        (outsideDiscountId == null ? 0 : outsideDiscountId.hashCode) +
         outsideEnabled.hashCode +
         (outsideOpenTime == null ? 0 : outsideOpenTime.hashCode) +
         prepTimeMinutes.hashCode;

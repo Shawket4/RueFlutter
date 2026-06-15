@@ -579,6 +579,9 @@ class PrinterService {
 
         // Totals
         _row('Subtotal', egp(order.subtotal), font: font, fontB: fontB, sz: 8),
+        if (order.discountAmount > 0)
+          _row('Discount', '- ${egp(order.discountAmount)}',
+              font: font, fontB: fontB, sz: 8),
         if (order.deliveryFee > 0)
           _row('Delivery Fee', egp(order.deliveryFee),
               font: font, fontB: fontB, sz: 8),

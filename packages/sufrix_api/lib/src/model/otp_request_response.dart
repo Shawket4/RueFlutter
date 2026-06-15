@@ -20,23 +20,8 @@ class OtpRequestResponse {
   /// Returns a new [OtpRequestResponse] instance.
   OtpRequestResponse({
 
-     this.debugCode,
-
     required  this.sent,
   });
-
-      /// Only populated when SUFRIX_OTP_DEBUG=1 (dev/test). Never set in prod.
-  @JsonKey(
-    
-    name: r'debug_code',
-    required: false,
-    includeIfNull: false,
-  )
-
-
-  final String? debugCode;
-
-
 
   @JsonKey(
     
@@ -54,12 +39,10 @@ class OtpRequestResponse {
 
     @override
     bool operator ==(Object other) => identical(this, other) || other is OtpRequestResponse &&
-      other.debugCode == debugCode &&
       other.sent == sent;
 
     @override
     int get hashCode =>
-        (debugCode == null ? 0 : debugCode.hashCode) +
         sent.hashCode;
 
   factory OtpRequestResponse.fromJson(Map<String, dynamic> json) => _$OtpRequestResponseFromJson(json);

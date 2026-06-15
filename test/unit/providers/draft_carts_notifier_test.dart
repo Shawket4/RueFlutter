@@ -45,6 +45,7 @@ class MockShiftNotifier extends Notifier<ShiftState> implements ShiftNotifier {
   @override void addLocalCash(int amount) {}
   @override void seedFromAuth(dynamic shift) {}
   @override void loadLocal(String branchId) {}
+  @override Future<void> handleOpenRejected(String branchId) async {}
 }
 
 void main() {

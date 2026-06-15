@@ -276,6 +276,10 @@ class DeliveryOrder {
   final int deliveryFee;
   final int total;
 
+  /// Frozen channel discount on the item subtotal (piastres); 0 when none.
+  /// `total == subtotal - discountAmount + deliveryFee`.
+  final int discountAmount;
+
   /// Per-order extra prep time in minutes (non-negative multiple of 5). Added
   /// on top of the branch BASE prep time (branch config; not on the order).
   final int extraPrepMinutes;
@@ -323,6 +327,7 @@ class DeliveryOrder {
     required this.subtotal,
     required this.deliveryFee,
     required this.total,
+    this.discountAmount = 0,
     this.extraPrepMinutes = 0,
     required this.cart,
     this.paymentMethodHint,
@@ -369,6 +374,7 @@ class DeliveryOrder {
         subtotal: _asInt(j['subtotal']),
         deliveryFee: _asInt(j['delivery_fee']),
         total: _asInt(j['total']),
+        discountAmount: _asInt(j['discount_amount']),
         extraPrepMinutes: _asInt(j['extra_prep_minutes']),
         cart: DeliveryCart.fromJson(_asMap(j['cart']) ?? const {}),
         paymentMethodHint: j['payment_method_hint'] as String?,
@@ -412,6 +418,7 @@ class DeliveryOrder {
           'road_distance_meters': roadDistanceMeters,
         'subtotal': subtotal,
         'delivery_fee': deliveryFee,
+        'discount_amount': discountAmount,
         'total': total,
         'extra_prep_minutes': extraPrepMinutes,
         'cart': cart.toJson(),

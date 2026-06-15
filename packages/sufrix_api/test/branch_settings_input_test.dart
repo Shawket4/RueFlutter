@@ -17,6 +17,12 @@ void main() {
       // TODO
     });
 
+    // Optional per-channel discount ids (must be active discounts in the caller's org). `null` clears the channel's discount.
+    // String inMallDiscountId
+    test('to test the property `inMallDiscountId`', () async {
+      // TODO
+    });
+
     // bool inMallEnabled
     test('to test the property `inMallEnabled`', () async {
       // TODO
@@ -39,6 +45,11 @@ void main() {
 
     // String outsideCloseTime
     test('to test the property `outsideCloseTime`', () async {
+      // TODO
+    });
+
+    // String outsideDiscountId
+    test('to test the property `outsideDiscountId`', () async {
       // TODO
     });
 

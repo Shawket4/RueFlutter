@@ -157,6 +157,7 @@ Class | Method | HTTP request | Description
  - [DeliveryEvent](doc/DeliveryEvent.md)
  - [DeliveryMenu](doc/DeliveryMenu.md)
  - [DeliveryMenuCategory](doc/DeliveryMenuCategory.md)
+ - [DeliveryMenuDiscount](doc/DeliveryMenuDiscount.md)
  - [DeliveryMenuItem](doc/DeliveryMenuItem.md)
  - [DeliveryMenuSize](doc/DeliveryMenuSize.md)
  - [DeliveryOptionalField](doc/DeliveryOptionalField.md)

@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -146,6 +147,70 @@ void main() {
       final state = container.read(authProvider);
       expect(state.isAuthenticated, false);
       expect(state.isLoading, false);
+    });
+  });
+
+  group('revalidateAfterForbidden', () {
+    // Brings the notifier to a live, authenticated online session.
+    Future<AuthNotifier> authenticate() async {
+      final user = makeUser(id: 'u1', name: 'John', role: UserRole.teller, branchId: 'b1');
+      when(() => mockAuthRepo.restoreSession())
+          .thenAnswer((_) async => (token: 'token', user: user, taxRate: 0.14));
+      when(() => mockBranchApi.get('b1'))
+          .thenAnswer((_) async => makeBranch(id: 'b1', orgId: 'org1', name: 'Branch 1'));
+      when(() => mockStorageService.saveBranch('b1', any())).thenAnswer((_) async {});
+      when(() => mockShiftApi.current('b1'))
+          .thenAnswer((_) async => ShiftPreFill(hasOpenShift: false, suggestedOpeningCash: 1000));
+      final notifier = container.read(authProvider.notifier);
+      await notifier.init();
+      return notifier;
+    }
+
+    DioException dioStatus(int code) => DioException(
+          requestOptions: RequestOptions(path: '/auth/me'),
+          response: Response(
+              requestOptions: RequestOptions(path: '/auth/me'), statusCode: code),
+        );
+
+    test('keeps a valid session — never logs out when /auth/me succeeds', () async {
+      final notifier = await authenticate();
+      expect(container.read(authProvider).isAuthenticated, true);
+      when(() => mockAuthRepo.validateToken()).thenAnswer((_) async {});
+
+      await notifier.revalidateAfterForbidden();
+
+      final state = container.read(authProvider);
+      expect(state.isAuthenticated, true, reason: 'a valid session is never logged out on 403');
+      expect(state.user?.id, 'u1');
+      expect(state.sessionExpiry, SessionExpiry.none);
+      verify(() => mockAuthRepo.validateToken()).called(1);
+    });
+
+    test('forces logout when /auth/me returns 401 (a dead session behind the 403)', () async {
+      final notifier = await authenticate();
+      when(() => mockAuthRepo.validateToken()).thenThrow(dioStatus(401));
+      when(() => mockAuthRepo.logout()).thenAnswer((_) async {});
+
+      await notifier.revalidateAfterForbidden();
+
+      final state = container.read(authProvider);
+      expect(state.isAuthenticated, false, reason: 'a dead session surfaced as 403 routes to /login');
+      expect(state.user, isNull);
+      expect(state.sessionExpiry, SessionExpiry.expired);
+    });
+
+    test('ignores a network error from /auth/me — keeps the session intact', () async {
+      final notifier = await authenticate();
+      when(() => mockAuthRepo.validateToken()).thenThrow(DioException(
+        requestOptions: RequestOptions(path: '/auth/me'),
+        type: DioExceptionType.connectionError,
+      ));
+
+      await notifier.revalidateAfterForbidden();
+
+      final state = container.read(authProvider);
+      expect(state.isAuthenticated, true, reason: 'a flaky link must not sign a valid session out');
+      expect(state.user?.id, 'u1');
     });
   });
 }

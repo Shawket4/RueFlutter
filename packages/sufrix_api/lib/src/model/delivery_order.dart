@@ -56,6 +56,14 @@ class DeliveryOrder {
 
      this.deliveryZoneId,
 
+     this.discountAmount,
+
+     this.discountId,
+
+     this.discountType,
+
+     this.discountValue,
+
     required  this.extraPrepMinutes,
 
      this.floor,
@@ -311,6 +319,55 @@ class DeliveryOrder {
 
 
   final String? deliveryZoneId;
+
+
+
+  @JsonKey(
+    
+    name: r'discount_amount',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final int? discountAmount;
+
+
+
+      /// Frozen channel discount on the item subtotal (`total == subtotal - discount_amount + delivery_fee`). `discount_amount` is 0 when none.
+  @JsonKey(
+    
+    name: r'discount_id',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final String? discountId;
+
+
+
+  @JsonKey(
+    
+    name: r'discount_type',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final String? discountType;
+
+
+
+  @JsonKey(
+    
+    name: r'discount_value',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final int? discountValue;
 
 
 
@@ -577,6 +634,10 @@ class DeliveryOrder {
       other.deliveryNotes == deliveryNotes &&
       other.deliveryRef == deliveryRef &&
       other.deliveryZoneId == deliveryZoneId &&
+      other.discountAmount == discountAmount &&
+      other.discountId == discountId &&
+      other.discountType == discountType &&
+      other.discountValue == discountValue &&
       other.extraPrepMinutes == extraPrepMinutes &&
       other.floor == floor &&
       other.id == id &&
@@ -618,6 +679,10 @@ class DeliveryOrder {
         (deliveryNotes == null ? 0 : deliveryNotes.hashCode) +
         (deliveryRef == null ? 0 : deliveryRef.hashCode) +
         (deliveryZoneId == null ? 0 : deliveryZoneId.hashCode) +
+        discountAmount.hashCode +
+        (discountId == null ? 0 : discountId.hashCode) +
+        (discountType == null ? 0 : discountType.hashCode) +
+        discountValue.hashCode +
         extraPrepMinutes.hashCode +
         (floor == null ? 0 : floor.hashCode) +
         id.hashCode +

@@ -11,6 +11,8 @@ abstract class _$BranchSettingsInputCWProxy {
 
   BranchSettingsInput inMallCloseTime(String? inMallCloseTime);
 
+  BranchSettingsInput inMallDiscountId(String? inMallDiscountId);
+
   BranchSettingsInput inMallEnabled(bool inMallEnabled);
 
   BranchSettingsInput inMallFee(int inMallFee);
@@ -20,6 +22,8 @@ abstract class _$BranchSettingsInputCWProxy {
   BranchSettingsInput maxRoadDistanceMeters(int? maxRoadDistanceMeters);
 
   BranchSettingsInput outsideCloseTime(String? outsideCloseTime);
+
+  BranchSettingsInput outsideDiscountId(String? outsideDiscountId);
 
   BranchSettingsInput outsideEnabled(bool outsideEnabled);
 
@@ -36,11 +40,13 @@ abstract class _$BranchSettingsInputCWProxy {
   BranchSettingsInput call({
     String branchId,
     String? inMallCloseTime,
+    String? inMallDiscountId,
     bool inMallEnabled,
     int inMallFee,
     String? inMallOpenTime,
     int? maxRoadDistanceMeters,
     String? outsideCloseTime,
+    String? outsideDiscountId,
     bool outsideEnabled,
     String? outsideOpenTime,
     int prepTimeMinutes,
@@ -61,6 +67,10 @@ class _$BranchSettingsInputCWProxyImpl implements _$BranchSettingsInputCWProxy {
       this(inMallCloseTime: inMallCloseTime);
 
   @override
+  BranchSettingsInput inMallDiscountId(String? inMallDiscountId) =>
+      this(inMallDiscountId: inMallDiscountId);
+
+  @override
   BranchSettingsInput inMallEnabled(bool inMallEnabled) =>
       this(inMallEnabled: inMallEnabled);
 
@@ -78,6 +88,10 @@ class _$BranchSettingsInputCWProxyImpl implements _$BranchSettingsInputCWProxy {
   @override
   BranchSettingsInput outsideCloseTime(String? outsideCloseTime) =>
       this(outsideCloseTime: outsideCloseTime);
+
+  @override
+  BranchSettingsInput outsideDiscountId(String? outsideDiscountId) =>
+      this(outsideDiscountId: outsideDiscountId);
 
   @override
   BranchSettingsInput outsideEnabled(bool outsideEnabled) =>
@@ -101,11 +115,13 @@ class _$BranchSettingsInputCWProxyImpl implements _$BranchSettingsInputCWProxy {
   BranchSettingsInput call({
     Object? branchId = const $CopyWithPlaceholder(),
     Object? inMallCloseTime = const $CopyWithPlaceholder(),
+    Object? inMallDiscountId = const $CopyWithPlaceholder(),
     Object? inMallEnabled = const $CopyWithPlaceholder(),
     Object? inMallFee = const $CopyWithPlaceholder(),
     Object? inMallOpenTime = const $CopyWithPlaceholder(),
     Object? maxRoadDistanceMeters = const $CopyWithPlaceholder(),
     Object? outsideCloseTime = const $CopyWithPlaceholder(),
+    Object? outsideDiscountId = const $CopyWithPlaceholder(),
     Object? outsideEnabled = const $CopyWithPlaceholder(),
     Object? outsideOpenTime = const $CopyWithPlaceholder(),
     Object? prepTimeMinutes = const $CopyWithPlaceholder(),
@@ -119,6 +135,10 @@ class _$BranchSettingsInputCWProxyImpl implements _$BranchSettingsInputCWProxy {
           ? _value.inMallCloseTime
           // ignore: cast_nullable_to_non_nullable
           : inMallCloseTime as String?,
+      inMallDiscountId: inMallDiscountId == const $CopyWithPlaceholder()
+          ? _value.inMallDiscountId
+          // ignore: cast_nullable_to_non_nullable
+          : inMallDiscountId as String?,
       inMallEnabled: inMallEnabled == const $CopyWithPlaceholder()
           ? _value.inMallEnabled
           // ignore: cast_nullable_to_non_nullable
@@ -140,6 +160,10 @@ class _$BranchSettingsInputCWProxyImpl implements _$BranchSettingsInputCWProxy {
           ? _value.outsideCloseTime
           // ignore: cast_nullable_to_non_nullable
           : outsideCloseTime as String?,
+      outsideDiscountId: outsideDiscountId == const $CopyWithPlaceholder()
+          ? _value.outsideDiscountId
+          // ignore: cast_nullable_to_non_nullable
+          : outsideDiscountId as String?,
       outsideEnabled: outsideEnabled == const $CopyWithPlaceholder()
           ? _value.outsideEnabled
           // ignore: cast_nullable_to_non_nullable
@@ -188,6 +212,10 @@ BranchSettingsInput _$BranchSettingsInputFromJson(Map<String, dynamic> json) =>
             'in_mall_close_time',
             (v) => v as String?,
           ),
+          inMallDiscountId: $checkedConvert(
+            'in_mall_discount_id',
+            (v) => v as String?,
+          ),
           inMallEnabled: $checkedConvert('in_mall_enabled', (v) => v as bool),
           inMallFee: $checkedConvert('in_mall_fee', (v) => (v as num).toInt()),
           inMallOpenTime: $checkedConvert(
@@ -200,6 +228,10 @@ BranchSettingsInput _$BranchSettingsInputFromJson(Map<String, dynamic> json) =>
           ),
           outsideCloseTime: $checkedConvert(
             'outside_close_time',
+            (v) => v as String?,
+          ),
+          outsideDiscountId: $checkedConvert(
+            'outside_discount_id',
             (v) => v as String?,
           ),
           outsideEnabled: $checkedConvert('outside_enabled', (v) => v as bool),
@@ -217,11 +249,13 @@ BranchSettingsInput _$BranchSettingsInputFromJson(Map<String, dynamic> json) =>
       fieldKeyMap: const {
         'branchId': 'branch_id',
         'inMallCloseTime': 'in_mall_close_time',
+        'inMallDiscountId': 'in_mall_discount_id',
         'inMallEnabled': 'in_mall_enabled',
         'inMallFee': 'in_mall_fee',
         'inMallOpenTime': 'in_mall_open_time',
         'maxRoadDistanceMeters': 'max_road_distance_meters',
         'outsideCloseTime': 'outside_close_time',
+        'outsideDiscountId': 'outside_discount_id',
         'outsideEnabled': 'outside_enabled',
         'outsideOpenTime': 'outside_open_time',
         'prepTimeMinutes': 'prep_time_minutes',
@@ -233,11 +267,13 @@ Map<String, dynamic> _$BranchSettingsInputToJson(
 ) => <String, dynamic>{
   'branch_id': instance.branchId,
   'in_mall_close_time': ?instance.inMallCloseTime,
+  'in_mall_discount_id': ?instance.inMallDiscountId,
   'in_mall_enabled': instance.inMallEnabled,
   'in_mall_fee': instance.inMallFee,
   'in_mall_open_time': ?instance.inMallOpenTime,
   'max_road_distance_meters': ?instance.maxRoadDistanceMeters,
   'outside_close_time': ?instance.outsideCloseTime,
+  'outside_discount_id': ?instance.outsideDiscountId,
   'outside_enabled': instance.outsideEnabled,
   'outside_open_time': ?instance.outsideOpenTime,
   'prep_time_minutes': instance.prepTimeMinutes,

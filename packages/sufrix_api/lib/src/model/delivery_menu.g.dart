@@ -11,6 +11,8 @@ abstract class _$DeliveryMenuCWProxy {
 
   DeliveryMenu categories(List<DeliveryMenuCategory> categories);
 
+  DeliveryMenu discount(DeliveryMenuDiscount? discount);
+
   DeliveryMenu items(List<DeliveryMenuItem> items);
 
   /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `DeliveryMenu(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
@@ -22,6 +24,7 @@ abstract class _$DeliveryMenuCWProxy {
   DeliveryMenu call({
     List<DeliveryAddonOption> addons,
     List<DeliveryMenuCategory> categories,
+    DeliveryMenuDiscount? discount,
     List<DeliveryMenuItem> items,
   });
 }
@@ -40,6 +43,10 @@ class _$DeliveryMenuCWProxyImpl implements _$DeliveryMenuCWProxy {
       this(categories: categories);
 
   @override
+  DeliveryMenu discount(DeliveryMenuDiscount? discount) =>
+      this(discount: discount);
+
+  @override
   DeliveryMenu items(List<DeliveryMenuItem> items) => this(items: items);
 
   @override
@@ -52,6 +59,7 @@ class _$DeliveryMenuCWProxyImpl implements _$DeliveryMenuCWProxy {
   DeliveryMenu call({
     Object? addons = const $CopyWithPlaceholder(),
     Object? categories = const $CopyWithPlaceholder(),
+    Object? discount = const $CopyWithPlaceholder(),
     Object? items = const $CopyWithPlaceholder(),
   }) {
     return DeliveryMenu(
@@ -63,6 +71,10 @@ class _$DeliveryMenuCWProxyImpl implements _$DeliveryMenuCWProxy {
           ? _value.categories
           // ignore: cast_nullable_to_non_nullable
           : categories as List<DeliveryMenuCategory>,
+      discount: discount == const $CopyWithPlaceholder()
+          ? _value.discount
+          // ignore: cast_nullable_to_non_nullable
+          : discount as DeliveryMenuDiscount?,
       items: items == const $CopyWithPlaceholder()
           ? _value.items
           // ignore: cast_nullable_to_non_nullable
@@ -98,6 +110,12 @@ DeliveryMenu _$DeliveryMenuFromJson(
           .map((e) => DeliveryMenuCategory.fromJson(e as Map<String, dynamic>))
           .toList(),
     ),
+    discount: $checkedConvert(
+      'discount',
+      (v) => v == null
+          ? null
+          : DeliveryMenuDiscount.fromJson(v as Map<String, dynamic>),
+    ),
     items: $checkedConvert(
       'items',
       (v) => (v as List<dynamic>)
@@ -112,5 +130,6 @@ Map<String, dynamic> _$DeliveryMenuToJson(DeliveryMenu instance) =>
     <String, dynamic>{
       'addons': instance.addons.map((e) => e.toJson()).toList(),
       'categories': instance.categories.map((e) => e.toJson()).toList(),
+      'discount': ?instance.discount?.toJson(),
       'items': instance.items.map((e) => e.toJson()).toList(),
     };

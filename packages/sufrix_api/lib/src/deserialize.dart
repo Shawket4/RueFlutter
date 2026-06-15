@@ -90,6 +90,7 @@ import 'package:sufrix_api/src/model/delivery_addon_option.dart';
 import 'package:sufrix_api/src/model/delivery_event.dart';
 import 'package:sufrix_api/src/model/delivery_menu.dart';
 import 'package:sufrix_api/src/model/delivery_menu_category.dart';
+import 'package:sufrix_api/src/model/delivery_menu_discount.dart';
 import 'package:sufrix_api/src/model/delivery_menu_item.dart';
 import 'package:sufrix_api/src/model/delivery_menu_size.dart';
 import 'package:sufrix_api/src/model/delivery_optional_field.dart';
@@ -447,6 +448,8 @@ final _regMap = RegExp(r'^Map<String,(.*)>$');
           return DeliveryMenu.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'DeliveryMenuCategory':
           return DeliveryMenuCategory.fromJson(value as Map<String, dynamic>) as ReturnType;
+        case 'DeliveryMenuDiscount':
+          return DeliveryMenuDiscount.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'DeliveryMenuItem':
           return DeliveryMenuItem.fromJson(value as Map<String, dynamic>) as ReturnType;
         case 'DeliveryMenuSize':

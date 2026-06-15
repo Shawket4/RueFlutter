@@ -101,6 +101,26 @@ void main() {
     test('handles non-DioException', () {
       expect(friendlyError(Exception('Random error')), 'Something went wrong — please try again');
     });
+
+    test('403 surfaces the server\'s specific permission message', () {
+      final err = DioException(
+        requestOptions: RequestOptions(path: '/'),
+        response: Response(
+          requestOptions: RequestOptions(path: '/'),
+          statusCode: 403,
+          data: {'error': 'Permission denied: read delivery_settings'},
+        ),
+      );
+      expect(friendlyError(err), 'Permission denied: read delivery_settings');
+    });
+
+    test('403 without a server message falls back to the generic line', () {
+      final err = DioException(
+        requestOptions: RequestOptions(path: '/'),
+        response: Response(requestOptions: RequestOptions(path: '/'), statusCode: 403),
+      );
+      expect(friendlyError(err), 'You do not have permission to do that');
+    });
   });
 
   group('isNetworkError', () {

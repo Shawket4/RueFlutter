@@ -273,6 +273,50 @@ void main() {
     expect((await db.query('outbox')).single['status'], 'dead');
   });
 
+  test('order-create 409 (shift closed) dead-letters — never silently dropped',
+      () async {
+    // The backend returns 409 ONLY when the order was genuinely not recorded
+    // (an idempotency replay of a saved order returns 200). Treating it as
+    // success would lose the sale silently while the cash sits in the drawer.
+    mockOrderCreateError(dioStatus(409));
+    var reportedSynced = false;
+    queue().onOrderSynced = (_, __) => reportedSynced = true;
+
+    await queue().enqueueOrder(pendingOrder('o1'));
+    await queue().syncAll();
+
+    final row = (await db.query('outbox')).single;
+    expect(row['status'], 'dead',
+        reason: 'a 409 order must surface as stuck, not be dropped as success');
+    expect(state().stuckCount, 1);
+    expect(reportedSynced, isFalse,
+        reason: 'an unrecorded order must never be reported as synced');
+  });
+
+  test('shift-open 409 dead-letters and fires the reject callback', () async {
+    when(() => shiftApi.openWithId(
+          branchId: any(named: 'branchId'),
+          shiftId: any(named: 'shiftId'),
+          openingCash: any(named: 'openingCash'),
+          openedAt: any(named: 'openedAt'),
+        )).thenThrow(dioStatus(409));
+    String? rejectedShift;
+    String? rejectedBranch;
+    queue().onShiftOpenRejected = (s, b) {
+      rejectedShift = s;
+      rejectedBranch = b;
+    };
+
+    await queue().enqueueShiftOpen(pendingShiftOpen('so1', shiftId: 's9'));
+    await queue().syncAll();
+
+    expect((await db.query('outbox')).single['status'], 'dead',
+        reason: 'a rejected open must surface, not silently succeed');
+    expect(rejectedShift, 's9',
+        reason: 'the app is told which phantom shift to clear');
+    expect(rejectedBranch, 'b1');
+  });
+
   test('order waits for its shift-open prerequisite; syncs after it', () async {
     when(() => shiftApi.openWithId(
           branchId: any(named: 'branchId'),

@@ -100,6 +100,7 @@ doc/DeliveryAddonOption.md
 doc/DeliveryEvent.md
 doc/DeliveryMenu.md
 doc/DeliveryMenuCategory.md
+doc/DeliveryMenuDiscount.md
 doc/DeliveryMenuItem.md
 doc/DeliveryMenuSize.md
 doc/DeliveryOptionalField.md
@@ -352,6 +353,7 @@ lib/src/model/delivery_addon_option.dart
 lib/src/model/delivery_event.dart
 lib/src/model/delivery_menu.dart
 lib/src/model/delivery_menu_category.dart
+lib/src/model/delivery_menu_discount.dart
 lib/src/model/delivery_menu_item.dart
 lib/src/model/delivery_menu_size.dart
 lib/src/model/delivery_optional_field.dart
@@ -598,6 +600,7 @@ test/deduction_log_row_test.dart
 test/delivery_addon_option_test.dart
 test/delivery_event_test.dart
 test/delivery_menu_category_test.dart
+test/delivery_menu_discount_test.dart
 test/delivery_menu_item_test.dart
 test/delivery_menu_size_test.dart
 test/delivery_menu_test.dart

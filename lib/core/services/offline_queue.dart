@@ -94,6 +94,12 @@ class OfflineQueueNotifier extends Notifier<OfflineQueueState> {
   /// Called when a queued void has been confirmed.
   void Function(Order order)? onVoidSynced;
 
+  /// Called when a queued shift-open was permanently REJECTED by the server
+  /// (e.g. another shift already holds this branch/teller open). The local
+  /// optimistic shift is a phantom that will never be accepted — the app must
+  /// clear it and route the teller back to the open-shift screen.
+  void Function(String shiftId, String branchId)? onShiftOpenRejected;
+
   // ── Internal ──────────────────────────────────────────────────────────────
 
   StreamSubscription<bool>? _connectivitySub;
@@ -344,8 +350,36 @@ class OfflineQueueNotifier extends Notifier<OfflineQueueState> {
                 'Order not found on server — $err');
             _updateEntryInState(entry.copyWith(
                 status: 'dead', lastError: 'Order not found on server'));
-          } else if (status == 409 || status == 404) {
-            // Already applied — treat as success.
+          } else if (status == 409) {
+            // A 409 means the server REJECTED this write as a conflict. For the
+            // idempotent, already-applied endpoints (void, shift-close) that is
+            // safe to treat as success. But order-create and shift-open return
+            // 409 ONLY when the write was genuinely NOT recorded:
+            //   • order-create → the target shift was closed before it landed.
+            //     (An idempotency replay of an already-saved order returns 200,
+            //     never 409.) Its cash is in the drawer with no server record.
+            //   • shift-open  → a different shift already holds this branch/teller
+            //     open. (Replaying the SAME shift id returns 200.) The local
+            //     optimistic shift will never be accepted.
+            // Silently completing those loses money / strands a phantom shift, so
+            // surface them as dead (visible in the stuck list) instead of dropping.
+            final type = entry.type;
+            if (type == PendingActionType.order.name ||
+                type == PendingActionType.shiftOpen.name) {
+              final err = friendlyError(e);
+              await dao.markDead(entry.localId, err);
+              _updateEntryInState(
+                  entry.copyWith(status: 'dead', lastError: err));
+              if (type == PendingActionType.shiftOpen.name) {
+                _notifyShiftOpenRejected(entry);
+              }
+            } else {
+              // void / shift-close: idempotent → already applied.
+              await _completeEntry(dao, entry);
+            }
+          } else if (status == 404) {
+            // Already gone for an idempotent endpoint → treat as applied.
+            // (A void 404 is handled in the branch above and never reaches here.)
             await _completeEntry(dao, entry);
           } else if (status == 400 || status == 403 || status == 422) {
             // Permanent validation/permission errors: retrying cannot
@@ -493,6 +527,16 @@ class OfflineQueueNotifier extends Notifier<OfflineQueueState> {
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
+
+  /// Pulls the shift/branch ids out of a rejected shift-open entry and notifies
+  /// the app so it can clear the phantom local shift.
+  void _notifyShiftOpenRejected(OutboxEntry entry) {
+    final p = entry.payloadMap;
+    final shiftId = p['shift_id'] as String?;
+    final branchId = p['branch_id'] as String?;
+    if (shiftId == null || branchId == null) return;
+    onShiftOpenRejected?.call(shiftId, branchId);
+  }
 
   /// Returns the [localId] of a live PendingShiftOpen for [shiftId], or null.
   String? _findLiveShiftOpen(String shiftId) {

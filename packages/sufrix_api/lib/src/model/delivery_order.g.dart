@@ -43,6 +43,14 @@ abstract class _$DeliveryOrderCWProxy {
 
   DeliveryOrder deliveryZoneId(String? deliveryZoneId);
 
+  DeliveryOrder discountAmount(int? discountAmount);
+
+  DeliveryOrder discountId(String? discountId);
+
+  DeliveryOrder discountType(String? discountType);
+
+  DeliveryOrder discountValue(int? discountValue);
+
   DeliveryOrder extraPrepMinutes(int extraPrepMinutes);
 
   DeliveryOrder floor(String? floor);
@@ -108,6 +116,10 @@ abstract class _$DeliveryOrderCWProxy {
     String? deliveryNotes,
     String? deliveryRef,
     String? deliveryZoneId,
+    int? discountAmount,
+    String? discountId,
+    String? discountType,
+    int? discountValue,
     int extraPrepMinutes,
     String? floor,
     String id,
@@ -205,6 +217,21 @@ class _$DeliveryOrderCWProxyImpl implements _$DeliveryOrderCWProxy {
       this(deliveryZoneId: deliveryZoneId);
 
   @override
+  DeliveryOrder discountAmount(int? discountAmount) =>
+      this(discountAmount: discountAmount);
+
+  @override
+  DeliveryOrder discountId(String? discountId) => this(discountId: discountId);
+
+  @override
+  DeliveryOrder discountType(String? discountType) =>
+      this(discountType: discountType);
+
+  @override
+  DeliveryOrder discountValue(int? discountValue) =>
+      this(discountValue: discountValue);
+
+  @override
   DeliveryOrder extraPrepMinutes(int extraPrepMinutes) =>
       this(extraPrepMinutes: extraPrepMinutes);
 
@@ -297,6 +324,10 @@ class _$DeliveryOrderCWProxyImpl implements _$DeliveryOrderCWProxy {
     Object? deliveryNotes = const $CopyWithPlaceholder(),
     Object? deliveryRef = const $CopyWithPlaceholder(),
     Object? deliveryZoneId = const $CopyWithPlaceholder(),
+    Object? discountAmount = const $CopyWithPlaceholder(),
+    Object? discountId = const $CopyWithPlaceholder(),
+    Object? discountType = const $CopyWithPlaceholder(),
+    Object? discountValue = const $CopyWithPlaceholder(),
     Object? extraPrepMinutes = const $CopyWithPlaceholder(),
     Object? floor = const $CopyWithPlaceholder(),
     Object? id = const $CopyWithPlaceholder(),
@@ -391,6 +422,22 @@ class _$DeliveryOrderCWProxyImpl implements _$DeliveryOrderCWProxy {
           ? _value.deliveryZoneId
           // ignore: cast_nullable_to_non_nullable
           : deliveryZoneId as String?,
+      discountAmount: discountAmount == const $CopyWithPlaceholder()
+          ? _value.discountAmount
+          // ignore: cast_nullable_to_non_nullable
+          : discountAmount as int?,
+      discountId: discountId == const $CopyWithPlaceholder()
+          ? _value.discountId
+          // ignore: cast_nullable_to_non_nullable
+          : discountId as String?,
+      discountType: discountType == const $CopyWithPlaceholder()
+          ? _value.discountType
+          // ignore: cast_nullable_to_non_nullable
+          : discountType as String?,
+      discountValue: discountValue == const $CopyWithPlaceholder()
+          ? _value.discountValue
+          // ignore: cast_nullable_to_non_nullable
+          : discountValue as int?,
       extraPrepMinutes: extraPrepMinutes == const $CopyWithPlaceholder()
           ? _value.extraPrepMinutes
           // ignore: cast_nullable_to_non_nullable
@@ -548,6 +595,16 @@ DeliveryOrder _$DeliveryOrderFromJson(
       deliveryNotes: $checkedConvert('delivery_notes', (v) => v as String?),
       deliveryRef: $checkedConvert('delivery_ref', (v) => v as String?),
       deliveryZoneId: $checkedConvert('delivery_zone_id', (v) => v as String?),
+      discountAmount: $checkedConvert(
+        'discount_amount',
+        (v) => (v as num?)?.toInt(),
+      ),
+      discountId: $checkedConvert('discount_id', (v) => v as String?),
+      discountType: $checkedConvert('discount_type', (v) => v as String?),
+      discountValue: $checkedConvert(
+        'discount_value',
+        (v) => (v as num?)?.toInt(),
+      ),
       extraPrepMinutes: $checkedConvert(
         'extra_prep_minutes',
         (v) => (v as num).toInt(),
@@ -615,6 +672,10 @@ DeliveryOrder _$DeliveryOrderFromJson(
     'deliveryNotes': 'delivery_notes',
     'deliveryRef': 'delivery_ref',
     'deliveryZoneId': 'delivery_zone_id',
+    'discountAmount': 'discount_amount',
+    'discountId': 'discount_id',
+    'discountType': 'discount_type',
+    'discountValue': 'discount_value',
     'extraPrepMinutes': 'extra_prep_minutes',
     'orderId': 'order_id',
     'orgId': 'org_id',
@@ -652,6 +713,10 @@ Map<String, dynamic> _$DeliveryOrderToJson(DeliveryOrder instance) =>
       'delivery_notes': ?instance.deliveryNotes,
       'delivery_ref': ?instance.deliveryRef,
       'delivery_zone_id': ?instance.deliveryZoneId,
+      'discount_amount': ?instance.discountAmount,
+      'discount_id': ?instance.discountId,
+      'discount_type': ?instance.discountType,
+      'discount_value': ?instance.discountValue,
       'extra_prep_minutes': instance.extraPrepMinutes,
       'floor': ?instance.floor,
       'id': instance.id,

@@ -107,6 +107,7 @@ export 'package:sufrix_api/src/model/delivery_addon_option.dart';
 export 'package:sufrix_api/src/model/delivery_event.dart';
 export 'package:sufrix_api/src/model/delivery_menu.dart';
 export 'package:sufrix_api/src/model/delivery_menu_category.dart';
+export 'package:sufrix_api/src/model/delivery_menu_discount.dart';
 export 'package:sufrix_api/src/model/delivery_menu_item.dart';
 export 'package:sufrix_api/src/model/delivery_menu_size.dart';
 export 'package:sufrix_api/src/model/delivery_optional_field.dart';

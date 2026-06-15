@@ -74,6 +74,9 @@ class AuthState {
 }
 
 class AuthNotifier extends Notifier<AuthState> {
+  /// Single-flight guard so a burst of 403s triggers exactly one `/auth/me` probe.
+  Future<void>? _forbiddenRevalidation;
+
   @override
   AuthState build() {
     onUnauthorizedCallback = () {
@@ -85,8 +88,51 @@ class AuthNotifier extends Notifier<AuthState> {
         _forceLogout(expiry: SessionExpiry.expired);
       }
     };
+    onForbiddenCallback = () {
+      // A 403 can be a genuinely dead token surfacing as Forbidden, or a real
+      // permission denial. Only meaningful for a real online session; offline
+      // sessions have no token and never make the request that 403s.
+      if (state.user != null && !state.isOfflineSession) {
+        revalidateAfterForbidden();
+      }
+    };
     Future.microtask(init);
     return const AuthState();
+  }
+
+  /// Probe `/auth/me` once after an authenticated request was rejected with 403.
+  /// If the token is genuinely dead the probe returns 401 → force logout →
+  /// `/login` (so a dead session that surfaced as 403 recovers instead of
+  /// dead-ending). If the token is still valid it is a true permission denial,
+  /// so the session is left intact and the caller surfaces the server's specific
+  /// message. NEVER logs out a valid session. Single-flighted against 403 bursts.
+  Future<void> revalidateAfterForbidden() {
+    if (state.user == null || state.isOfflineSession || state.isLoading) {
+      return Future.value();
+    }
+    final existing = _forbiddenRevalidation;
+    if (existing != null) return existing;
+    final fut = _runForbiddenRevalidation()
+        .whenComplete(() => _forbiddenRevalidation = null);
+    _forbiddenRevalidation = fut;
+    return fut;
+  }
+
+  Future<void> _runForbiddenRevalidation() async {
+    try {
+      await ref.read(authRepositoryProvider).validateToken();
+      // Token still valid → genuine permission denial; leave the session alone.
+    } catch (e) {
+      // A 401 here means the session is truly gone → route to /login. (The Dio
+      // interceptor also maps this 401 to a force-logout; reaching the same
+      // terminal state twice is harmless.) Any other error (network/timeout) is
+      // non-fatal — a flaky link must never sign a valid session out.
+      if (isUnauthorizedError(e) &&
+          state.user != null &&
+          !state.isOfflineSession) {
+        await _forceLogout(expiry: SessionExpiry.expired);
+      }
+    }
   }
 
   /// Offline PIN unlock: restores the teller's cached identity without a

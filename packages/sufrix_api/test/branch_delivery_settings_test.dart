@@ -17,6 +17,12 @@ void main() {
       // TODO
     });
 
+    // Optional discount applied to each channel's item subtotal (reuses the org `discounts` table). Frozen onto the order at intake. `null` = none.
+    // String inMallDiscountId
+    test('to test the property `inMallDiscountId`', () async {
+      // TODO
+    });
+
     // bool inMallEnabled
     test('to test the property `inMallEnabled`', () async {
       // TODO
@@ -44,6 +50,11 @@ void main() {
 
     // String outsideCloseTime
     test('to test the property `outsideCloseTime`', () async {
+      // TODO
+    });
+
+    // String outsideDiscountId
+    test('to test the property `outsideDiscountId`', () async {
       // TODO
     });
 

@@ -303,9 +303,33 @@ class _ChannelAcceptingBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final s = ref.watch(deliverySettingsProvider.select((v) => v.settings));
-    if (s == null || !s.anyEnabled) return const SizedBox.shrink();
+    final v = ref.watch(deliverySettingsProvider);
+    final s = v.settings;
     final t = context.tokens;
+    if (s == null) {
+      // Settings failed to load (e.g. a 403). Don't vanish silently — surface
+      // the reason so a permission/branch problem is visible, not a missing bar.
+      if (v.error != null) {
+        return Padding(
+          padding: const EdgeInsetsDirectional.only(top: AppSpace.sm),
+          child: SurfaceCard(
+            padding: const EdgeInsets.all(AppSpace.md),
+            child: Row(children: [
+              Icon(Icons.error_outline_rounded, size: 16, color: t.danger),
+              const SizedBox(width: AppSpace.sm),
+              Expanded(
+                child: Text(
+                  'Accepting controls unavailable: ${v.error}',
+                  style: ui(size: 12, weight: FontWeight.w600, color: t.danger),
+                ),
+              ),
+            ]),
+          ),
+        );
+      }
+      return const SizedBox.shrink();
+    }
+    if (!s.anyEnabled) return const SizedBox.shrink();
 
     Widget channelRow(String channel, String label, IconData icon) {
       if (!s.enabledFor(channel)) return const SizedBox.shrink();
@@ -850,6 +874,7 @@ class _TotalsBlock extends StatelessWidget {
           BoxDecoration(border: Border(top: BorderSide(color: t.borderLight))),
       child: Column(children: [
         row('Subtotal', egp(order.subtotal)),
+        if (order.discountAmount > 0) row('Discount', '- ${egp(order.discountAmount)}'),
         if (order.deliveryFee > 0) row('Delivery fee', egp(order.deliveryFee)),
         const SizedBox(height: 4),
         row('Total', egp(order.total), strong: true),
@@ -1117,12 +1142,19 @@ class _FinalizeSheet extends ConsumerStatefulWidget {
 class _FinalizeSheetState extends ConsumerState<_FinalizeSheet> {
   late String? _selected;
 
+  /// Delivery is paid on delivery in cash or by card only — restrict the org's
+  /// methods to those two (cash = any `is_cash` method; card = the card method).
+  static bool _isCard(PaymentMethod m) =>
+      m.wireFormat == 'card' || m.wireFormat == 'credit_card';
+  List<PaymentMethod> get _methods =>
+      widget.methods.where((m) => m.isCash || _isCard(m)).toList();
+
   @override
   void initState() {
     super.initState();
     final hint = widget.order.paymentMethodHint;
-    final methods = widget.methods;
-    // Default to the hinted method if it's a real org method, else the first.
+    final methods = _methods;
+    // Default to the hinted method if it survives the cash/card filter, else first.
     if (hint != null && methods.any((m) => m.wireFormat == hint)) {
       _selected = hint;
     } else {
@@ -1157,50 +1189,78 @@ class _FinalizeSheetState extends ConsumerState<_FinalizeSheet> {
         const SizedBox(height: AppSpace.xs),
         Align(
           alignment: AlignmentDirectional.centerStart,
-          child: Text(
-              'How did the customer pay? Total ${egp(widget.order.total)}',
+          child: Text('How did the customer pay?',
               style: ui(size: 13, color: t.textSecondary)),
         ),
+        const SizedBox(height: AppSpace.md),
+
+        // Totals breakdown so the teller confirms exactly what's charged.
+        Container(
+          padding: const EdgeInsets.all(AppSpace.md),
+          decoration: BoxDecoration(
+            color: t.surfaceAlt,
+            borderRadius: BorderRadius.circular(AppRadius.sm),
+          ),
+          child: Column(children: [
+            _finalizeRow(t, 'Subtotal', egp(widget.order.subtotal)),
+            if (widget.order.discountAmount > 0)
+              _finalizeRow(t, 'Discount', '- ${egp(widget.order.discountAmount)}'),
+            if (widget.order.deliveryFee > 0)
+              _finalizeRow(t, 'Delivery fee', egp(widget.order.deliveryFee)),
+            Padding(
+              padding: const EdgeInsets.only(top: AppSpace.xs),
+              child: _finalizeRow(t, 'Total', egp(widget.order.total), strong: true),
+            ),
+          ]),
+        ),
         const SizedBox(height: AppSpace.lg),
-        if (widget.methods.isEmpty)
+
+        if (_methods.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: AppSpace.md),
-            child: Text('No payment methods configured.',
+            child: Text('No cash or card payment method is configured.',
                 style: ui(size: 13, color: t.textMuted)),
           )
         else
-          ...widget.methods.map((m) {
-            final sel = _selected == m.wireFormat;
-            return Padding(
-              padding: const EdgeInsets.only(bottom: AppSpace.sm),
-              child: AnimatedPressScale(
-                onTap: () => setState(() => _selected = m.wireFormat),
-                child: Container(
-                  padding: const EdgeInsetsDirectional.symmetric(
-                      horizontal: AppSpace.md, vertical: AppSpace.md),
-                  decoration: BoxDecoration(
-                    color: sel ? t.navyBg : t.surfaceAlt,
-                    borderRadius: BorderRadius.circular(AppRadius.sm),
-                    border: Border.all(color: sel ? t.navy : t.border),
-                  ),
-                  child: Row(children: [
-                    Icon(m.uiIcon,
-                        size: 18, color: sel ? t.navy : t.textSecondary),
-                    const SizedBox(width: AppSpace.md),
-                    Expanded(
-                      child: Text(m.label(locale),
+          LayoutBuilder(builder: (ctx, c) {
+            final w = (c.maxWidth - AppSpace.sm) / 2;
+            return Wrap(
+              spacing: AppSpace.sm,
+              runSpacing: AppSpace.sm,
+              children: _methods.map((m) {
+                final sel = _selected == m.wireFormat;
+                return AnimatedPressScale(
+                  onTap: () => setState(() => _selected = m.wireFormat),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    width: w,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 16),
+                    decoration: BoxDecoration(
+                      // Selected wears the method's own brand colour (dashboard
+                      // data), white content — mirrors the consumer checkout.
+                      color: sel ? m.uiColor : t.surfaceAlt,
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                      border: Border.all(
+                          color: sel ? m.uiColor : t.border,
+                          width: sel ? 1.5 : 1),
+                    ),
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                      Icon(m.uiIcon,
+                          size: 24, color: sel ? Colors.white : m.uiColor),
+                      const SizedBox(height: AppSpace.sm),
+                      Text(m.label(locale),
                           style: ui(
                               size: 14,
                               weight: FontWeight.w700,
-                              color: sel ? t.navy : t.textPrimary)),
-                    ),
-                    if (sel) Icon(Icons.check_circle_rounded, color: t.navy),
-                  ]),
-                ),
-              ),
+                              color: sel ? Colors.white : t.textPrimary)),
+                    ]),
+                  ),
+                );
+              }).toList(),
             );
           }),
-        const SizedBox(height: AppSpace.sm),
+        const SizedBox(height: AppSpace.lg),
         Row(children: [
           Expanded(
             child: AnimatedPressScale(
@@ -1245,6 +1305,23 @@ class _FinalizeSheetState extends ConsumerState<_FinalizeSheet> {
     );
   }
 }
+
+/// One line of the finalize totals breakdown.
+Widget _finalizeRow(AppTokens t, String label, String value, {bool strong = false}) =>
+    Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        Text(label,
+            style: strong
+                ? ui(size: 14, weight: FontWeight.w800)
+                : ui(size: 13, color: t.textSecondary)),
+        Text(value,
+            style: money(
+                size: strong ? 16 : 13,
+                weight: strong ? FontWeight.w800 : FontWeight.w600,
+                color: t.textPrimary)),
+      ]),
+    );
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  CANCEL SHEET — reason + restore-inventory / mark-as-waste toggle.

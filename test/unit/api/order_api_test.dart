@@ -35,6 +35,8 @@ void main() {
     'discount_id': null,
     'customer_name': 'John Doe',
     'notes': 'Test Note',
+    'order_type': 'dine_in',
+    'delivery_fee': 0,
     'void_reason': null,
     'created_at': '2023-01-01T12:00:00.000Z',
     'items': []

@@ -146,7 +146,7 @@ void main() {
         'payment_method': 'cash', 'subtotal': 1000,
         'discount_value': 0, 'discount_amount': 0, 'tax_amount': 0,
         'total_amount': 1000, 'amount_tendered': 1000, 'change_given': 0,
-        'tip_amount': 0,
+        'tip_amount': 0, 'order_type': 'dine_in', 'delivery_fee': 0,
         'created_at': '2023-01-01T12:00:00.000Z',
         'items': <Map<String, dynamic>>[],
       };

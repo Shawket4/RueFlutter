@@ -9,6 +9,8 @@ part of 'order_summary.dart';
 abstract class _$OrderSummaryCWProxy {
   OrderSummary completed(int completed);
 
+  OrderSummary deliveryFees(int? deliveryFees);
+
   OrderSummary discounts(int discounts);
 
   OrderSummary revenue(int revenue);
@@ -25,6 +27,7 @@ abstract class _$OrderSummaryCWProxy {
   /// ````
   OrderSummary call({
     int completed,
+    int? deliveryFees,
     int discounts,
     int revenue,
     int tips,
@@ -40,6 +43,10 @@ class _$OrderSummaryCWProxyImpl implements _$OrderSummaryCWProxy {
 
   @override
   OrderSummary completed(int completed) => this(completed: completed);
+
+  @override
+  OrderSummary deliveryFees(int? deliveryFees) =>
+      this(deliveryFees: deliveryFees);
 
   @override
   OrderSummary discounts(int discounts) => this(discounts: discounts);
@@ -62,6 +69,7 @@ class _$OrderSummaryCWProxyImpl implements _$OrderSummaryCWProxy {
   /// ````
   OrderSummary call({
     Object? completed = const $CopyWithPlaceholder(),
+    Object? deliveryFees = const $CopyWithPlaceholder(),
     Object? discounts = const $CopyWithPlaceholder(),
     Object? revenue = const $CopyWithPlaceholder(),
     Object? tips = const $CopyWithPlaceholder(),
@@ -72,6 +80,10 @@ class _$OrderSummaryCWProxyImpl implements _$OrderSummaryCWProxy {
           ? _value.completed
           // ignore: cast_nullable_to_non_nullable
           : completed as int,
+      deliveryFees: deliveryFees == const $CopyWithPlaceholder()
+          ? _value.deliveryFees
+          // ignore: cast_nullable_to_non_nullable
+          : deliveryFees as int?,
       discounts: discounts == const $CopyWithPlaceholder()
           ? _value.discounts
           // ignore: cast_nullable_to_non_nullable
@@ -102,31 +114,28 @@ extension $OrderSummaryCopyWith on OrderSummary {
 // JsonSerializableGenerator
 // **************************************************************************
 
-OrderSummary _$OrderSummaryFromJson(Map<String, dynamic> json) =>
-    $checkedCreate('OrderSummary', json, ($checkedConvert) {
-      $checkKeys(
-        json,
-        requiredKeys: const [
-          'completed',
-          'discounts',
-          'revenue',
-          'tips',
-          'voided',
-        ],
-      );
-      final val = OrderSummary(
-        completed: $checkedConvert('completed', (v) => (v as num).toInt()),
-        discounts: $checkedConvert('discounts', (v) => (v as num).toInt()),
-        revenue: $checkedConvert('revenue', (v) => (v as num).toInt()),
-        tips: $checkedConvert('tips', (v) => (v as num).toInt()),
-        voided: $checkedConvert('voided', (v) => (v as num).toInt()),
-      );
-      return val;
-    });
+OrderSummary _$OrderSummaryFromJson(
+  Map<String, dynamic> json,
+) => $checkedCreate('OrderSummary', json, ($checkedConvert) {
+  $checkKeys(
+    json,
+    requiredKeys: const ['completed', 'discounts', 'revenue', 'tips', 'voided'],
+  );
+  final val = OrderSummary(
+    completed: $checkedConvert('completed', (v) => (v as num).toInt()),
+    deliveryFees: $checkedConvert('delivery_fees', (v) => (v as num?)?.toInt()),
+    discounts: $checkedConvert('discounts', (v) => (v as num).toInt()),
+    revenue: $checkedConvert('revenue', (v) => (v as num).toInt()),
+    tips: $checkedConvert('tips', (v) => (v as num).toInt()),
+    voided: $checkedConvert('voided', (v) => (v as num).toInt()),
+  );
+  return val;
+}, fieldKeyMap: const {'deliveryFees': 'delivery_fees'});
 
 Map<String, dynamic> _$OrderSummaryToJson(OrderSummary instance) =>
     <String, dynamic>{
       'completed': instance.completed,
+      'delivery_fees': ?instance.deliveryFees,
       'discounts': instance.discounts,
       'revenue': instance.revenue,
       'tips': instance.tips,

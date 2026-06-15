@@ -22,6 +22,8 @@ class OrderSummary {
 
     required  this.completed,
 
+     this.deliveryFees,
+
     required  this.discounts,
 
     required  this.revenue,
@@ -40,6 +42,19 @@ class OrderSummary {
 
 
   final int completed;
+
+
+
+      /// Total delivery charges (piastres) across completed orders in scope. Lets the dashboard surface delivery revenue separately from item sales.
+  @JsonKey(
+    
+    name: r'delivery_fees',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final int? deliveryFees;
 
 
 
@@ -96,6 +111,7 @@ class OrderSummary {
     @override
     bool operator ==(Object other) => identical(this, other) || other is OrderSummary &&
       other.completed == completed &&
+      other.deliveryFees == deliveryFees &&
       other.discounts == discounts &&
       other.revenue == revenue &&
       other.tips == tips &&
@@ -104,6 +120,7 @@ class OrderSummary {
     @override
     int get hashCode =>
         completed.hashCode +
+        deliveryFees.hashCode +
         discounts.hashCode +
         revenue.hashCode +
         tips.hashCode +

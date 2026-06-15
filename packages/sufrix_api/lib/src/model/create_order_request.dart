@@ -26,9 +26,13 @@ class CreateOrderRequest {
 
     required  this.branchId,
 
+     this.changeGiven,
+
      this.createdAt,
 
      this.customerName,
+
+     this.discountAmount,
 
      this.discountId,
 
@@ -46,9 +50,15 @@ class CreateOrderRequest {
 
     required  this.shiftId,
 
+     this.subtotal,
+
+     this.taxAmount,
+
      this.tipAmount,
 
      this.tipPaymentMethod,
+
+     this.totalAmount,
   });
 
   @JsonKey(
@@ -77,6 +87,18 @@ class CreateOrderRequest {
 
   @JsonKey(
     
+    name: r'change_given',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final int? changeGiven;
+
+
+
+  @JsonKey(
+    
     name: r'created_at',
     required: false,
     includeIfNull: false,
@@ -96,6 +118,18 @@ class CreateOrderRequest {
 
 
   final String? customerName;
+
+
+
+  @JsonKey(
+    
+    name: r'discount_amount',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final int? discountAmount;
 
 
 
@@ -197,6 +231,30 @@ class CreateOrderRequest {
 
   @JsonKey(
     
+    name: r'subtotal',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final int? subtotal;
+
+
+
+  @JsonKey(
+    
+    name: r'tax_amount',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final int? taxAmount;
+
+
+
+  @JsonKey(
+    
     name: r'tip_amount',
     required: false,
     includeIfNull: false,
@@ -219,14 +277,28 @@ class CreateOrderRequest {
 
 
 
+  @JsonKey(
+    
+    name: r'total_amount',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final int? totalAmount;
+
+
+
 
 
     @override
     bool operator ==(Object other) => identical(this, other) || other is CreateOrderRequest &&
       other.amountTendered == amountTendered &&
       other.branchId == branchId &&
+      other.changeGiven == changeGiven &&
       other.createdAt == createdAt &&
       other.customerName == customerName &&
+      other.discountAmount == discountAmount &&
       other.discountId == discountId &&
       other.discountType == discountType &&
       other.discountValue == discountValue &&
@@ -235,15 +307,20 @@ class CreateOrderRequest {
       other.paymentMethod == paymentMethod &&
       other.paymentSplits == paymentSplits &&
       other.shiftId == shiftId &&
+      other.subtotal == subtotal &&
+      other.taxAmount == taxAmount &&
       other.tipAmount == tipAmount &&
-      other.tipPaymentMethod == tipPaymentMethod;
+      other.tipPaymentMethod == tipPaymentMethod &&
+      other.totalAmount == totalAmount;
 
     @override
     int get hashCode =>
         (amountTendered == null ? 0 : amountTendered.hashCode) +
         branchId.hashCode +
+        (changeGiven == null ? 0 : changeGiven.hashCode) +
         (createdAt == null ? 0 : createdAt.hashCode) +
         (customerName == null ? 0 : customerName.hashCode) +
+        (discountAmount == null ? 0 : discountAmount.hashCode) +
         (discountId == null ? 0 : discountId.hashCode) +
         (discountType == null ? 0 : discountType.hashCode) +
         (discountValue == null ? 0 : discountValue.hashCode) +
@@ -252,8 +329,11 @@ class CreateOrderRequest {
         paymentMethod.hashCode +
         (paymentSplits == null ? 0 : paymentSplits.hashCode) +
         shiftId.hashCode +
+        (subtotal == null ? 0 : subtotal.hashCode) +
+        (taxAmount == null ? 0 : taxAmount.hashCode) +
         (tipAmount == null ? 0 : tipAmount.hashCode) +
-        (tipPaymentMethod == null ? 0 : tipPaymentMethod.hashCode);
+        (tipPaymentMethod == null ? 0 : tipPaymentMethod.hashCode) +
+        (totalAmount == null ? 0 : totalAmount.hashCode);
 
   factory CreateOrderRequest.fromJson(Map<String, dynamic> json) => _$CreateOrderRequestFromJson(json);
 

@@ -63,6 +63,8 @@ void main() {
           ),
           totalPayments: 100, voidedAmount: 0, netPayments: 100,
           cashMovementsIn: 50, cashMovementsOut: 20,
+          // Server-authoritative expected cash: opening(100) + in(50) − out(20).
+          expectedCash: openingCash + 50 - 20,
           printedAt: DateTime.now(),
         );
 
@@ -113,8 +115,16 @@ void main() {
     });
 
     test('fetchShiftsFresh fetches and saves to cache', () async {
-      when(() => mockShiftApi.list('b1'))
-          .thenAnswer((_) async => [sampleShift]);
+      when(() => mockShiftApi.list('b1',
+              page: any(named: 'page'),
+              perPage: any(named: 'perPage')))
+          .thenAnswer((_) async => ShiftPage(
+                shifts: [sampleShift],
+                total: 1,
+                page: 1,
+                perPage: 50,
+                totalPages: 1,
+              ));
       when(() => mockStorage.saveShifts('b1', any())).thenAnswer((_) async {});
 
       final result = await repo.fetchShiftsFresh('b1');

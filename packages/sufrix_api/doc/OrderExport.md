@@ -13,6 +13,8 @@ Name | Type | Description | Notes
 **changeGiven** | **int** |  | [optional] 
 **createdAt** | [**DateTime**](DateTime.md) |  | 
 **customerName** | **String** |  | [optional] 
+**deliveryFee** | **int** | Delivery charge in piastres, shown separately from the item subtotal. Always 0 for dine-in orders; for delivery orders `total_amount == subtotal + tax_amount + delivery_fee` (minus discount). | 
+**deliveryOrderId** | **String** | Links a finalized delivery order back to its `delivery_orders` row (customer, address, channel, zone). `null` for dine-in orders. | [optional] 
 **discountAmount** | **int** |  | 
 **discountId** | **String** |  | [optional] 
 **discountType** | **String** |  | [optional] 
@@ -21,6 +23,7 @@ Name | Type | Description | Notes
 **notes** | **String** |  | [optional] 
 **orderNumber** | **int** |  | 
 **orderRef** | **String** | Human-readable, org-unique reference (e.g. \"DT-260614-0042\"). Additive alongside the per-shift order_number. Optional only during the rollout window before the historical backfill runs; never null afterwards. | [optional] 
+**orderType** | **String** | Order origin: \"dine_in\" (POS sale) or \"delivery\" (finalized delivery order). Defaults to \"dine_in\" for every POS sale. | 
 **paymentMethod** | **String** |  | 
 **shiftId** | **String** |  | 
 **status** | **String** |  | 

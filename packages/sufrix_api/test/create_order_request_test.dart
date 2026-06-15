@@ -17,6 +17,11 @@ void main() {
       // TODO
     });
 
+    // int changeGiven
+    test('to test the property `changeGiven`', () async {
+      // TODO
+    });
+
     // DateTime createdAt
     test('to test the property `createdAt`', () async {
       // TODO
@@ -24,6 +29,11 @@ void main() {
 
     // String customerName
     test('to test the property `customerName`', () async {
+      // TODO
+    });
+
+    // int discountAmount
+    test('to test the property `discountAmount`', () async {
       // TODO
     });
 
@@ -67,6 +77,16 @@ void main() {
       // TODO
     });
 
+    // int subtotal
+    test('to test the property `subtotal`', () async {
+      // TODO
+    });
+
+    // int taxAmount
+    test('to test the property `taxAmount`', () async {
+      // TODO
+    });
+
     // int tipAmount
     test('to test the property `tipAmount`', () async {
       // TODO
@@ -74,6 +94,11 @@ void main() {
 
     // String tipPaymentMethod
     test('to test the property `tipPaymentMethod`', () async {
+      // TODO
+    });
+
+    // int totalAmount
+    test('to test the property `totalAmount`', () async {
       // TODO
     });
 

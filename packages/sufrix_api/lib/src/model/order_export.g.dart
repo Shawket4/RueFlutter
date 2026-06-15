@@ -17,6 +17,10 @@ abstract class _$OrderExportCWProxy {
 
   OrderExport customerName(String? customerName);
 
+  OrderExport deliveryFee(int deliveryFee);
+
+  OrderExport deliveryOrderId(String? deliveryOrderId);
+
   OrderExport discountAmount(int discountAmount);
 
   OrderExport discountId(String? discountId);
@@ -32,6 +36,8 @@ abstract class _$OrderExportCWProxy {
   OrderExport orderNumber(int orderNumber);
 
   OrderExport orderRef(String? orderRef);
+
+  OrderExport orderType(String orderType);
 
   OrderExport paymentMethod(String paymentMethod);
 
@@ -77,6 +83,8 @@ abstract class _$OrderExportCWProxy {
     int? changeGiven,
     DateTime createdAt,
     String? customerName,
+    int deliveryFee,
+    String? deliveryOrderId,
     int discountAmount,
     String? discountId,
     String? discountType,
@@ -85,6 +93,7 @@ abstract class _$OrderExportCWProxy {
     String? notes,
     int orderNumber,
     String? orderRef,
+    String orderType,
     String paymentMethod,
     String shiftId,
     String status,
@@ -128,6 +137,13 @@ class _$OrderExportCWProxyImpl implements _$OrderExportCWProxy {
       this(customerName: customerName);
 
   @override
+  OrderExport deliveryFee(int deliveryFee) => this(deliveryFee: deliveryFee);
+
+  @override
+  OrderExport deliveryOrderId(String? deliveryOrderId) =>
+      this(deliveryOrderId: deliveryOrderId);
+
+  @override
   OrderExport discountAmount(int discountAmount) =>
       this(discountAmount: discountAmount);
 
@@ -153,6 +169,9 @@ class _$OrderExportCWProxyImpl implements _$OrderExportCWProxy {
 
   @override
   OrderExport orderRef(String? orderRef) => this(orderRef: orderRef);
+
+  @override
+  OrderExport orderType(String orderType) => this(orderType: orderType);
 
   @override
   OrderExport paymentMethod(String paymentMethod) =>
@@ -217,6 +236,8 @@ class _$OrderExportCWProxyImpl implements _$OrderExportCWProxy {
     Object? changeGiven = const $CopyWithPlaceholder(),
     Object? createdAt = const $CopyWithPlaceholder(),
     Object? customerName = const $CopyWithPlaceholder(),
+    Object? deliveryFee = const $CopyWithPlaceholder(),
+    Object? deliveryOrderId = const $CopyWithPlaceholder(),
     Object? discountAmount = const $CopyWithPlaceholder(),
     Object? discountId = const $CopyWithPlaceholder(),
     Object? discountType = const $CopyWithPlaceholder(),
@@ -225,6 +246,7 @@ class _$OrderExportCWProxyImpl implements _$OrderExportCWProxy {
     Object? notes = const $CopyWithPlaceholder(),
     Object? orderNumber = const $CopyWithPlaceholder(),
     Object? orderRef = const $CopyWithPlaceholder(),
+    Object? orderType = const $CopyWithPlaceholder(),
     Object? paymentMethod = const $CopyWithPlaceholder(),
     Object? shiftId = const $CopyWithPlaceholder(),
     Object? status = const $CopyWithPlaceholder(),
@@ -263,6 +285,14 @@ class _$OrderExportCWProxyImpl implements _$OrderExportCWProxy {
           ? _value.customerName
           // ignore: cast_nullable_to_non_nullable
           : customerName as String?,
+      deliveryFee: deliveryFee == const $CopyWithPlaceholder()
+          ? _value.deliveryFee
+          // ignore: cast_nullable_to_non_nullable
+          : deliveryFee as int,
+      deliveryOrderId: deliveryOrderId == const $CopyWithPlaceholder()
+          ? _value.deliveryOrderId
+          // ignore: cast_nullable_to_non_nullable
+          : deliveryOrderId as String?,
       discountAmount: discountAmount == const $CopyWithPlaceholder()
           ? _value.discountAmount
           // ignore: cast_nullable_to_non_nullable
@@ -295,6 +325,10 @@ class _$OrderExportCWProxyImpl implements _$OrderExportCWProxy {
           ? _value.orderRef
           // ignore: cast_nullable_to_non_nullable
           : orderRef as String?,
+      orderType: orderType == const $CopyWithPlaceholder()
+          ? _value.orderType
+          // ignore: cast_nullable_to_non_nullable
+          : orderType as String,
       paymentMethod: paymentMethod == const $CopyWithPlaceholder()
           ? _value.paymentMethod
           // ignore: cast_nullable_to_non_nullable
@@ -382,10 +416,12 @@ OrderExport _$OrderExportFromJson(Map<String, dynamic> json) => $checkedCreate(
       requiredKeys: const [
         'branch_id',
         'created_at',
+        'delivery_fee',
         'discount_amount',
         'discount_value',
         'id',
         'order_number',
+        'order_type',
         'payment_method',
         'shift_id',
         'status',
@@ -410,6 +446,11 @@ OrderExport _$OrderExportFromJson(Map<String, dynamic> json) => $checkedCreate(
         (v) => DateTime.parse(v as String),
       ),
       customerName: $checkedConvert('customer_name', (v) => v as String?),
+      deliveryFee: $checkedConvert('delivery_fee', (v) => (v as num).toInt()),
+      deliveryOrderId: $checkedConvert(
+        'delivery_order_id',
+        (v) => v as String?,
+      ),
       discountAmount: $checkedConvert(
         'discount_amount',
         (v) => (v as num).toInt(),
@@ -424,6 +465,7 @@ OrderExport _$OrderExportFromJson(Map<String, dynamic> json) => $checkedCreate(
       notes: $checkedConvert('notes', (v) => v as String?),
       orderNumber: $checkedConvert('order_number', (v) => (v as num).toInt()),
       orderRef: $checkedConvert('order_ref', (v) => v as String?),
+      orderType: $checkedConvert('order_type', (v) => v as String),
       paymentMethod: $checkedConvert('payment_method', (v) => v as String),
       shiftId: $checkedConvert('shift_id', (v) => v as String),
       status: $checkedConvert('status', (v) => v as String),
@@ -465,12 +507,15 @@ OrderExport _$OrderExportFromJson(Map<String, dynamic> json) => $checkedCreate(
     'changeGiven': 'change_given',
     'createdAt': 'created_at',
     'customerName': 'customer_name',
+    'deliveryFee': 'delivery_fee',
+    'deliveryOrderId': 'delivery_order_id',
     'discountAmount': 'discount_amount',
     'discountId': 'discount_id',
     'discountType': 'discount_type',
     'discountValue': 'discount_value',
     'orderNumber': 'order_number',
     'orderRef': 'order_ref',
+    'orderType': 'order_type',
     'paymentMethod': 'payment_method',
     'shiftId': 'shift_id',
     'taxAmount': 'tax_amount',
@@ -493,6 +538,8 @@ Map<String, dynamic> _$OrderExportToJson(OrderExport instance) =>
       'change_given': ?instance.changeGiven,
       'created_at': instance.createdAt.toIso8601String(),
       'customer_name': ?instance.customerName,
+      'delivery_fee': instance.deliveryFee,
+      'delivery_order_id': ?instance.deliveryOrderId,
       'discount_amount': instance.discountAmount,
       'discount_id': ?instance.discountId,
       'discount_type': ?instance.discountType,
@@ -501,6 +548,7 @@ Map<String, dynamic> _$OrderExportToJson(OrderExport instance) =>
       'notes': ?instance.notes,
       'order_number': instance.orderNumber,
       'order_ref': ?instance.orderRef,
+      'order_type': instance.orderType,
       'payment_method': instance.paymentMethod,
       'shift_id': instance.shiftId,
       'status': instance.status,

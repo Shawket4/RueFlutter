@@ -987,6 +987,14 @@ class _OrderCard extends StatelessWidget {
                           voided: isVoided,
                           methods: methods),
                     ),
+                    if (o.orderType == 'delivery') ...[
+                      const SizedBox(width: AppSpace.xs),
+                      const StatusChip(
+                        label: 'Delivery',
+                        tone: ChipTone.info,
+                        icon: Icons.local_shipping_outlined,
+                      ),
+                    ],
                     const Spacer(),
                     Text(egp(o.totalAmount),
                         style: money(
@@ -1114,6 +1122,8 @@ class _OrderDetail extends StatelessWidget {
                 valueColor: t.success),
           if (order.taxAmount > 0)
             _TotalRow(label: s.orderTax14, value: egp(order.taxAmount)),
+          if (order.deliveryFee > 0)
+            _TotalRow(label: 'Delivery fee', value: egp(order.deliveryFee)),
           const SizedBox(height: AppSpace.sm),
           Container(
             padding: const EdgeInsets.only(top: AppSpace.sm),

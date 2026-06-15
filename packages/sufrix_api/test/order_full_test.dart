@@ -32,6 +32,18 @@ void main() {
       // TODO
     });
 
+    // Delivery charge in piastres, shown separately from the item subtotal. Always 0 for dine-in orders; for delivery orders `total_amount == subtotal + tax_amount + delivery_fee` (minus discount).
+    // int deliveryFee
+    test('to test the property `deliveryFee`', () async {
+      // TODO
+    });
+
+    // Links a finalized delivery order back to its `delivery_orders` row (customer, address, channel, zone). `null` for dine-in orders.
+    // String deliveryOrderId
+    test('to test the property `deliveryOrderId`', () async {
+      // TODO
+    });
+
     // int discountAmount
     test('to test the property `discountAmount`', () async {
       // TODO
@@ -70,6 +82,12 @@ void main() {
     // Human-readable, org-unique reference (e.g. \"DT-260614-0042\"). Additive alongside the per-shift order_number. Optional only during the rollout window before the historical backfill runs; never null afterwards.
     // String orderRef
     test('to test the property `orderRef`', () async {
+      // TODO
+    });
+
+    // Order origin: \"dine_in\" (POS sale) or \"delivery\" (finalized delivery order). Defaults to \"dine_in\" for every POS sale.
+    // String orderType
+    test('to test the property `orderType`', () async {
       // TODO
     });
 
@@ -140,6 +158,12 @@ void main() {
 
     // String voidedBy
     test('to test the property `voidedBy`', () async {
+      // TODO
+    });
+
+    // Delivery context (customer phone, address, channel, zone), populated only on the single-order detail endpoint and only when the order originated from a delivery order. `null`/absent for dine-in orders.
+    // OrderDeliveryInfo delivery
+    test('to test the property `delivery`', () async {
       // TODO
     });
 

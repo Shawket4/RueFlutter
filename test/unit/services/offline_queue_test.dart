@@ -45,6 +45,8 @@ Order order(String id) => Order(
       shiftId: 's1',
       tellerId: 'u1',
       tellerName: 'Teller',
+      orderType: 'dine_in',
+      deliveryFee: 0,
       orderNumber: 1,
       status: 'completed',
       paymentMethod: 'cash',

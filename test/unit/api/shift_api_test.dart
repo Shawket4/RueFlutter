@@ -57,16 +57,24 @@ void main() {
     });
 
     test('list returns shifts', () async {
-      when(() => mockDio.get('/shifts/branches/b1'))
+      when(() => mockDio.get('/shifts/branches/b1',
+              queryParameters: any(named: 'queryParameters')))
           .thenAnswer((_) async => Response(
                 requestOptions: RequestOptions(path: ''),
-                data: [shiftJson],
+                // Backend returns a PaginatedShifts envelope.
+                data: {
+                  'data': [shiftJson],
+                  'total': 1,
+                  'page': 1,
+                  'per_page': 50,
+                  'total_pages': 1,
+                },
                 statusCode: 200,
               ));
 
       final shifts = await shiftApi.list('b1');
-      expect(shifts.length, 1);
-      expect(shifts[0].id, 's1');
+      expect(shifts.shifts.length, 1);
+      expect(shifts.shifts[0].id, 's1');
     });
 
     test('open returns new shift', () async {
@@ -136,6 +144,7 @@ void main() {
                   'cash_movements_out': 0,
                   'cash_movements_net': 0,
                   'voided_amount': 0,
+                  'expected_cash': 0,
                   'printed_at': '2023-01-01T16:00:00Z',
                 },
                 statusCode: 200,

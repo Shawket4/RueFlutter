@@ -79,6 +79,7 @@ class OpenShiftRequest {
 
 
 
+      /// Ignored by the server — the carryover edit is DERIVED from the previous shift's declared closing. Kept only for API/back-compat with clients.
   @JsonKey(
     
     name: r'opening_cash_edited',

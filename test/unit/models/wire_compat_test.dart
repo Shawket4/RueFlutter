@@ -34,6 +34,8 @@ void main() {
       'change_given': 5050,
       'tip_amount': 200,
       'tip_payment_method': 'cash',
+      'order_type': 'dine_in',
+      'delivery_fee': 0,
       'discount_id': 'd-1',
       'customer_name': 'Walk-in',
       'notes': 'no foam',
@@ -129,7 +131,8 @@ void main() {
         'order_number', 'status', 'payment_method', 'subtotal',
         'discount_type', 'discount_value', 'discount_amount', 'tax_amount',
         'total_amount', 'amount_tendered', 'change_given', 'tip_amount',
-        'tip_payment_method', 'discount_id', 'customer_name', 'notes',
+        'tip_payment_method', 'order_type', 'delivery_fee',
+        'discount_id', 'customer_name', 'notes',
         'created_at', 'items',
       ]) {
         expect(out.containsKey(key), true, reason: 'order key $key');

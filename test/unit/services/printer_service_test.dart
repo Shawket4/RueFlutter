@@ -23,8 +23,9 @@ void main() {
   group('PrinterService', () {
     test('print returns error when printer is unreachable', () async {
       final order = Order(
-        id: 'o1', branchId: 'b1', shiftId: 's1', tellerId: 't1', tellerName: 'Teller', 
-        status: 'completed', paymentMethod: 'cash', orderNumber: 1, 
+        id: 'o1', branchId: 'b1', shiftId: 's1', tellerId: 't1', tellerName: 'Teller',
+        orderType: 'dine_in', deliveryFee: 0,
+        status: 'completed', paymentMethod: 'cash', orderNumber: 1,
         amountTendered: 10, subtotal: 10, discountValue: 0, discountAmount: 0, 
         taxAmount: 0, totalAmount: 10, items: [], createdAt: DateTime.now(),
       );

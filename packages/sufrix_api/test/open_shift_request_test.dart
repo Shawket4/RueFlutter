@@ -27,6 +27,7 @@ void main() {
       // TODO
     });
 
+    // Ignored by the server — the carryover edit is DERIVED from the previous shift's declared closing. Kept only for API/back-compat with clients.
     // bool openingCashEdited
     test('to test the property `openingCashEdited`', () async {
       // TODO

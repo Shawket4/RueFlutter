@@ -62,6 +62,7 @@ void main() {
     final sampleOrder = Order(
       id: 'o1', branchId: 'b1', shiftId: 's1',
       tellerId: 't1', tellerName: 'Teller',
+      orderType: 'dine_in', deliveryFee: 0,
       orderNumber: 1, status: 'completed',
       paymentMethod: 'cash', subtotal: 10, discountValue: 0,
       discountAmount: 0, taxAmount: 0, totalAmount: 10,

@@ -138,6 +138,8 @@ void main() {
         shiftId: 'shift1',
         tellerId: 't1',
         tellerName: 'Teller',
+        orderType: 'dine_in',
+        deliveryFee: 0,
         orderNumber: 1001,
         paymentMethod: 'cash',
         status: 'completed',

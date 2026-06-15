@@ -28,6 +28,12 @@ void main() {
       // TODO
     });
 
+    // Authoritative system (expected) cash in the drawer. For a closed shift this is the snapshot taken at close (`closing_cash_system`); for an open shift it is computed live via the same formula. Clients should display this directly instead of re-deriving it from the payment breakdown.
+    // int expectedCash
+    test('to test the property `expectedCash`', () async {
+      // TODO
+    });
+
     // int netPayments
     test('to test the property `netPayments`', () async {
       // TODO

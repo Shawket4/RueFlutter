@@ -3,6 +3,7 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:sufrix_api/src/model/order_delivery_info.dart';
 import 'package:sufrix_api/src/model/order_item_full.dart';
 import 'package:copy_with_extension/copy_with_extension.dart';
 import 'package:json_annotation/json_annotation.dart';
@@ -31,6 +32,10 @@ class OrderFull {
 
      this.customerName,
 
+    required  this.deliveryFee,
+
+     this.deliveryOrderId,
+
     required  this.discountAmount,
 
      this.discountId,
@@ -46,6 +51,8 @@ class OrderFull {
     required  this.orderNumber,
 
      this.orderRef,
+
+    required  this.orderType,
 
     required  this.paymentMethod,
 
@@ -74,6 +81,8 @@ class OrderFull {
      this.voidedAt,
 
      this.voidedBy,
+
+     this.delivery,
 
     required  this.items,
 
@@ -137,6 +146,32 @@ class OrderFull {
 
 
   final String? customerName;
+
+
+
+      /// Delivery charge in piastres, shown separately from the item subtotal. Always 0 for dine-in orders; for delivery orders `total_amount == subtotal + tax_amount + delivery_fee` (minus discount).
+  @JsonKey(
+    
+    name: r'delivery_fee',
+    required: true,
+    includeIfNull: false,
+  )
+
+
+  final int deliveryFee;
+
+
+
+      /// Links a finalized delivery order back to its `delivery_orders` row (customer, address, channel, zone). `null` for dine-in orders.
+  @JsonKey(
+    
+    name: r'delivery_order_id',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final String? deliveryOrderId;
 
 
 
@@ -234,6 +269,19 @@ class OrderFull {
 
 
   final String? orderRef;
+
+
+
+      /// Order origin: \"dine_in\" (POS sale) or \"delivery\" (finalized delivery order). Defaults to \"dine_in\" for every POS sale.
+  @JsonKey(
+    
+    name: r'order_type',
+    required: true,
+    includeIfNull: false,
+  )
+
+
+  final String orderType;
 
 
 
@@ -405,6 +453,19 @@ class OrderFull {
 
 
 
+      /// Delivery context (customer phone, address, channel, zone), populated only on the single-order detail endpoint and only when the order originated from a delivery order. `null`/absent for dine-in orders.
+  @JsonKey(
+    
+    name: r'delivery',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final OrderDeliveryInfo? delivery;
+
+
+
   @JsonKey(
     
     name: r'items',
@@ -439,6 +500,8 @@ class OrderFull {
       other.changeGiven == changeGiven &&
       other.createdAt == createdAt &&
       other.customerName == customerName &&
+      other.deliveryFee == deliveryFee &&
+      other.deliveryOrderId == deliveryOrderId &&
       other.discountAmount == discountAmount &&
       other.discountId == discountId &&
       other.discountType == discountType &&
@@ -447,6 +510,7 @@ class OrderFull {
       other.notes == notes &&
       other.orderNumber == orderNumber &&
       other.orderRef == orderRef &&
+      other.orderType == orderType &&
       other.paymentMethod == paymentMethod &&
       other.shiftId == shiftId &&
       other.status == status &&
@@ -461,6 +525,7 @@ class OrderFull {
       other.voidReason == voidReason &&
       other.voidedAt == voidedAt &&
       other.voidedBy == voidedBy &&
+      other.delivery == delivery &&
       other.items == items &&
       other.warnings == warnings;
 
@@ -471,6 +536,8 @@ class OrderFull {
         changeGiven.hashCode +
         createdAt.hashCode +
         customerName.hashCode +
+        deliveryFee.hashCode +
+        deliveryOrderId.hashCode +
         discountAmount.hashCode +
         discountId.hashCode +
         discountType.hashCode +
@@ -479,6 +546,7 @@ class OrderFull {
         notes.hashCode +
         orderNumber.hashCode +
         orderRef.hashCode +
+        orderType.hashCode +
         paymentMethod.hashCode +
         shiftId.hashCode +
         status.hashCode +
@@ -493,6 +561,7 @@ class OrderFull {
         voidReason.hashCode +
         voidedAt.hashCode +
         voidedBy.hashCode +
+        (delivery == null ? 0 : delivery.hashCode) +
         items.hashCode +
         warnings.hashCode;
 

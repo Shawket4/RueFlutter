@@ -78,6 +78,9 @@ void main() {
         'cash_movements_out': 0,
         'cash_movements_net': 100,
         'voided_amount': 0,
+        // Server-authoritative expected cash (required on every report):
+        // 1000 (opening) + 500 (cash payment) + 100 (cash in).
+        'expected_cash': 1600,
         'printed_at': '2023-01-01T12:00:00.000Z',
       };
 
@@ -90,8 +93,7 @@ void main() {
       expect(report.totalReturns, 0);
       expect(report.paymentSummary.length, 1);
       expect(report.cashMovements.length, 1);
-      // 1000 (opening) + 500 (cash payment) + 100 (cash in)
-      expect(report.expectedCash(), 1600);
+      expect(report.expectedCash, 1600);
 
       final out = report.toJson();
       expect(out['shift']['id'], 's1');
@@ -100,15 +102,16 @@ void main() {
       expect(out['cash_movements_in'], 100);
     });
 
-    test('expectedCash uses closingCashSystem if present', () {
+    test('expectedCash is the server-authoritative field', () {
       final report = makeShiftReport(
         shift: makeShift(
           status: 'closed',
           openingCash: 1000,
           closingCashSystem: 2000,
         ),
+        expectedCash: 2000,
       );
-      expect(report.expectedCash(), 2000);
+      expect(report.expectedCash, 2000);
       expect(report.isOpen, false);
     });
   });

@@ -416,8 +416,9 @@ class PrinterService {
         }),
         _divider(),
 
-        // Totals
-        if (order.discountAmount > 0)
+        // Totals — show the subtotal whenever there's anything between it and
+        // the total (discount or delivery fee) so the math reconciles on paper.
+        if (order.discountAmount > 0 || order.deliveryFee > 0)
           _row('Subtotal', egp(order.subtotal),
               font: font, fontB: fontB, sz: 8),
         if (order.discountAmount > 0)
@@ -425,6 +426,9 @@ class PrinterService {
               font: font, fontB: fontB, sz: 8, valueColor: PdfColors.red700),
         if (order.taxAmount > 0)
           _row('Tax', egp(order.taxAmount), font: font, fontB: fontB, sz: 8),
+        if (order.deliveryFee > 0)
+          _row('Delivery Fee', egp(order.deliveryFee),
+              font: font, fontB: fontB, sz: 8),
         _row('TOTAL', egp(order.totalAmount),
             font: font, fontB: fontB, bold: true, boldValue: true, sz: 10),
         _divider(),

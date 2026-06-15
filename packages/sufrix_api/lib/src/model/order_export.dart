@@ -32,6 +32,10 @@ class OrderExport {
 
      this.customerName,
 
+    required  this.deliveryFee,
+
+     this.deliveryOrderId,
+
     required  this.discountAmount,
 
      this.discountId,
@@ -47,6 +51,8 @@ class OrderExport {
     required  this.orderNumber,
 
      this.orderRef,
+
+    required  this.orderType,
 
     required  this.paymentMethod,
 
@@ -138,6 +144,32 @@ class OrderExport {
 
 
   final String? customerName;
+
+
+
+      /// Delivery charge in piastres, shown separately from the item subtotal. Always 0 for dine-in orders; for delivery orders `total_amount == subtotal + tax_amount + delivery_fee` (minus discount).
+  @JsonKey(
+    
+    name: r'delivery_fee',
+    required: true,
+    includeIfNull: false,
+  )
+
+
+  final int deliveryFee;
+
+
+
+      /// Links a finalized delivery order back to its `delivery_orders` row (customer, address, channel, zone). `null` for dine-in orders.
+  @JsonKey(
+    
+    name: r'delivery_order_id',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final String? deliveryOrderId;
 
 
 
@@ -235,6 +267,19 @@ class OrderExport {
 
 
   final String? orderRef;
+
+
+
+      /// Order origin: \"dine_in\" (POS sale) or \"delivery\" (finalized delivery order). Defaults to \"dine_in\" for every POS sale.
+  @JsonKey(
+    
+    name: r'order_type',
+    required: true,
+    includeIfNull: false,
+  )
+
+
+  final String orderType;
 
 
 
@@ -439,6 +484,8 @@ class OrderExport {
       other.changeGiven == changeGiven &&
       other.createdAt == createdAt &&
       other.customerName == customerName &&
+      other.deliveryFee == deliveryFee &&
+      other.deliveryOrderId == deliveryOrderId &&
       other.discountAmount == discountAmount &&
       other.discountId == discountId &&
       other.discountType == discountType &&
@@ -447,6 +494,7 @@ class OrderExport {
       other.notes == notes &&
       other.orderNumber == orderNumber &&
       other.orderRef == orderRef &&
+      other.orderType == orderType &&
       other.paymentMethod == paymentMethod &&
       other.shiftId == shiftId &&
       other.status == status &&
@@ -471,6 +519,8 @@ class OrderExport {
         changeGiven.hashCode +
         createdAt.hashCode +
         customerName.hashCode +
+        deliveryFee.hashCode +
+        deliveryOrderId.hashCode +
         discountAmount.hashCode +
         discountId.hashCode +
         discountType.hashCode +
@@ -479,6 +529,7 @@ class OrderExport {
         notes.hashCode +
         orderNumber.hashCode +
         orderRef.hashCode +
+        orderType.hashCode +
         paymentMethod.hashCode +
         shiftId.hashCode +
         status.hashCode +

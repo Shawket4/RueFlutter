@@ -193,7 +193,7 @@ class ShiftReportPreviewSheet extends ConsumerWidget {
                       if (closeTs != null) _Row(s.shiftColClosed, closeTs),
                       _Row(s.shiftOpeningCash, egp(r.openingCash),
                           isMoney: true),
-                      _Row(s.shiftExpectedCash, egp(r.expectedCash()),
+                      _Row(s.shiftExpectedCash, egp(r.expectedCash),
                           isMoney: true),
                       if (r.closingCashDeclared != null) ...[
                         _Row(s.shiftDeclaredCash, egp(r.closingCashDeclared!),
@@ -201,7 +201,7 @@ class ShiftReportPreviewSheet extends ConsumerWidget {
                         Divider(color: t.borderLight, height: 16),
                         _DiscrepancyRow(
                             declared: r.closingCashDeclared!,
-                            expected: r.expectedCash()),
+                            expected: r.expectedCash),
                       ],
                     ]),
                   ),

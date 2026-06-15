@@ -11,9 +11,13 @@ abstract class _$CreateOrderRequestCWProxy {
 
   CreateOrderRequest branchId(String branchId);
 
+  CreateOrderRequest changeGiven(int? changeGiven);
+
   CreateOrderRequest createdAt(DateTime? createdAt);
 
   CreateOrderRequest customerName(String? customerName);
+
+  CreateOrderRequest discountAmount(int? discountAmount);
 
   CreateOrderRequest discountId(String? discountId);
 
@@ -31,9 +35,15 @@ abstract class _$CreateOrderRequestCWProxy {
 
   CreateOrderRequest shiftId(String shiftId);
 
+  CreateOrderRequest subtotal(int? subtotal);
+
+  CreateOrderRequest taxAmount(int? taxAmount);
+
   CreateOrderRequest tipAmount(int? tipAmount);
 
   CreateOrderRequest tipPaymentMethod(String? tipPaymentMethod);
+
+  CreateOrderRequest totalAmount(int? totalAmount);
 
   /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `CreateOrderRequest(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
   ///
@@ -44,8 +54,10 @@ abstract class _$CreateOrderRequestCWProxy {
   CreateOrderRequest call({
     int? amountTendered,
     String branchId,
+    int? changeGiven,
     DateTime? createdAt,
     String? customerName,
+    int? discountAmount,
     String? discountId,
     String? discountType,
     int? discountValue,
@@ -54,8 +66,11 @@ abstract class _$CreateOrderRequestCWProxy {
     String paymentMethod,
     List<PaymentSplitInput>? paymentSplits,
     String shiftId,
+    int? subtotal,
+    int? taxAmount,
     int? tipAmount,
     String? tipPaymentMethod,
+    int? totalAmount,
   });
 }
 
@@ -73,12 +88,20 @@ class _$CreateOrderRequestCWProxyImpl implements _$CreateOrderRequestCWProxy {
   CreateOrderRequest branchId(String branchId) => this(branchId: branchId);
 
   @override
+  CreateOrderRequest changeGiven(int? changeGiven) =>
+      this(changeGiven: changeGiven);
+
+  @override
   CreateOrderRequest createdAt(DateTime? createdAt) =>
       this(createdAt: createdAt);
 
   @override
   CreateOrderRequest customerName(String? customerName) =>
       this(customerName: customerName);
+
+  @override
+  CreateOrderRequest discountAmount(int? discountAmount) =>
+      this(discountAmount: discountAmount);
 
   @override
   CreateOrderRequest discountId(String? discountId) =>
@@ -110,11 +133,21 @@ class _$CreateOrderRequestCWProxyImpl implements _$CreateOrderRequestCWProxy {
   CreateOrderRequest shiftId(String shiftId) => this(shiftId: shiftId);
 
   @override
+  CreateOrderRequest subtotal(int? subtotal) => this(subtotal: subtotal);
+
+  @override
+  CreateOrderRequest taxAmount(int? taxAmount) => this(taxAmount: taxAmount);
+
+  @override
   CreateOrderRequest tipAmount(int? tipAmount) => this(tipAmount: tipAmount);
 
   @override
   CreateOrderRequest tipPaymentMethod(String? tipPaymentMethod) =>
       this(tipPaymentMethod: tipPaymentMethod);
+
+  @override
+  CreateOrderRequest totalAmount(int? totalAmount) =>
+      this(totalAmount: totalAmount);
 
   @override
   /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `CreateOrderRequest(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
@@ -126,8 +159,10 @@ class _$CreateOrderRequestCWProxyImpl implements _$CreateOrderRequestCWProxy {
   CreateOrderRequest call({
     Object? amountTendered = const $CopyWithPlaceholder(),
     Object? branchId = const $CopyWithPlaceholder(),
+    Object? changeGiven = const $CopyWithPlaceholder(),
     Object? createdAt = const $CopyWithPlaceholder(),
     Object? customerName = const $CopyWithPlaceholder(),
+    Object? discountAmount = const $CopyWithPlaceholder(),
     Object? discountId = const $CopyWithPlaceholder(),
     Object? discountType = const $CopyWithPlaceholder(),
     Object? discountValue = const $CopyWithPlaceholder(),
@@ -136,8 +171,11 @@ class _$CreateOrderRequestCWProxyImpl implements _$CreateOrderRequestCWProxy {
     Object? paymentMethod = const $CopyWithPlaceholder(),
     Object? paymentSplits = const $CopyWithPlaceholder(),
     Object? shiftId = const $CopyWithPlaceholder(),
+    Object? subtotal = const $CopyWithPlaceholder(),
+    Object? taxAmount = const $CopyWithPlaceholder(),
     Object? tipAmount = const $CopyWithPlaceholder(),
     Object? tipPaymentMethod = const $CopyWithPlaceholder(),
+    Object? totalAmount = const $CopyWithPlaceholder(),
   }) {
     return CreateOrderRequest(
       amountTendered: amountTendered == const $CopyWithPlaceholder()
@@ -148,6 +186,10 @@ class _$CreateOrderRequestCWProxyImpl implements _$CreateOrderRequestCWProxy {
           ? _value.branchId
           // ignore: cast_nullable_to_non_nullable
           : branchId as String,
+      changeGiven: changeGiven == const $CopyWithPlaceholder()
+          ? _value.changeGiven
+          // ignore: cast_nullable_to_non_nullable
+          : changeGiven as int?,
       createdAt: createdAt == const $CopyWithPlaceholder()
           ? _value.createdAt
           // ignore: cast_nullable_to_non_nullable
@@ -156,6 +198,10 @@ class _$CreateOrderRequestCWProxyImpl implements _$CreateOrderRequestCWProxy {
           ? _value.customerName
           // ignore: cast_nullable_to_non_nullable
           : customerName as String?,
+      discountAmount: discountAmount == const $CopyWithPlaceholder()
+          ? _value.discountAmount
+          // ignore: cast_nullable_to_non_nullable
+          : discountAmount as int?,
       discountId: discountId == const $CopyWithPlaceholder()
           ? _value.discountId
           // ignore: cast_nullable_to_non_nullable
@@ -188,6 +234,14 @@ class _$CreateOrderRequestCWProxyImpl implements _$CreateOrderRequestCWProxy {
           ? _value.shiftId
           // ignore: cast_nullable_to_non_nullable
           : shiftId as String,
+      subtotal: subtotal == const $CopyWithPlaceholder()
+          ? _value.subtotal
+          // ignore: cast_nullable_to_non_nullable
+          : subtotal as int?,
+      taxAmount: taxAmount == const $CopyWithPlaceholder()
+          ? _value.taxAmount
+          // ignore: cast_nullable_to_non_nullable
+          : taxAmount as int?,
       tipAmount: tipAmount == const $CopyWithPlaceholder()
           ? _value.tipAmount
           // ignore: cast_nullable_to_non_nullable
@@ -196,6 +250,10 @@ class _$CreateOrderRequestCWProxyImpl implements _$CreateOrderRequestCWProxy {
           ? _value.tipPaymentMethod
           // ignore: cast_nullable_to_non_nullable
           : tipPaymentMethod as String?,
+      totalAmount: totalAmount == const $CopyWithPlaceholder()
+          ? _value.totalAmount
+          // ignore: cast_nullable_to_non_nullable
+          : totalAmount as int?,
     );
   }
 }
@@ -227,11 +285,16 @@ CreateOrderRequest _$CreateOrderRequestFromJson(
         (v) => (v as num?)?.toInt(),
       ),
       branchId: $checkedConvert('branch_id', (v) => v as String),
+      changeGiven: $checkedConvert('change_given', (v) => (v as num?)?.toInt()),
       createdAt: $checkedConvert(
         'created_at',
         (v) => v == null ? null : DateTime.parse(v as String),
       ),
       customerName: $checkedConvert('customer_name', (v) => v as String?),
+      discountAmount: $checkedConvert(
+        'discount_amount',
+        (v) => (v as num?)?.toInt(),
+      ),
       discountId: $checkedConvert('discount_id', (v) => v as String?),
       discountType: $checkedConvert('discount_type', (v) => v as String?),
       discountValue: $checkedConvert(
@@ -253,27 +316,34 @@ CreateOrderRequest _$CreateOrderRequestFromJson(
             .toList(),
       ),
       shiftId: $checkedConvert('shift_id', (v) => v as String),
+      subtotal: $checkedConvert('subtotal', (v) => (v as num?)?.toInt()),
+      taxAmount: $checkedConvert('tax_amount', (v) => (v as num?)?.toInt()),
       tipAmount: $checkedConvert('tip_amount', (v) => (v as num?)?.toInt()),
       tipPaymentMethod: $checkedConvert(
         'tip_payment_method',
         (v) => v as String?,
       ),
+      totalAmount: $checkedConvert('total_amount', (v) => (v as num?)?.toInt()),
     );
     return val;
   },
   fieldKeyMap: const {
     'amountTendered': 'amount_tendered',
     'branchId': 'branch_id',
+    'changeGiven': 'change_given',
     'createdAt': 'created_at',
     'customerName': 'customer_name',
+    'discountAmount': 'discount_amount',
     'discountId': 'discount_id',
     'discountType': 'discount_type',
     'discountValue': 'discount_value',
     'paymentMethod': 'payment_method',
     'paymentSplits': 'payment_splits',
     'shiftId': 'shift_id',
+    'taxAmount': 'tax_amount',
     'tipAmount': 'tip_amount',
     'tipPaymentMethod': 'tip_payment_method',
+    'totalAmount': 'total_amount',
   },
 );
 
@@ -282,8 +352,10 @@ Map<String, dynamic> _$CreateOrderRequestToJson(
 ) => <String, dynamic>{
   'amount_tendered': ?instance.amountTendered,
   'branch_id': instance.branchId,
+  'change_given': ?instance.changeGiven,
   'created_at': ?instance.createdAt?.toIso8601String(),
   'customer_name': ?instance.customerName,
+  'discount_amount': ?instance.discountAmount,
   'discount_id': ?instance.discountId,
   'discount_type': ?instance.discountType,
   'discount_value': ?instance.discountValue,
@@ -292,6 +364,9 @@ Map<String, dynamic> _$CreateOrderRequestToJson(
   'payment_method': instance.paymentMethod,
   'payment_splits': ?instance.paymentSplits?.map((e) => e.toJson()).toList(),
   'shift_id': instance.shiftId,
+  'subtotal': ?instance.subtotal,
+  'tax_amount': ?instance.taxAmount,
   'tip_amount': ?instance.tipAmount,
   'tip_payment_method': ?instance.tipPaymentMethod,
+  'total_amount': ?instance.totalAmount,
 };

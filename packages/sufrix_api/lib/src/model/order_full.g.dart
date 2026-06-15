@@ -17,6 +17,10 @@ abstract class _$OrderFullCWProxy {
 
   OrderFull customerName(String? customerName);
 
+  OrderFull deliveryFee(int deliveryFee);
+
+  OrderFull deliveryOrderId(String? deliveryOrderId);
+
   OrderFull discountAmount(int discountAmount);
 
   OrderFull discountId(String? discountId);
@@ -32,6 +36,8 @@ abstract class _$OrderFullCWProxy {
   OrderFull orderNumber(int orderNumber);
 
   OrderFull orderRef(String? orderRef);
+
+  OrderFull orderType(String orderType);
 
   OrderFull paymentMethod(String paymentMethod);
 
@@ -61,6 +67,8 @@ abstract class _$OrderFullCWProxy {
 
   OrderFull voidedBy(String? voidedBy);
 
+  OrderFull delivery(OrderDeliveryInfo? delivery);
+
   OrderFull items(List<OrderItemFull> items);
 
   OrderFull warnings(List<String>? warnings);
@@ -77,6 +85,8 @@ abstract class _$OrderFullCWProxy {
     int? changeGiven,
     DateTime createdAt,
     String? customerName,
+    int deliveryFee,
+    String? deliveryOrderId,
     int discountAmount,
     String? discountId,
     String? discountType,
@@ -85,6 +95,7 @@ abstract class _$OrderFullCWProxy {
     String? notes,
     int orderNumber,
     String? orderRef,
+    String orderType,
     String paymentMethod,
     String shiftId,
     String status,
@@ -99,6 +110,7 @@ abstract class _$OrderFullCWProxy {
     String? voidReason,
     DateTime? voidedAt,
     String? voidedBy,
+    OrderDeliveryInfo? delivery,
     List<OrderItemFull> items,
     List<String>? warnings,
   });
@@ -128,6 +140,13 @@ class _$OrderFullCWProxyImpl implements _$OrderFullCWProxy {
       this(customerName: customerName);
 
   @override
+  OrderFull deliveryFee(int deliveryFee) => this(deliveryFee: deliveryFee);
+
+  @override
+  OrderFull deliveryOrderId(String? deliveryOrderId) =>
+      this(deliveryOrderId: deliveryOrderId);
+
+  @override
   OrderFull discountAmount(int discountAmount) =>
       this(discountAmount: discountAmount);
 
@@ -153,6 +172,9 @@ class _$OrderFullCWProxyImpl implements _$OrderFullCWProxy {
 
   @override
   OrderFull orderRef(String? orderRef) => this(orderRef: orderRef);
+
+  @override
+  OrderFull orderType(String orderType) => this(orderType: orderType);
 
   @override
   OrderFull paymentMethod(String paymentMethod) =>
@@ -199,6 +221,9 @@ class _$OrderFullCWProxyImpl implements _$OrderFullCWProxy {
   OrderFull voidedBy(String? voidedBy) => this(voidedBy: voidedBy);
 
   @override
+  OrderFull delivery(OrderDeliveryInfo? delivery) => this(delivery: delivery);
+
+  @override
   OrderFull items(List<OrderItemFull> items) => this(items: items);
 
   @override
@@ -217,6 +242,8 @@ class _$OrderFullCWProxyImpl implements _$OrderFullCWProxy {
     Object? changeGiven = const $CopyWithPlaceholder(),
     Object? createdAt = const $CopyWithPlaceholder(),
     Object? customerName = const $CopyWithPlaceholder(),
+    Object? deliveryFee = const $CopyWithPlaceholder(),
+    Object? deliveryOrderId = const $CopyWithPlaceholder(),
     Object? discountAmount = const $CopyWithPlaceholder(),
     Object? discountId = const $CopyWithPlaceholder(),
     Object? discountType = const $CopyWithPlaceholder(),
@@ -225,6 +252,7 @@ class _$OrderFullCWProxyImpl implements _$OrderFullCWProxy {
     Object? notes = const $CopyWithPlaceholder(),
     Object? orderNumber = const $CopyWithPlaceholder(),
     Object? orderRef = const $CopyWithPlaceholder(),
+    Object? orderType = const $CopyWithPlaceholder(),
     Object? paymentMethod = const $CopyWithPlaceholder(),
     Object? shiftId = const $CopyWithPlaceholder(),
     Object? status = const $CopyWithPlaceholder(),
@@ -239,6 +267,7 @@ class _$OrderFullCWProxyImpl implements _$OrderFullCWProxy {
     Object? voidReason = const $CopyWithPlaceholder(),
     Object? voidedAt = const $CopyWithPlaceholder(),
     Object? voidedBy = const $CopyWithPlaceholder(),
+    Object? delivery = const $CopyWithPlaceholder(),
     Object? items = const $CopyWithPlaceholder(),
     Object? warnings = const $CopyWithPlaceholder(),
   }) {
@@ -263,6 +292,14 @@ class _$OrderFullCWProxyImpl implements _$OrderFullCWProxy {
           ? _value.customerName
           // ignore: cast_nullable_to_non_nullable
           : customerName as String?,
+      deliveryFee: deliveryFee == const $CopyWithPlaceholder()
+          ? _value.deliveryFee
+          // ignore: cast_nullable_to_non_nullable
+          : deliveryFee as int,
+      deliveryOrderId: deliveryOrderId == const $CopyWithPlaceholder()
+          ? _value.deliveryOrderId
+          // ignore: cast_nullable_to_non_nullable
+          : deliveryOrderId as String?,
       discountAmount: discountAmount == const $CopyWithPlaceholder()
           ? _value.discountAmount
           // ignore: cast_nullable_to_non_nullable
@@ -295,6 +332,10 @@ class _$OrderFullCWProxyImpl implements _$OrderFullCWProxy {
           ? _value.orderRef
           // ignore: cast_nullable_to_non_nullable
           : orderRef as String?,
+      orderType: orderType == const $CopyWithPlaceholder()
+          ? _value.orderType
+          // ignore: cast_nullable_to_non_nullable
+          : orderType as String,
       paymentMethod: paymentMethod == const $CopyWithPlaceholder()
           ? _value.paymentMethod
           // ignore: cast_nullable_to_non_nullable
@@ -351,6 +392,10 @@ class _$OrderFullCWProxyImpl implements _$OrderFullCWProxy {
           ? _value.voidedBy
           // ignore: cast_nullable_to_non_nullable
           : voidedBy as String?,
+      delivery: delivery == const $CopyWithPlaceholder()
+          ? _value.delivery
+          // ignore: cast_nullable_to_non_nullable
+          : delivery as OrderDeliveryInfo?,
       items: items == const $CopyWithPlaceholder()
           ? _value.items
           // ignore: cast_nullable_to_non_nullable
@@ -382,10 +427,12 @@ OrderFull _$OrderFullFromJson(Map<String, dynamic> json) => $checkedCreate(
       requiredKeys: const [
         'branch_id',
         'created_at',
+        'delivery_fee',
         'discount_amount',
         'discount_value',
         'id',
         'order_number',
+        'order_type',
         'payment_method',
         'shift_id',
         'status',
@@ -409,6 +456,11 @@ OrderFull _$OrderFullFromJson(Map<String, dynamic> json) => $checkedCreate(
         (v) => DateTime.parse(v as String),
       ),
       customerName: $checkedConvert('customer_name', (v) => v as String?),
+      deliveryFee: $checkedConvert('delivery_fee', (v) => (v as num).toInt()),
+      deliveryOrderId: $checkedConvert(
+        'delivery_order_id',
+        (v) => v as String?,
+      ),
       discountAmount: $checkedConvert(
         'discount_amount',
         (v) => (v as num).toInt(),
@@ -423,6 +475,7 @@ OrderFull _$OrderFullFromJson(Map<String, dynamic> json) => $checkedCreate(
       notes: $checkedConvert('notes', (v) => v as String?),
       orderNumber: $checkedConvert('order_number', (v) => (v as num).toInt()),
       orderRef: $checkedConvert('order_ref', (v) => v as String?),
+      orderType: $checkedConvert('order_type', (v) => v as String),
       paymentMethod: $checkedConvert('payment_method', (v) => v as String),
       shiftId: $checkedConvert('shift_id', (v) => v as String),
       status: $checkedConvert('status', (v) => v as String),
@@ -443,6 +496,12 @@ OrderFull _$OrderFullFromJson(Map<String, dynamic> json) => $checkedCreate(
         (v) => v == null ? null : DateTime.parse(v as String),
       ),
       voidedBy: $checkedConvert('voided_by', (v) => v as String?),
+      delivery: $checkedConvert(
+        'delivery',
+        (v) => v == null
+            ? null
+            : OrderDeliveryInfo.fromJson(v as Map<String, dynamic>),
+      ),
       items: $checkedConvert(
         'items',
         (v) => (v as List<dynamic>)
@@ -462,12 +521,15 @@ OrderFull _$OrderFullFromJson(Map<String, dynamic> json) => $checkedCreate(
     'changeGiven': 'change_given',
     'createdAt': 'created_at',
     'customerName': 'customer_name',
+    'deliveryFee': 'delivery_fee',
+    'deliveryOrderId': 'delivery_order_id',
     'discountAmount': 'discount_amount',
     'discountId': 'discount_id',
     'discountType': 'discount_type',
     'discountValue': 'discount_value',
     'orderNumber': 'order_number',
     'orderRef': 'order_ref',
+    'orderType': 'order_type',
     'paymentMethod': 'payment_method',
     'shiftId': 'shift_id',
     'taxAmount': 'tax_amount',
@@ -489,6 +551,8 @@ Map<String, dynamic> _$OrderFullToJson(OrderFull instance) => <String, dynamic>{
   'change_given': ?instance.changeGiven,
   'created_at': instance.createdAt.toIso8601String(),
   'customer_name': ?instance.customerName,
+  'delivery_fee': instance.deliveryFee,
+  'delivery_order_id': ?instance.deliveryOrderId,
   'discount_amount': instance.discountAmount,
   'discount_id': ?instance.discountId,
   'discount_type': ?instance.discountType,
@@ -497,6 +561,7 @@ Map<String, dynamic> _$OrderFullToJson(OrderFull instance) => <String, dynamic>{
   'notes': ?instance.notes,
   'order_number': instance.orderNumber,
   'order_ref': ?instance.orderRef,
+  'order_type': instance.orderType,
   'payment_method': instance.paymentMethod,
   'shift_id': instance.shiftId,
   'status': instance.status,
@@ -511,6 +576,7 @@ Map<String, dynamic> _$OrderFullToJson(OrderFull instance) => <String, dynamic>{
   'void_reason': ?instance.voidReason,
   'voided_at': ?instance.voidedAt?.toIso8601String(),
   'voided_by': ?instance.voidedBy,
+  'delivery': ?instance.delivery?.toJson(),
   'items': instance.items.map((e) => e.toJson()).toList(),
   'warnings': ?instance.warnings,
 };

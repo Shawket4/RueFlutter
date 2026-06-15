@@ -9,6 +9,7 @@ import 'package:sufrix_api/api.dart';
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **completed** | **int** |  | 
+**deliveryFees** | **int** | Total delivery charges (piastres) across completed orders in scope. Lets the dashboard surface delivery revenue separately from item sales. | [optional] 
 **discounts** | **int** |  | 
 **revenue** | **int** |  | 
 **tips** | **int** |  | 

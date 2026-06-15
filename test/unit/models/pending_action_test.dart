@@ -16,6 +16,7 @@ void main() {
         'shift_id': 's1',
         'opening_cash': 1000,
         'opened_at': now.toIso8601String(),
+        'edit_reason': null,
       };
 
       final action = PendingShiftOpen.fromJson(json);

@@ -393,6 +393,8 @@ Order makeOrder({
   String tellerName = 'Teller',
   int orderNumber = 1,
   String status = 'completed',
+  String orderType = 'dine_in',
+  int deliveryFee = 0,
   String paymentMethod = 'cash',
   int subtotal = 0,
   String? discountType,
@@ -419,6 +421,8 @@ Order makeOrder({
       tellerName: tellerName,
       orderNumber: orderNumber,
       status: status,
+      orderType: orderType,
+      deliveryFee: deliveryFee,
       paymentMethod: paymentMethod,
       subtotal: subtotal,
       discountType: discountType,
@@ -523,6 +527,7 @@ ShiftReport makeShiftReport({
   int cashMovementsIn = 0,
   int cashMovementsOut = 0,
   int voidedAmount = 0,
+  int expectedCash = 0,
   DateTime? printedAt,
 }) =>
     ShiftReport(
@@ -535,6 +540,7 @@ ShiftReport makeShiftReport({
       cashMovementsOut: cashMovementsOut,
       cashMovementsNet: cashMovementsIn - cashMovementsOut,
       voidedAmount: voidedAmount,
+      expectedCash: expectedCash,
       printedAt: printedAt ?? kFixtureTime,
     );
 

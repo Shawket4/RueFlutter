@@ -11,13 +11,15 @@ abstract class _$AddonInputCWProxy {
 
   AddonInput quantity(int? quantity);
 
+  AddonInput unitPrice(int? unitPrice);
+
   /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `AddonInput(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
   ///
   /// Usage
   /// ```dart
   /// AddonInput(...).copyWith(id: 12, name: "My name")
   /// ````
-  AddonInput call({String addonItemId, int? quantity});
+  AddonInput call({String addonItemId, int? quantity, int? unitPrice});
 }
 
 /// Proxy class for `copyWith` functionality. This is a callable class and can be used as follows: `instanceOfAddonInput.copyWith(...)`. Additionally contains functions for specific fields e.g. `instanceOfAddonInput.copyWith.fieldName(...)`
@@ -33,6 +35,9 @@ class _$AddonInputCWProxyImpl implements _$AddonInputCWProxy {
   AddonInput quantity(int? quantity) => this(quantity: quantity);
 
   @override
+  AddonInput unitPrice(int? unitPrice) => this(unitPrice: unitPrice);
+
+  @override
   /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `AddonInput(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
   ///
   /// Usage
@@ -42,6 +47,7 @@ class _$AddonInputCWProxyImpl implements _$AddonInputCWProxy {
   AddonInput call({
     Object? addonItemId = const $CopyWithPlaceholder(),
     Object? quantity = const $CopyWithPlaceholder(),
+    Object? unitPrice = const $CopyWithPlaceholder(),
   }) {
     return AddonInput(
       addonItemId: addonItemId == const $CopyWithPlaceholder()
@@ -52,6 +58,10 @@ class _$AddonInputCWProxyImpl implements _$AddonInputCWProxy {
           ? _value.quantity
           // ignore: cast_nullable_to_non_nullable
           : quantity as int?,
+      unitPrice: unitPrice == const $CopyWithPlaceholder()
+          ? _value.unitPrice
+          // ignore: cast_nullable_to_non_nullable
+          : unitPrice as int?,
     );
   }
 }
@@ -66,18 +76,27 @@ extension $AddonInputCopyWith on AddonInput {
 // JsonSerializableGenerator
 // **************************************************************************
 
-AddonInput _$AddonInputFromJson(Map<String, dynamic> json) =>
-    $checkedCreate('AddonInput', json, ($checkedConvert) {
-      $checkKeys(json, requiredKeys: const ['addon_item_id']);
-      final val = AddonInput(
-        addonItemId: $checkedConvert('addon_item_id', (v) => v as String),
-        quantity: $checkedConvert('quantity', (v) => (v as num?)?.toInt()),
-      );
-      return val;
-    }, fieldKeyMap: const {'addonItemId': 'addon_item_id'});
+AddonInput _$AddonInputFromJson(Map<String, dynamic> json) => $checkedCreate(
+  'AddonInput',
+  json,
+  ($checkedConvert) {
+    $checkKeys(json, requiredKeys: const ['addon_item_id']);
+    final val = AddonInput(
+      addonItemId: $checkedConvert('addon_item_id', (v) => v as String),
+      quantity: $checkedConvert('quantity', (v) => (v as num?)?.toInt()),
+      unitPrice: $checkedConvert('unit_price', (v) => (v as num?)?.toInt()),
+    );
+    return val;
+  },
+  fieldKeyMap: const {
+    'addonItemId': 'addon_item_id',
+    'unitPrice': 'unit_price',
+  },
+);
 
 Map<String, dynamic> _$AddonInputToJson(AddonInput instance) =>
     <String, dynamic>{
       'addon_item_id': instance.addonItemId,
       'quantity': ?instance.quantity,
+      'unit_price': ?instance.unitPrice,
     };

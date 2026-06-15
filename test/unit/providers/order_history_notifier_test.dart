@@ -11,6 +11,7 @@ class MockOrderRepository extends Mock implements OrderRepository {}
 Order order(String id, {String status = 'completed'}) => Order(
       id: id, branchId: 'b', shiftId: 's',
       tellerId: 't', tellerName: 'Teller', status: status,
+      orderType: 'dine_in', deliveryFee: 0,
       paymentMethod: 'cash', orderNumber: 1, amountTendered: 10,
       subtotal: 10, discountValue: 0, discountAmount: 0, taxAmount: 0,
       totalAmount: 10, items: const [], createdAt: DateTime.now(),

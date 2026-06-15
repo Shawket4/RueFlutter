@@ -12,6 +12,12 @@ void main() {
       // TODO
     });
 
+    // Total delivery charges (piastres) across completed orders in scope. Lets the dashboard surface delivery revenue separately from item sales.
+    // int deliveryFees
+    test('to test the property `deliveryFees`', () async {
+      // TODO
+    });
+
     // int discounts
     test('to test the property `discounts`', () async {
       // TODO

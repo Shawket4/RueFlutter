@@ -17,7 +17,7 @@ class MockShiftNotifier extends Notifier<ShiftState> implements ShiftNotifier {
   @override Future<bool> closeShift({required String branchId, required int closingCash, String? note, List<Map<String, dynamic>> inventoryCounts = const []}) async => true;
   @override Future<void> load(String branchId) async {}
   @override Future<void> loadSystemCash() async {}
-  @override Future<bool> openShift(String branchId, int openingCash) async => true;
+  @override Future<bool> openShift(String branchId, int openingCash, {String? editReason}) async => true;
   @override void updateShiftSynced(Shift shift) {}
   @override void addLocalCash(int amount) {}
   @override void seedFromAuth(Shift? shift) {}

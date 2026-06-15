@@ -23,6 +23,8 @@ class AddonInput {
     required  this.addonItemId,
 
      this.quantity,
+
+     this.unitPrice,
   });
 
   @JsonKey(
@@ -49,17 +51,32 @@ class AddonInput {
 
 
 
+      /// Charged unit price (piastres) the POS applied for this addon. When present it is RECORDED as the addon's unit_price; absent → the server's expected (catalog) price is used. Bundle-component addons ignore this (server-priced).
+  @JsonKey(
+    
+    name: r'unit_price',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final int? unitPrice;
+
+
+
 
 
     @override
     bool operator ==(Object other) => identical(this, other) || other is AddonInput &&
       other.addonItemId == addonItemId &&
-      other.quantity == quantity;
+      other.quantity == quantity &&
+      other.unitPrice == unitPrice;
 
     @override
     int get hashCode =>
         addonItemId.hashCode +
-        quantity.hashCode;
+        quantity.hashCode +
+        (unitPrice == null ? 0 : unitPrice.hashCode);
 
   factory AddonInput.fromJson(Map<String, dynamic> json) => _$AddonInputFromJson(json);
 

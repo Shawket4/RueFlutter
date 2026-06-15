@@ -37,6 +37,8 @@ class OrderItemInput {
     required  this.quantity,
 
      this.sizeLabel,
+
+     this.unitPrice,
   });
 
   @JsonKey(
@@ -135,6 +137,19 @@ class OrderItemInput {
 
 
 
+      /// Charged unit price (piastres) the POS applied for this item/bundle line. When present it is RECORDED as the line's unit_price; absent → the server's expected (catalog + branch override) price is used. Recording what the customer was actually charged keeps the DB equal to the printed receipt even when the POS's synced menu/override prices are stale or it was offline at sale time.
+  @JsonKey(
+    
+    name: r'unit_price',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final int? unitPrice;
+
+
+
 
 
     @override
@@ -146,7 +161,8 @@ class OrderItemInput {
       other.notes == notes &&
       other.optionalFieldIds == optionalFieldIds &&
       other.quantity == quantity &&
-      other.sizeLabel == sizeLabel;
+      other.sizeLabel == sizeLabel &&
+      other.unitPrice == unitPrice;
 
     @override
     int get hashCode =>
@@ -157,7 +173,8 @@ class OrderItemInput {
         (notes == null ? 0 : notes.hashCode) +
         optionalFieldIds.hashCode +
         quantity.hashCode +
-        (sizeLabel == null ? 0 : sizeLabel.hashCode);
+        (sizeLabel == null ? 0 : sizeLabel.hashCode) +
+        (unitPrice == null ? 0 : unitPrice.hashCode);
 
   factory OrderItemInput.fromJson(Map<String, dynamic> json) => _$OrderItemInputFromJson(json);
 

@@ -23,6 +23,8 @@ abstract class _$OrderItemInputCWProxy {
 
   OrderItemInput sizeLabel(String? sizeLabel);
 
+  OrderItemInput unitPrice(int? unitPrice);
+
   /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `OrderItemInput(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
   ///
   /// Usage
@@ -38,6 +40,7 @@ abstract class _$OrderItemInputCWProxy {
     List<String> optionalFieldIds,
     int quantity,
     String? sizeLabel,
+    int? unitPrice,
   });
 }
 
@@ -75,6 +78,9 @@ class _$OrderItemInputCWProxyImpl implements _$OrderItemInputCWProxy {
   OrderItemInput sizeLabel(String? sizeLabel) => this(sizeLabel: sizeLabel);
 
   @override
+  OrderItemInput unitPrice(int? unitPrice) => this(unitPrice: unitPrice);
+
+  @override
   /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `OrderItemInput(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
   ///
   /// Usage
@@ -90,6 +96,7 @@ class _$OrderItemInputCWProxyImpl implements _$OrderItemInputCWProxy {
     Object? optionalFieldIds = const $CopyWithPlaceholder(),
     Object? quantity = const $CopyWithPlaceholder(),
     Object? sizeLabel = const $CopyWithPlaceholder(),
+    Object? unitPrice = const $CopyWithPlaceholder(),
   }) {
     return OrderItemInput(
       addons: addons == const $CopyWithPlaceholder()
@@ -124,6 +131,10 @@ class _$OrderItemInputCWProxyImpl implements _$OrderItemInputCWProxy {
           ? _value.sizeLabel
           // ignore: cast_nullable_to_non_nullable
           : sizeLabel as String?,
+      unitPrice: unitPrice == const $CopyWithPlaceholder()
+          ? _value.unitPrice
+          // ignore: cast_nullable_to_non_nullable
+          : unitPrice as int?,
     );
   }
 }
@@ -172,6 +183,7 @@ OrderItemInput _$OrderItemInputFromJson(Map<String, dynamic> json) =>
           ),
           quantity: $checkedConvert('quantity', (v) => (v as num).toInt()),
           sizeLabel: $checkedConvert('size_label', (v) => v as String?),
+          unitPrice: $checkedConvert('unit_price', (v) => (v as num?)?.toInt()),
         );
         return val;
       },
@@ -181,6 +193,7 @@ OrderItemInput _$OrderItemInputFromJson(Map<String, dynamic> json) =>
         'menuItemId': 'menu_item_id',
         'optionalFieldIds': 'optional_field_ids',
         'sizeLabel': 'size_label',
+        'unitPrice': 'unit_price',
       },
     );
 
@@ -196,4 +209,5 @@ Map<String, dynamic> _$OrderItemInputToJson(OrderItemInput instance) =>
       'optional_field_ids': instance.optionalFieldIds,
       'quantity': instance.quantity,
       'size_label': ?instance.sizeLabel,
+      'unit_price': ?instance.unitPrice,
     };

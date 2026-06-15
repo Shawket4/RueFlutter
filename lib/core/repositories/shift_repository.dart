@@ -141,7 +141,7 @@ class ShiftRepository {
   Future<int> getSystemCash(String shiftId, int openingCash) async {
     try {
       final shiftReport = await _shiftApi.getReport(shiftId);
-      return shiftReport.expectedCash();
+      return shiftReport.expectedCash;
     } catch (_) {}
     return openingCash;
   }

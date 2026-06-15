@@ -31,6 +31,8 @@ class ShiftReportResponse {
 
     required  this.cashMovementsOut,
 
+    required  this.expectedCash,
+
     required  this.netPayments,
 
     required  this.paymentSummary,
@@ -42,8 +44,6 @@ class ShiftReportResponse {
     required  this.totalPayments,
 
     required  this.voidedAmount,
-
-    this.expectedCashAmount,
   });
 
   @JsonKey(
@@ -92,6 +92,19 @@ class ShiftReportResponse {
 
 
   final int cashMovementsOut;
+
+
+
+      /// Authoritative system (expected) cash in the drawer. For a closed shift this is the snapshot taken at close (`closing_cash_system`); for an open shift it is computed live via the same formula. Clients should display this directly instead of re-deriving it from the payment breakdown.
+  @JsonKey(
+    
+    name: r'expected_cash',
+    required: true,
+    includeIfNull: false,
+  )
+
+
+  final int expectedCash;
 
 
 
@@ -167,22 +180,6 @@ class ShiftReportResponse {
 
 
 
-      /// Authoritative system (expected) cash in the drawer, computed by the
-      /// backend (snapshot for a closed shift, live formula for an open one).
-      /// Nullable: reports cached before this field existed fall back to a
-      /// client-side derivation in the app façade.
-  @JsonKey(
-
-    name: r'expected_cash',
-    required: false,
-    includeIfNull: false,
-  )
-
-
-  final int? expectedCashAmount;
-
-
-
 
 
     @override
@@ -191,13 +188,13 @@ class ShiftReportResponse {
       other.cashMovementsIn == cashMovementsIn &&
       other.cashMovementsNet == cashMovementsNet &&
       other.cashMovementsOut == cashMovementsOut &&
+      other.expectedCash == expectedCash &&
       other.netPayments == netPayments &&
       other.paymentSummary == paymentSummary &&
       other.printedAt == printedAt &&
       other.shift == shift &&
       other.totalPayments == totalPayments &&
-      other.voidedAmount == voidedAmount &&
-      other.expectedCashAmount == expectedCashAmount;
+      other.voidedAmount == voidedAmount;
 
     @override
     int get hashCode =>
@@ -205,13 +202,13 @@ class ShiftReportResponse {
         cashMovementsIn.hashCode +
         cashMovementsNet.hashCode +
         cashMovementsOut.hashCode +
+        expectedCash.hashCode +
         netPayments.hashCode +
         paymentSummary.hashCode +
         printedAt.hashCode +
         shift.hashCode +
         totalPayments.hashCode +
-        voidedAmount.hashCode +
-        expectedCashAmount.hashCode;
+        voidedAmount.hashCode;
 
   factory ShiftReportResponse.fromJson(Map<String, dynamic> json) => _$ShiftReportResponseFromJson(json);
 

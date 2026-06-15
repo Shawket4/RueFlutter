@@ -278,10 +278,9 @@ class _BottomActionBar extends ConsumerWidget {
         ref.watch(offlineQueueProvider.select((q) => q.hasStuck));
     final isOnline = ref.watch(isOnlineProvider);
     final shift = ref.watch(shiftProvider.select((s) => s.shift));
-    // Delivery is a first-class action on the bar (not buried in "More"):
-    // the badge counts in-flight orders, and brand-new ones pulse in red.
-    final deliveryActive =
-        ref.watch(deliveryOrdersProvider.select((d) => d.activeCount));
+    // Delivery is a first-class action on the bar (not buried in "More").
+    // A red alert counter shows orders awaiting acceptance; the button stays
+    // neutral until one arrives, then highlights + pulses to draw the eye.
     final deliveryNew =
         ref.watch(deliveryOrdersProvider.select((d) => d.newCount));
 
@@ -327,10 +326,13 @@ class _BottomActionBar extends ConsumerWidget {
                       label: 'Delivery',
                       compact: compact,
                       disabled: shift == null,
-                      badgeCount: deliveryActive,
-                      badgeDanger: deliveryNew > 0,
+                      // Red alert counter = orders awaiting acceptance; the
+                      // button only lights up (highlight + pulse) when there's
+                      // a new one — otherwise it sits like every other action.
+                      badgeCount: deliveryNew,
+                      badgeDanger: true,
                       pulse: deliveryNew > 0,
-                      accent: true,
+                      accent: deliveryNew > 0,
                       onTap: () => context.push('/delivery-orders'),
                     ),
                     _BarAction(
@@ -490,11 +492,32 @@ class _BarAction extends StatelessWidget {
       );
     }
     if (badgeCount > 0) {
-      iconWidget = Badge(
-        backgroundColor: badgeDanger ? t.danger : t.accent,
-        label: Text('$badgeCount',
-            style: ui(size: 10, weight: FontWeight.w700, color: Colors.white)),
-        child: iconWidget,
+      // App-icon-style alert counter: a ringed red pill pinned to the top-end
+      // corner so it reads as a notification, not part of the icon.
+      iconWidget = Stack(
+        clipBehavior: Clip.none,
+        children: [
+          iconWidget,
+          PositionedDirectional(
+            top: -7,
+            end: -10,
+            child: Container(
+              height: 16,
+              constraints: const BoxConstraints(minWidth: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: badgeDanger ? t.danger : t.accent,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: t.surface, width: 1.5),
+              ),
+              child: Text(
+                badgeCount > 99 ? '99+' : '$badgeCount',
+                style: ui(size: 9.5, weight: FontWeight.w800, color: Colors.white),
+              ),
+            ),
+          ),
+        ],
       );
     }
 

@@ -6,6 +6,7 @@ import '../../core/models/delivery_order.dart';
 import '../../core/models/payment_method.dart';
 import '../../core/providers/auth_notifier.dart';
 import '../../core/providers/delivery_orders_notifier.dart';
+import '../../core/providers/delivery_settings_notifier.dart';
 import '../../core/providers/payment_method_notifier.dart';
 import '../../core/providers/shift_notifier.dart';
 import '../../core/repositories/delivery_order_repository.dart';
@@ -143,6 +144,9 @@ class _DeliveryOrdersScreenState extends ConsumerState<DeliveryOrdersScreen> {
   Future<void> _load() async {
     final branchId = _branchId;
     if (branchId == null) return;
+    // Pull the channel accepting state alongside the queue (fire-and-forget;
+    // a settings failure must not block the orders list).
+    ref.read(deliverySettingsProvider.notifier).load(branchId);
     await ref
         .read(deliveryOrdersProvider.notifier)
         .loadForBranch(branchId, force: true);
@@ -219,6 +223,7 @@ class _Content extends ConsumerWidget {
             AppSpace.lg, AppSpace.md, AppSpace.lg, 0),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           const OfflineBanner(),
+          const _ChannelAcceptingBar(),
           _FilterRow(orders: orders),
         ]),
       ),
@@ -260,6 +265,137 @@ class _FilterRow extends ConsumerWidget {
           ),
           const SizedBox(width: AppSpace.sm),
         ],
+      ]),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  CHANNEL ACCEPTING — teller toggle for in-mall / outside (auto/open/closed).
+//  Mirrors backend POST /delivery/accepting. Only channels the dashboard has
+//  enabled are shown (the POS can't open a disabled channel). Hidden entirely
+//  until settings load and while no channel is enabled.
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ChannelAcceptingBar extends ConsumerWidget {
+  const _ChannelAcceptingBar();
+
+  String? _branchId(WidgetRef ref) =>
+      ref.read(authProvider).user?.branchId ?? ref.read(authProvider).branch?.id;
+
+  Future<void> _set(
+      BuildContext context, WidgetRef ref, String channel, String mode) async {
+    final branchId = _branchId(ref);
+    if (branchId == null) return;
+    try {
+      await ref
+          .read(deliverySettingsProvider.notifier)
+          .setMode(branchId, channel, mode);
+    } catch (e) {
+      if (!context.mounted) return;
+      final msg = e.toString();
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(msg.startsWith('Exception: ') ? msg.substring(11) : msg),
+        backgroundColor: context.tokens.danger,
+      ));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = ref.watch(deliverySettingsProvider.select((v) => v.settings));
+    if (s == null || !s.anyEnabled) return const SizedBox.shrink();
+    final t = context.tokens;
+
+    Widget channelRow(String channel, String label, IconData icon) {
+      if (!s.enabledFor(channel)) return const SizedBox.shrink();
+      return Padding(
+        padding: const EdgeInsetsDirectional.only(top: AppSpace.sm),
+        child: Row(children: [
+          Icon(icon, size: 16, color: t.textSecondary),
+          const SizedBox(width: AppSpace.sm),
+          Expanded(
+              child: Text(label,
+                  style: ui(size: 13, weight: FontWeight.w600))),
+          _ModeSegments(
+            mode: s.overrideFor(channel),
+            onPick: (m) => _set(context, ref, channel, m),
+          ),
+        ]),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsetsDirectional.only(top: AppSpace.sm),
+      child: SurfaceCard(
+        padding: const EdgeInsets.all(AppSpace.md),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Row(children: [
+            Icon(Icons.tune_rounded, size: 14, color: t.textMuted),
+            const SizedBox(width: AppSpace.xs),
+            Text('ACCEPTING ORDERS',
+                style: ui(
+                    size: 10,
+                    weight: FontWeight.w800,
+                    color: t.textMuted,
+                    letterSpacing: 0.6)),
+          ]),
+          channelRow('in_mall', 'In-mall', Icons.storefront_rounded),
+          channelRow('outside', 'Outside', Icons.pedal_bike_rounded),
+        ]),
+      ),
+    );
+  }
+}
+
+/// Three-state segmented control: Auto · Open · Closed. The active segment is
+/// tinted by meaning (open=success, closed=danger, auto=accent).
+class _ModeSegments extends StatelessWidget {
+  final String mode; // auto | open | closed
+  final ValueChanged<String> onPick;
+  const _ModeSegments({required this.mode, required this.onPick});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+
+    Widget seg(String value, String label) {
+      final active = mode == value;
+      final activeBg = switch (value) {
+        'open' => t.success,
+        'closed' => t.danger,
+        _ => t.accent,
+      };
+      return AnimatedPressScale(
+        onTap: active ? null : () => onPick(value),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding:
+              const EdgeInsetsDirectional.symmetric(horizontal: 11, vertical: 6),
+          decoration: BoxDecoration(
+            color: active ? activeBg : Colors.transparent,
+            borderRadius: BorderRadius.circular(AppRadius.xs),
+          ),
+          child: Text(label,
+              style: ui(
+                  size: 11,
+                  weight: FontWeight.w700,
+                  color: active ? Colors.white : t.textSecondary)),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(2),
+      decoration: BoxDecoration(
+        color: t.surfaceAlt,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(color: t.borderLight),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        seg('auto', 'Auto'),
+        seg('open', 'Open'),
+        seg('closed', 'Closed'),
       ]),
     );
   }

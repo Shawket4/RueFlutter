@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/delivery_order.dart';
+import '../models/delivery_settings.dart';
 import 'client.dart';
 
 /// Staff delivery API (JWT, branch-scoped). Reuses the shared [DioClient]:
@@ -33,6 +34,31 @@ class DeliveryApi {
     return items
         .map((o) => DeliveryOrder.fromJson(o as Map<String, dynamic>))
         .toList();
+  }
+
+  /// `GET /delivery/settings` — the branch's delivery configuration, including
+  /// the POS-owned accepting overrides (`*_override`).
+  Future<DeliverySettings> getSettings(String branchId) async {
+    final res = await _c.dio.get('/delivery/settings',
+        queryParameters: {'branch_id': branchId});
+    return DeliverySettings.fromJson(res.data as Map<String, dynamic>);
+  }
+
+  /// `POST /delivery/accepting` — set a channel's accepting override.
+  /// [channel] is `in_mall`/`outside`, [mode] is `auto`/`open`/`closed`.
+  /// The backend rejects (409) an attempt to open a dashboard-disabled channel.
+  /// Returns the updated [DeliverySettings].
+  Future<DeliverySettings> setAccepting(
+    String branchId, {
+    required String channel,
+    required String mode,
+  }) async {
+    final res = await _c.dio.post('/delivery/accepting', data: {
+      'branch_id': branchId,
+      'channel': channel,
+      'mode': mode,
+    });
+    return DeliverySettings.fromJson(res.data as Map<String, dynamic>);
   }
 
   /// `GET /delivery-orders/{id}`.

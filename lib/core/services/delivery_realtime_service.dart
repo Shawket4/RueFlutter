@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../models/delivery_order.dart';
 import '../providers/auth_notifier.dart';
@@ -38,16 +39,22 @@ class DeliveryRealtimeService {
   StreamSubscription<String>? _sub;
   Timer? _poll;
   Timer? _backoff;
+  Timer? _watchdog;
   int _attempt = 0;
   bool _connected = false;
   bool _connecting = false;
   bool _disposed = false;
+  bool _awake = false;
 
   String? _branchId;
   final NewOrderDetector _detector = NewOrderDetector();
   final math.Random _rng = math.Random();
 
   static const _pollInterval = Duration(seconds: 30);
+  // The server sends a `:` keep-alive every ~20s. If we hear NOTHING (not even a
+  // ping) for this long the socket is silently dead (NAT/Wi-Fi drop with no
+  // FIN/RST) — force a reconnect so we never sit "connected" but deaf.
+  static const _stallTimeout = Duration(seconds: 45);
 
   // ── Gate ───────────────────────────────────────────────────────────────────
 
@@ -63,6 +70,10 @@ class DeliveryRealtimeService {
   }) {
     if (_disposed) return;
     final active = online && authed && shiftOpen && branchId != null;
+
+    // Keep the screen awake while we're actively listening for orders so the
+    // device never sleeps → backgrounds the app → drops the stream.
+    _setKeepAwake(active);
 
     if (branchId != _branchId) {
       _teardown();
@@ -95,8 +106,20 @@ class DeliveryRealtimeService {
     );
   }
 
-  /// App backgrounded — drop the socket; [reevaluate] re-connects on resume.
-  void pause() => _teardown();
+  /// App backgrounded — drop the socket + release the wake-lock; [reevaluate]
+  /// re-connects (and re-locks) on resume.
+  void pause() {
+    _teardown();
+    _setKeepAwake(false);
+  }
+
+  void _setKeepAwake(bool on) {
+    if (on == _awake) return;
+    _awake = on;
+    try {
+      on ? WakelockPlus.enable() : WakelockPlus.disable();
+    } catch (_) {/* platform plugin unavailable (e.g. tests) — ignore */}
+  }
 
   bool _gateActive() {
     final auth = _ref.read(authProvider);
@@ -152,6 +175,9 @@ class DeliveryRealtimeService {
           .transform(const LineSplitter())
           .listen(
         (line) {
+          // ANY line — a real frame OR a `:` keep-alive — proves the socket is
+          // alive, so reset the stall watchdog on every one.
+          _resetWatchdog(branchId);
           final frame = parser.addLine(line);
           if (frame != null) _dispatch(frame.event, frame.data);
         },
@@ -159,6 +185,7 @@ class DeliveryRealtimeService {
         onDone: () => _onClosed(branchId),
         cancelOnError: true,
       );
+      _resetWatchdog(branchId); // arm it immediately (catch a dead-on-arrival socket)
     } catch (e) {
       _cancel = null;
       _connected = false;
@@ -181,11 +208,32 @@ class DeliveryRealtimeService {
 
   void _onClosed(String branchId) {
     if (_branchId != branchId) return; // stale callback after a branch change
+    _watchdog?.cancel();
+    _watchdog = null;
     _connected = false;
     _sub?.cancel();
     _sub = null;
     _cancel = null;
     _scheduleReconnect(branchId);
+  }
+
+  /// (Re)arm the stall watchdog. Fires [_onStall] if no byte arrives within
+  /// [_stallTimeout]; reset on every received line.
+  void _resetWatchdog(String branchId) {
+    if (_disposed || _branchId != branchId) return;
+    _watchdog?.cancel();
+    _watchdog = Timer(_stallTimeout, () => _onStall(branchId));
+  }
+
+  /// The stream went silent past the keep-alive interval → treat it as dead.
+  /// Cancel the zombie socket and reconnect (the poll covers the gap).
+  void _onStall(String branchId) {
+    if (_disposed || _branchId != branchId || !_connected) return;
+    if (kDebugMode) {
+      debugPrint('delivery SSE stalled (>${_stallTimeout.inSeconds}s silent) — reconnecting');
+    }
+    _cancel?.cancel(); // force-close the half-open socket so reconnect is clean
+    _onClosed(branchId);
   }
 
   void _scheduleReconnect(String branchId) {
@@ -273,6 +321,8 @@ class DeliveryRealtimeService {
   void _teardown() {
     _backoff?.cancel();
     _backoff = null;
+    _watchdog?.cancel();
+    _watchdog = null;
     _sub?.cancel();
     _sub = null;
     _cancel?.cancel();
@@ -291,6 +341,7 @@ class DeliveryRealtimeService {
   void dispose() {
     _disposed = true;
     _teardown();
+    _setKeepAwake(false);
   }
 }
 

@@ -480,15 +480,19 @@ class _BarAction extends StatelessWidget {
 
     Widget iconWidget = Icon(icon, size: 17, color: fg);
     if (pulse && !disabled) {
-      // Smooth breathing scale (1.0 → ~1.18 → 1.0) — matches the app's other
-      // looping micro-animations, used here to flag orders awaiting acceptance.
+      // Playful "ring": a quick double-bounce + a little wiggle, looping until
+      // the order is accepted/rejected (pulse is driven by newCount > 0).
       final inner = iconWidget;
       iconWidget = LoopingIcon(
-        duration: const Duration(milliseconds: 1100),
-        builder: (ctx, p) => Transform.scale(
-          scale: 1.0 + 0.18 * math.sin(p * math.pi),
-          child: inner,
-        ),
+        duration: const Duration(milliseconds: 900),
+        builder: (ctx, p) {
+          final scale = 1.0 + 0.16 * math.sin(p * math.pi * 2).abs();
+          final angle = 0.12 * math.sin(p * math.pi * 4);
+          return Transform.rotate(
+            angle: angle,
+            child: Transform.scale(scale: scale, child: inner),
+          );
+        },
       );
     }
     if (badgeCount > 0) {

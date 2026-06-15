@@ -352,7 +352,7 @@ class _ChannelAcceptingBar extends ConsumerWidget {
     }
 
     return Padding(
-      padding: const EdgeInsetsDirectional.only(top: AppSpace.sm),
+      padding: const EdgeInsetsDirectional.only(top: AppSpace.sm, bottom: AppSpace.md),
       child: SurfaceCard(
         padding: const EdgeInsets.all(AppSpace.md),
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -1214,12 +1214,17 @@ class _FinalizeSheet extends ConsumerStatefulWidget {
 class _FinalizeSheetState extends ConsumerState<_FinalizeSheet> {
   late String? _selected;
 
-  /// Delivery is paid on delivery in cash or by card only — restrict the org's
-  /// methods to those two (cash = any `is_cash` method; card = the card method).
+  /// Delivery is paid in cash, by card, or via Talabat online (the Talabat
+  /// integration is imminent and lives in this same module). Restrict the org's
+  /// methods to those: cash = any `is_cash` method; card = the card method;
+  /// plus `talabat_online`. Other methods (e.g. POS-only wallets) are hidden.
   static bool _isCard(PaymentMethod m) =>
       m.wireFormat == 'card' || m.wireFormat == 'credit_card';
-  List<PaymentMethod> get _methods =>
-      widget.methods.where((m) => m.isCash || _isCard(m)).toList();
+  static bool _isTalabatOnline(PaymentMethod m) =>
+      m.wireFormat == 'talabat_online';
+  List<PaymentMethod> get _methods => widget.methods
+      .where((m) => m.isCash || _isCard(m) || _isTalabatOnline(m))
+      .toList();
 
   @override
   void initState() {

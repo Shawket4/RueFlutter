@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,6 +8,7 @@ import '../../core/models/delivery_order.dart';
 import '../../core/providers/delivery_orders_notifier.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatting.dart';
+import 'animated_icons.dart';
 
 /// Holds the most recent brand-new delivery order to surface as an in-app
 /// banner, or null when there's nothing to show. Driven by
@@ -68,7 +71,23 @@ class NewOrderBanner extends ConsumerWidget {
             border: Border.all(color: t.accent.withOpacity(0.35)),
           ),
           child: Row(children: [
-            Icon(Icons.delivery_dining_rounded, size: 18, color: t.accent),
+            // Playful bounce + wiggle that loops the whole time the banner is up
+            // (i.e. until the teller accepts or rejects the order).
+            LoopingIcon(
+              duration: const Duration(milliseconds: 900),
+              builder: (ctx, p) {
+                final scale = 1.0 + 0.18 * math.sin(p * math.pi * 2).abs();
+                final angle = 0.18 * math.sin(p * math.pi * 4);
+                return Transform.rotate(
+                  angle: angle,
+                  child: Transform.scale(
+                    scale: scale,
+                    child: Icon(Icons.delivery_dining_rounded,
+                        size: 18, color: t.accent),
+                  ),
+                );
+              },
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: Column(

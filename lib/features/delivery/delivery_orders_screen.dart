@@ -13,6 +13,8 @@ import '../../core/repositories/delivery_order_repository.dart';
 import '../../core/services/printer_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatting.dart';
+import '../../core/utils/launchers.dart';
+import '../../core/utils/time_utils.dart';
 import '../../shared/widgets/app_top_bar.dart';
 import '../../shared/widgets/empty_state.dart';
 import '../../core/services/notification_service.dart';
@@ -610,7 +612,7 @@ class _DeliveryCardState extends ConsumerState<_DeliveryCard> {
                           weight: FontWeight.w800,
                           color: t.textPrimary)),
                   const SizedBox(height: 2),
-                  Text(timeShort(order.createdAt),
+                  Text('${timeShort(order.createdAt)} · ${_elapsedLabel(order.createdAt)}',
                       style: ui(size: 11, color: t.textMuted)),
                 ],
               ),
@@ -689,9 +691,33 @@ class _DeliveryCardState extends ConsumerState<_DeliveryCard> {
 
 // ── Customer block ───────────────────────────────────────────────────────────
 
+/// Compact "how long ago" label for the queue header (updates each refresh).
+String _elapsedLabel(DateTime created) {
+  final mins = TimeUtils.now().difference(created).inMinutes;
+  if (mins < 1) return 'just now';
+  if (mins < 60) return '${mins}m ago';
+  final h = mins ~/ 60;
+  final m = mins % 60;
+  return m == 0 ? '${h}h ago' : '${h}h ${m}m ago';
+}
+
 class _CustomerBlock extends StatelessWidget {
   final DeliveryOrder order;
   const _CustomerBlock({required this.order});
+
+  Future<void> _openMaps(BuildContext context) async {
+    final lat = order.customerLat, lng = order.customerLng;
+    if (lat == null || lng == null) return;
+    final ok = await openInMaps(lat, lng);
+    if (!ok && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Could not open Maps on this device.'),
+          backgroundColor: context.tokens.danger,
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -706,50 +732,96 @@ class _CustomerBlock extends StatelessWidget {
     final distanceKm = order.roadDistanceMeters != null
         ? (order.roadDistanceMeters! / 1000).toStringAsFixed(1)
         : null;
+    final hasCoords = order.customerLat != null && order.customerLng != null;
 
     return Padding(
       padding: const EdgeInsetsDirectional.symmetric(
-          horizontal: AppSpace.lg, vertical: AppSpace.sm),
+          horizontal: AppSpace.lg, vertical: AppSpace.md),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        // Contact: name (+ verified) and a tap-to-call phone pill.
         Row(children: [
-          Icon(Icons.person_outline_rounded, size: 14, color: t.textMuted),
+          Icon(Icons.person_rounded, size: 15, color: t.navy),
           const SizedBox(width: AppSpace.xs),
           Expanded(
             child: Text(order.customerName,
                 style: ui(size: 13, weight: FontWeight.w700)),
           ),
           if (order.otpVerified) ...[
-            Icon(Icons.verified_rounded, size: 13, color: t.success),
-            const SizedBox(width: AppSpace.xs),
+            Icon(Icons.verified_rounded, size: 14, color: t.success),
+            const SizedBox(width: AppSpace.sm),
           ],
-          Icon(Icons.phone_outlined, size: 13, color: t.textMuted),
-          const SizedBox(width: AppSpace.xs),
-          Text(order.customerPhone, style: ui(size: 12, color: t.textSecondary)),
+          AnimatedPressScale(
+            onTap: () => dialPhone(order.customerPhone),
+            child: Container(
+              padding: const EdgeInsetsDirectional.fromSTEB(8, 4, 10, 4),
+              decoration: BoxDecoration(
+                color: t.navyBg,
+                borderRadius: BorderRadius.circular(AppRadius.pill),
+              ),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(Icons.phone_rounded, size: 12, color: t.navy),
+                const SizedBox(width: 5),
+                Text(order.customerPhone,
+                    style: ui(size: 12, weight: FontWeight.w700, color: t.navy)),
+              ]),
+            ),
+          ),
         ]),
         if (addr.isNotEmpty) ...[
-          const SizedBox(height: AppSpace.xs),
+          const SizedBox(height: AppSpace.sm),
           Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Icon(Icons.location_on_outlined, size: 14, color: t.textMuted),
+            Icon(Icons.location_on_outlined, size: 15, color: t.textMuted),
             const SizedBox(width: AppSpace.xs),
             Expanded(
               child: Text(addr.join(' · '),
-                  style: ui(size: 12, color: t.textSecondary)),
+                  style: ui(size: 12, color: t.textSecondary, height: 1.35)),
             ),
-            if (distanceKm != null)
+            if (distanceKm != null) ...[
+              const SizedBox(width: AppSpace.sm),
               Text('$distanceKm km',
-                  style: ui(size: 11, weight: FontWeight.w600, color: t.textMuted)),
+                  style: ui(size: 11, weight: FontWeight.w700, color: t.textMuted)),
+            ],
           ]),
         ],
         if (order.deliveryNotes?.isNotEmpty ?? false) ...[
-          const SizedBox(height: AppSpace.xs),
-          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Icon(Icons.sticky_note_2_outlined, size: 14, color: t.warning),
-            const SizedBox(width: AppSpace.xs),
-            Expanded(
-              child: Text(order.deliveryNotes!,
-                  style: ui(size: 12, color: t.textSecondary)),
+          const SizedBox(height: AppSpace.sm),
+          Container(
+            padding: const EdgeInsets.all(AppSpace.sm),
+            decoration: BoxDecoration(
+              color: t.warningBg,
+              borderRadius: BorderRadius.circular(AppRadius.xs),
             ),
-          ]),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Icon(Icons.sticky_note_2_outlined, size: 14, color: t.warning),
+              const SizedBox(width: AppSpace.xs),
+              Expanded(
+                child: Text(order.deliveryNotes!,
+                    style: ui(size: 12, color: t.textPrimary, height: 1.3)),
+              ),
+            ]),
+          ),
+        ],
+        // Outside orders carry a precise pin — let the rider open it in Maps.
+        if (hasCoords) ...[
+          const SizedBox(height: AppSpace.sm),
+          AnimatedPressScale(
+            onTap: () => _openMaps(context),
+            child: Container(
+              width: double.infinity,
+              height: 40,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: t.navy,
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+              ),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                const Icon(Icons.navigation_rounded, size: 16, color: Colors.white),
+                const SizedBox(width: AppSpace.sm),
+                Text('Open in Google Maps',
+                    style: ui(size: 13, weight: FontWeight.w800, color: Colors.white)),
+              ]),
+            ),
+          ),
         ],
       ]),
     );

@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/db/outbox_dao.dart';
 import '../../core/l10n/l10n.dart';
 import '../../core/models/pending_action.dart';
-import '../../core/providers/auth_notifier.dart';
 import '../../core/services/connectivity_service.dart';
 import '../../core/services/offline_queue.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatting.dart';
+import '../../core/utils/haptics.dart';
 import '../../core/utils/responsive.dart';
+import '../../shared/widgets/animated_icons.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_top_bar.dart';
 import '../../shared/widgets/confirm_sheet.dart';
@@ -35,21 +35,13 @@ class PendingOrdersScreen extends ConsumerWidget {
     final s = l10n(context);
     final queue = ref.watch(offlineQueueProvider);
     final isOnline = ref.watch(isOnlineProvider);
-    final currentUserId = ref.watch(authProvider.select((a) => a.user?.id));
 
-    // ── Partition entries ──────────────────────────────────────────────────
-    final mine = <OutboxEntry>[];
-    final others = <OutboxEntry>[];
-    for (final e in queue.entries) {
-      final isMine =
-          e.userId == null || currentUserId == null || e.userId == currentUserId;
-      (isMine ? mine : others).add(e);
-    }
-    final stuck = mine.where((e) => e.status == 'dead').toList();
-    final active = mine.where((e) => e.status != 'dead').toList();
+    final entries = queue.entries;
+    final stuck = entries.where((e) => e.status == 'dead').toList();
+    final active = entries.where((e) => e.status != 'dead').toList();
 
-    final allSynced = queue.entries.isEmpty;
-    final paused = queue.authPaused && queue.entries.isNotEmpty;
+    final allSynced = entries.isEmpty;
+    final paused = queue.authPaused && entries.isNotEmpty;
 
     final subtitle = allSynced
         ? s.allSynced
@@ -100,34 +92,21 @@ class PendingOrdersScreen extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      _SyncSummaryCard(
+                      _StatusHero(
                         queue: queue,
                         isOnline: isOnline,
                         paused: paused,
                         onSyncNow: syncNow,
                       ),
-                      const SizedBox(height: AppSpace.md),
-                      _TypeBreakdown(queue: queue),
                       if (stuck.isNotEmpty) ...[
+                        const SizedBox(height: AppSpace.lg),
                         SectionHeader(title: s.syncNeedsAttentionHeader),
-                        _EntryGroupCard(
-                          entries: stuck,
-                          allEntries: queue.entries,
-                        ),
+                        _EntryGroupCard(entries: stuck, allEntries: entries),
                       ],
                       if (active.isNotEmpty) ...[
-                        SectionHeader(title: s.syncWaitingHeader),
-                        _EntryGroupCard(
-                          entries: active,
-                          allEntries: queue.entries,
-                        ),
-                      ],
-                      if (others.isNotEmpty) ...[
                         const SizedBox(height: AppSpace.lg),
-                        _OtherSessionGroup(
-                          entries: others,
-                          allEntries: queue.entries,
-                        ),
+                        SectionHeader(title: s.syncWaitingHeader),
+                        _EntryGroupCard(entries: active, allEntries: entries),
                       ],
                       const SizedBox(height: AppSpace.xxl),
                     ],
@@ -146,13 +125,16 @@ class PendingOrdersScreen extends ConsumerWidget {
 //  SUMMARY CARD — one glanceable state: paused / offline / syncing / waiting.
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _SyncSummaryCard extends StatelessWidget {
+/// One glanceable hero: dominant state + an inline breakdown of what's queued
+/// + the Sync-now action — replaces the old summary card and the separate row
+/// of breakdown chips.
+class _StatusHero extends StatelessWidget {
   final OfflineQueueState queue;
   final bool isOnline;
   final bool paused;
   final Future<void> Function() onSyncNow;
 
-  const _SyncSummaryCard({
+  const _StatusHero({
     required this.queue,
     required this.isOnline,
     required this.paused,
@@ -204,48 +186,60 @@ class _SyncSummaryCard extends StatelessWidget {
         ),
     };
 
-    final showSyncNow = !paused;
+    final breakdown = _breakdown(s);
+    final subtitle = breakdown.isNotEmpty ? breakdown : body;
+    final showSyncNow = !paused && isOnline && !queue.isSyncing && count > 0;
 
     return SurfaceCard(
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
-            child: queue.isSyncing && !paused
-                ? _Spinning(child: Icon(icon, size: 20, color: fg))
-                : Icon(icon, size: 20, color: fg),
+      child: Row(children: [
+        Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
+          child: queue.isSyncing && !paused
+              ? _Spinning(child: Icon(icon, size: 20, color: fg))
+              : Icon(icon, size: 20, color: fg),
+        ),
+        const SizedBox(width: AppSpace.md),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title,
+                  style: ui(size: 15, weight: FontWeight.w700, color: fg)),
+              const SizedBox(height: 2),
+              Text(subtitle,
+                  style: ui(size: 12.5, color: t.textSecondary, height: 1.4),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis),
+            ],
           ),
-          const SizedBox(width: AppSpace.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: ui(size: 15, weight: FontWeight.w700, color: fg)),
-                const SizedBox(height: 2),
-                Text(body,
-                    style: ui(size: 13, color: t.textSecondary, height: 1.45)),
-              ],
-            ),
-          ),
-        ]),
+        ),
         if (showSyncNow) ...[
-          const SizedBox(height: AppSpace.lg),
-          Align(
-            alignment: AlignmentDirectional.centerStart,
-            child: AppButton(
-              label: s.syncNow,
-              icon: Icons.sync_rounded,
-              width: 160,
-              height: 44,
-              loading: queue.isSyncing,
-              onTap: isOnline ? onSyncNow : null,
-            ),
+          const SizedBox(width: AppSpace.md),
+          AppButton(
+            label: s.syncNow,
+            icon: Icons.sync_rounded,
+            width: 134,
+            height: 44,
+            onTap: onSyncNow,
           ),
         ],
       ]),
     );
+  }
+
+  /// "3 orders · 1 shift open · 1 cash" — the queue's makeup as one line.
+  /// Shift CLOSE is intentionally absent: closing a shift requires being
+  /// online, so it never queues.
+  String _breakdown(AppLocalizations s) {
+    final parts = <String>[
+      if (queue.orderCount > 0) s.commonOrdersCount(queue.orderCount),
+      if (queue.shiftOpenCount > 0) s.syncShiftOpenChip(queue.shiftOpenCount),
+      if (queue.voidCount > 0) s.syncVoidsChip(queue.voidCount),
+      if (queue.cashCount > 0) s.syncCashChip(queue.cashCount),
+    ];
+    return parts.join(' · ');
   }
 }
 
@@ -275,54 +269,6 @@ class _SpinningState extends State<_Spinning>
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  TYPE BREAKDOWN CHIPS
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _TypeBreakdown extends StatelessWidget {
-  final OfflineQueueState queue;
-  const _TypeBreakdown({required this.queue});
-
-  @override
-  Widget build(BuildContext context) {
-    final s = l10n(context);
-    final chips = <Widget>[
-      if (queue.orderCount > 0)
-        StatusChip(
-            label: s.commonOrdersCount(queue.orderCount),
-            tone: ChipTone.success,
-            icon: Icons.receipt_long_rounded),
-      if (queue.shiftOpenCount > 0)
-        StatusChip(
-            label: s.syncShiftOpenChip(queue.shiftOpenCount),
-            tone: ChipTone.info,
-            icon: Icons.play_arrow_rounded),
-      if (queue.shiftCloseCount > 0)
-        StatusChip(
-            label: s.syncShiftCloseChip(queue.shiftCloseCount),
-            tone: ChipTone.warning,
-            icon: Icons.lock_outline_rounded),
-      if (queue.voidCount > 0)
-        StatusChip(
-            label: s.syncVoidsChip(queue.voidCount),
-            tone: ChipTone.danger,
-            icon: Icons.cancel_outlined),
-      if (queue.cashCount > 0)
-        StatusChip(
-            label: s.syncCashChip(queue.cashCount),
-            tone: ChipTone.neutral,
-            icon: Icons.payments_outlined),
-      if (queue.hasStuck)
-        StatusChip(
-            label: s.syncStuckChip(queue.stuckCount),
-            tone: ChipTone.danger,
-            icon: Icons.error_outline_rounded),
-    ];
-    if (chips.isEmpty) return const SizedBox.shrink();
-    return Wrap(spacing: AppSpace.sm, runSpacing: AppSpace.sm, children: chips);
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 //  ENTRY GROUPS
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -341,81 +287,6 @@ class _EntryGroupCard extends ConsumerWidget {
         for (final (i, entry) in entries.indexed) ...[
           if (i > 0) Divider(height: 1, color: t.borderLight),
           _EntryRow(entry: entry, allEntries: allEntries),
-        ],
-      ]),
-    );
-  }
-}
-
-/// Whether the "from another session" group is expanded. autoDispose:
-/// collapses again once the screen is closed.
-final _otherSessionExpandedProvider =
-    StateProvider.autoDispose<bool>((_) => false);
-
-/// Collapsed group for entries enqueued under a different account. The queue
-/// only drains entries belonging to the signed-in user, so these wait for
-/// their owner to sign in on this device.
-class _OtherSessionGroup extends ConsumerWidget {
-  final List<OutboxEntry> entries;
-  final List<OutboxEntry> allEntries;
-
-  const _OtherSessionGroup({required this.entries, required this.allEntries});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final t = context.tokens;
-    final s = l10n(context);
-    final n = entries.length;
-    final expanded = ref.watch(_otherSessionExpandedProvider);
-
-    return SurfaceCard(
-      padding: EdgeInsets.zero,
-      child: Column(children: [
-        AnimatedPressScale(
-          scaleDown: 0.99,
-          onTap: () => ref
-              .read(_otherSessionExpandedProvider.notifier)
-              .update((v) => !v),
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpace.lg),
-            child: Row(children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration:
-                    BoxDecoration(color: t.navyBg, shape: BoxShape.circle),
-                child: Icon(Icons.person_outline_rounded,
-                    size: 18, color: t.navy),
-              ),
-              const SizedBox(width: AppSpace.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(s.syncFromAnotherSession,
-                        style: ui(size: 14, weight: FontWeight.w600,
-                            color: t.textPrimary)),
-                    const SizedBox(height: 2),
-                    Text(s.syncOtherSessionBody(n),
-                        style: ui(size: 12, color: t.textSecondary)),
-                  ],
-                ),
-              ),
-              Icon(
-                  expanded
-                      ? Icons.expand_less_rounded
-                      : Icons.expand_more_rounded,
-                  size: 20,
-                  color: t.textMuted),
-            ]),
-          ),
-        ),
-        if (expanded) ...[
-          Divider(height: 1, color: t.borderLight),
-          for (final (i, entry) in entries.indexed) ...[
-            if (i > 0) Divider(height: 1, color: t.borderLight),
-            _EntryRow(entry: entry, allEntries: allEntries),
-          ],
         ],
       ]),
     );
@@ -522,19 +393,37 @@ class _EntryRow extends ConsumerWidget {
                 ],
               ),
             ),
-            if (orderTotal != null) ...[
+            // Trailing cluster: amount + discard, centred against each other
+            // (the row itself is top-aligned for the multi-line middle column)
+            // with a clear gap between them.
+            if (orderTotal != null || !_isStuck) ...[
               const SizedBox(width: AppSpace.sm),
-              Text(egp(orderTotal),
-                  style: money(size: 14, color: t.textPrimary)),
+              Row(mainAxisSize: MainAxisSize.min, children: [
+                if (orderTotal != null)
+                  Text(egp(orderTotal),
+                      style: money(size: 14, color: t.textPrimary)),
+                if (orderTotal != null && !_isStuck)
+                  const SizedBox(width: AppSpace.md),
+                if (!_isStuck)
+                  // Discard — the trash lifts its lid and shakes, then (after
+                  // a short beat) opens the confirm sheet.
+                  TapToPlayIcon(
+                    onTapDown: Haptics.impact,
+                    onPressed: () => _confirmDiscard(context, ref),
+                    builder: (_, anim) => Container(
+                      width: 28,
+                      height: 28,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                          color: t.dangerBg,
+                          borderRadius: BorderRadius.circular(6)),
+                      child: CustomPaint(
+                          size: const Size(20, 20),
+                          painter: TrashPainter(t: anim, color: t.danger)),
+                    ),
+                  ),
+              ]),
             ],
-            if (!_isStuck)
-              IconButton(
-                onPressed: () => _confirmDiscard(context, ref),
-                tooltip: s.discardAction,
-                icon: Icon(Icons.delete_outline_rounded,
-                    size: 18, color: t.textMuted),
-                visualDensity: VisualDensity.compact,
-              ),
           ]),
           if (_isStuck)
             Padding(
@@ -577,7 +466,6 @@ class _EntryRow extends ConsumerWidget {
       icon: Icons.delete_outline_rounded,
     );
     if (!confirmed) return;
-    HapticFeedback.mediumImpact();
     await ref.read(offlineQueueProvider.notifier).discard(entry.localId);
   }
 
@@ -857,22 +745,18 @@ _TypeMeta _typeMeta(AppLocalizations s, String type) =>
       ChipTone.info => (t.navyBg, t.navy),
     };
 
-/// Sum of `line_total` across the order payload's items; null when the
-/// payload doesn't carry a usable items list.
+/// Order total (subtotal − discount), computed exactly like the details sheet.
+/// Items serialise their price components, not a `line_total` key, so the total
+/// has to be reconstructed through the model's computed `lineTotal` — reading a
+/// raw `line_total` field summed to 0, which is why the row showed "EGP 0"
+/// until expanded.
 int? _orderTotal(Map<String, dynamic> payload) {
   try {
-    final items = payload['items'] as List?;
-    if (items == null || items.isEmpty) return null;
-    var sum = 0;
-    for (final item in items) {
-      final lt = (item as Map)['line_total'];
-      if (lt is int) {
-        sum += lt;
-      } else if (lt is num) {
-        sum += lt.round();
-      }
-    }
-    return sum;
+    final order = PendingOrder.fromJson(payload);
+    if (order.items.isEmpty) return null;
+    final subtotal = order.items.fold<int>(0, (sum, i) => sum + i.lineTotal);
+    return subtotal -
+        _calcDiscount(order.discountType, order.discountValue, subtotal);
   } catch (_) {
     return null;
   }

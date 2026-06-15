@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/providers/cart_notifier.dart';
 import '../../../core/providers/menu_notifier.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatting.dart';
+import '../../../core/utils/haptics.dart';
+import '../../../shared/widgets/animated_icons.dart';
 import '../../../shared/widgets/confirm_sheet.dart';
 import 'bundle_cart_row.dart';
 import 'item_detail_sheet.dart';
@@ -18,6 +19,11 @@ class CartRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final t = context.tokens;
     final cart = ref.watch(cartProvider);
+    // The cart's AnimatedSwitcher keeps this row mounted while the list
+    // animates out after the cart shrinks or clears. During that window the
+    // row rebuilds against the now-shorter list, so a stale index would throw
+    // RangeError and flash a red error box. Bail out instead.
+    if (index >= cart.items.length) return const SizedBox.shrink();
     final item = cart.items[index];
     if (item.isBundleLine) {
       return BundleCartRow(index: index, item: item);
@@ -106,7 +112,7 @@ class CartRow extends ConsumerWidget {
           _QtyControl(
             icon: Icons.remove,
             onTap: () {
-              HapticFeedback.lightImpact();
+              Haptics.selection();
               if (item.quantity == 1) {
                 _confirmRemove(context, ref, item.itemName, () {
                   ref.read(cartProvider.notifier).setQty(index, 0);
@@ -134,7 +140,7 @@ class CartRow extends ConsumerWidget {
           _QtyControl(
             icon: Icons.add,
             onTap: () {
-              HapticFeedback.lightImpact();
+              Haptics.selection();
               ref
                   .read(cartProvider.notifier)
                   .setQty(index, item.quantity + 1);
@@ -162,18 +168,24 @@ class CartRow extends ConsumerWidget {
           ),
           const SizedBox(width: 6),
 
-          // Delete
-          _ActionIcon(
-            icon: Icons.close_rounded,
-            color: t.danger,
-            background: t.dangerBg,
-            onTap: () {
-              HapticFeedback.mediumImpact();
-              _confirmRemove(context, ref, item.itemName, () {
-                ref.read(cartProvider.notifier).removeAt(index);
-                _showSnackbar(context, ref, item.itemName);
-              });
-            },
+          // Delete — the trash lifts its lid and shakes, then (after a short
+          // beat) opens the confirm sheet.
+          TapToPlayIcon(
+            onTapDown: Haptics.impact,
+            onPressed: () => _confirmRemove(context, ref, item.itemName, () {
+              ref.read(cartProvider.notifier).removeAt(index);
+              _showSnackbar(context, ref, item.itemName);
+            }),
+            builder: (_, anim) => Container(
+              width: 28,
+              height: 28,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                  color: t.dangerBg, borderRadius: BorderRadius.circular(6)),
+              child: CustomPaint(
+                  size: const Size(20, 20),
+                  painter: TrashPainter(t: anim, color: t.danger)),
+            ),
           ),
         ]),
       ]),
@@ -195,15 +207,20 @@ class CartRow extends ConsumerWidget {
 
   void _showSnackbar(BuildContext context, WidgetRef ref, String itemName) {
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).clearSnackBars();
-    ScaffoldMessenger.of(context).showSnackBar(
+    // Capture the notifier NOW, while this row's ref is still valid. The
+    // SnackBar outlives the row (deleting the item disposes it — and the whole
+    // list when it was the last item), so a late ref.read() on the disposed
+    // row would throw and the Undo would silently do nothing.
+    final cart = ref.read(cartProvider.notifier);
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.clearSnackBars();
+    messenger.showSnackBar(
       SnackBar(
         content: Text(l10n(context).orderItemRemoved(itemName)),
         behavior: SnackBarBehavior.floating,
         action: SnackBarAction(
           label: l10n(context).commonUndo,
-          onPressed: () =>
-              ref.read(cartProvider.notifier).restoreLastRemoved(),
+          onPressed: cart.restoreLastRemoved,
         ),
         duration: const Duration(seconds: 4),
       ),

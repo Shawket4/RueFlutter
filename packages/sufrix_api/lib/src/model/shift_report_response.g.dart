@@ -27,6 +27,8 @@ abstract class _$ShiftReportResponseCWProxy {
 
   ShiftReportResponse voidedAmount(int voidedAmount);
 
+  ShiftReportResponse expectedCashAmount(int? expectedCashAmount);
+
   /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `ShiftReportResponse(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
   ///
   /// Usage
@@ -44,6 +46,7 @@ abstract class _$ShiftReportResponseCWProxy {
     Shift shift,
     int totalPayments,
     int voidedAmount,
+    int? expectedCashAmount,
   });
 }
 
@@ -94,6 +97,10 @@ class _$ShiftReportResponseCWProxyImpl implements _$ShiftReportResponseCWProxy {
       this(voidedAmount: voidedAmount);
 
   @override
+  ShiftReportResponse expectedCashAmount(int? expectedCashAmount) =>
+      this(expectedCashAmount: expectedCashAmount);
+
+  @override
   /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `ShiftReportResponse(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
   ///
   /// Usage
@@ -111,6 +118,7 @@ class _$ShiftReportResponseCWProxyImpl implements _$ShiftReportResponseCWProxy {
     Object? shift = const $CopyWithPlaceholder(),
     Object? totalPayments = const $CopyWithPlaceholder(),
     Object? voidedAmount = const $CopyWithPlaceholder(),
+    Object? expectedCashAmount = const $CopyWithPlaceholder(),
   }) {
     return ShiftReportResponse(
       cashMovements: cashMovements == const $CopyWithPlaceholder()
@@ -153,6 +161,10 @@ class _$ShiftReportResponseCWProxyImpl implements _$ShiftReportResponseCWProxy {
           ? _value.voidedAmount
           // ignore: cast_nullable_to_non_nullable
           : voidedAmount as int,
+      expectedCashAmount: expectedCashAmount == const $CopyWithPlaceholder()
+          ? _value.expectedCashAmount
+          // ignore: cast_nullable_to_non_nullable
+          : expectedCashAmount as int?,
     );
   }
 }
@@ -230,6 +242,10 @@ ShiftReportResponse _$ShiftReportResponseFromJson(
         (v) => (v as num).toInt(),
       ),
       voidedAmount: $checkedConvert('voided_amount', (v) => (v as num).toInt()),
+      expectedCashAmount: $checkedConvert(
+        'expected_cash',
+        (v) => (v as num?)?.toInt(),
+      ),
     );
     return val;
   },
@@ -243,6 +259,7 @@ ShiftReportResponse _$ShiftReportResponseFromJson(
     'printedAt': 'printed_at',
     'totalPayments': 'total_payments',
     'voidedAmount': 'voided_amount',
+    'expectedCashAmount': 'expected_cash',
   },
 );
 
@@ -259,4 +276,5 @@ Map<String, dynamic> _$ShiftReportResponseToJson(
   'shift': instance.shift.toJson(),
   'total_payments': instance.totalPayments,
   'voided_amount': instance.voidedAmount,
+  'expected_cash': ?instance.expectedCashAmount,
 };

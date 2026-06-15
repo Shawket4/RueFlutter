@@ -23,6 +23,8 @@ class StocktakeFull {
 
     required  this.branchId,
 
+     this.branchName,
+
     required  this.createdAt,
 
      this.finalizedAt,
@@ -57,6 +59,19 @@ class StocktakeFull {
 
 
   final String branchId;
+
+
+
+      /// Branch label — only populated by the stocktakes list (so the \"All branches\" view can show which branch each stocktake belongs to). Other stocktake endpoints leave it `null`.
+  @JsonKey(
+    
+    name: r'branch_name',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final String? branchName;
 
 
 
@@ -210,6 +225,7 @@ class StocktakeFull {
     @override
     bool operator ==(Object other) => identical(this, other) || other is StocktakeFull &&
       other.branchId == branchId &&
+      other.branchName == branchName &&
       other.createdAt == createdAt &&
       other.finalizedAt == finalizedAt &&
       other.finalizedBy == finalizedBy &&
@@ -226,6 +242,7 @@ class StocktakeFull {
     @override
     int get hashCode =>
         branchId.hashCode +
+        branchName.hashCode +
         createdAt.hashCode +
         finalizedAt.hashCode +
         finalizedBy.hashCode +

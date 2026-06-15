@@ -41,20 +41,68 @@ class Pill extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 //  COUNT BADGE
 // ─────────────────────────────────────────────────────────────────────────────
-class CountBadge extends StatelessWidget {
+class CountBadge extends StatefulWidget {
   final int count;
   const CountBadge({super.key, required this.count});
+
+  @override
+  State<CountBadge> createState() => _CountBadgeState();
+}
+
+class _CountBadgeState extends State<CountBadge>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 300),
+  );
+
+  // Overshoot then settle — the satisfying "pop" each time the count changes.
+  late final Animation<double> _scale = TweenSequence<double>([
+    TweenSequenceItem(
+        tween: Tween(begin: 1.0, end: 1.32)
+            .chain(CurveTween(curve: Curves.easeOut)),
+        weight: 45),
+    TweenSequenceItem(
+        tween: Tween(begin: 1.32, end: 1.0)
+            .chain(CurveTween(curve: Curves.easeIn)),
+        weight: 55),
+  ]).animate(_c);
+
+  @override
+  void initState() {
+    super.initState();
+    // Pop on first appearance (e.g. the first item added to an empty cart).
+    _c.forward();
+  }
+
+  @override
+  void didUpdateWidget(CountBadge oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Pop again on in-place count changes (the FAB/sheet reuse one instance;
+    // the side panel swaps a keyed instance, which re-runs initState instead).
+    if (oldWidget.count != widget.count) _c.forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = context.tokens;
-    return Container(
-        padding:
-            const EdgeInsetsDirectional.symmetric(horizontal: 8, vertical: 2),
-        decoration: BoxDecoration(
-            color: t.accentBg,
-            borderRadius: BorderRadius.circular(AppRadius.pill)),
-        child: Text('$count',
-            style: ui(size: 11, weight: FontWeight.w700, color: t.accent)));
+    return ScaleTransition(
+      scale: _scale,
+      child: Container(
+          padding:
+              const EdgeInsetsDirectional.symmetric(horizontal: 8, vertical: 2),
+          decoration: BoxDecoration(
+              color: t.accentBg,
+              borderRadius: BorderRadius.circular(AppRadius.pill)),
+          child: Text('${widget.count}',
+              style: ui(size: 11, weight: FontWeight.w700, color: t.accent))),
+    );
   }
 }
 

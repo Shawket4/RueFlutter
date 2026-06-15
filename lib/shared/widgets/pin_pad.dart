@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/responsive.dart';
 
@@ -52,15 +51,17 @@ class PinPad extends StatelessWidget {
                 color: filled ? t.accent : t.border,
                 width: 2,
               ),
-              boxShadow: filled
-                  ? [
-                      BoxShadow(
-                        color: t.accent.withOpacity(0.3),
-                        blurRadius: 10,
-                        offset: const Offset(0, 2),
-                      ),
-                    ]
-                  : const [],
+              // Keep the shadow present in both states with a constant blur
+              // and animate only its color. easeOutBack overshoots above 1.0,
+              // so lerping the blur toward an absent shadow would dip it below
+              // zero and trip the "shadow blur must be non-negative" assert.
+              boxShadow: [
+                BoxShadow(
+                  color: filled ? t.accent.withOpacity(0.3) : Colors.transparent,
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
           );
         }),
@@ -81,7 +82,6 @@ class PinPad extends StatelessWidget {
                 return _Key(
                   size: keySize,
                   onTap: () {
-                    HapticFeedback.lightImpact();
                     isBack ? onBackspace() : onDigit(k);
                   },
                   child: isBack

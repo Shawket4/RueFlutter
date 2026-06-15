@@ -31,6 +31,8 @@ abstract class _$OrderFullCWProxy {
 
   OrderFull orderNumber(int orderNumber);
 
+  OrderFull orderRef(String? orderRef);
+
   OrderFull paymentMethod(String paymentMethod);
 
   OrderFull shiftId(String shiftId);
@@ -82,6 +84,7 @@ abstract class _$OrderFullCWProxy {
     String id,
     String? notes,
     int orderNumber,
+    String? orderRef,
     String paymentMethod,
     String shiftId,
     String status,
@@ -147,6 +150,9 @@ class _$OrderFullCWProxyImpl implements _$OrderFullCWProxy {
 
   @override
   OrderFull orderNumber(int orderNumber) => this(orderNumber: orderNumber);
+
+  @override
+  OrderFull orderRef(String? orderRef) => this(orderRef: orderRef);
 
   @override
   OrderFull paymentMethod(String paymentMethod) =>
@@ -218,6 +224,7 @@ class _$OrderFullCWProxyImpl implements _$OrderFullCWProxy {
     Object? id = const $CopyWithPlaceholder(),
     Object? notes = const $CopyWithPlaceholder(),
     Object? orderNumber = const $CopyWithPlaceholder(),
+    Object? orderRef = const $CopyWithPlaceholder(),
     Object? paymentMethod = const $CopyWithPlaceholder(),
     Object? shiftId = const $CopyWithPlaceholder(),
     Object? status = const $CopyWithPlaceholder(),
@@ -284,6 +291,10 @@ class _$OrderFullCWProxyImpl implements _$OrderFullCWProxy {
           ? _value.orderNumber
           // ignore: cast_nullable_to_non_nullable
           : orderNumber as int,
+      orderRef: orderRef == const $CopyWithPlaceholder()
+          ? _value.orderRef
+          // ignore: cast_nullable_to_non_nullable
+          : orderRef as String?,
       paymentMethod: paymentMethod == const $CopyWithPlaceholder()
           ? _value.paymentMethod
           // ignore: cast_nullable_to_non_nullable
@@ -411,6 +422,7 @@ OrderFull _$OrderFullFromJson(Map<String, dynamic> json) => $checkedCreate(
       id: $checkedConvert('id', (v) => v as String),
       notes: $checkedConvert('notes', (v) => v as String?),
       orderNumber: $checkedConvert('order_number', (v) => (v as num).toInt()),
+      orderRef: $checkedConvert('order_ref', (v) => v as String?),
       paymentMethod: $checkedConvert('payment_method', (v) => v as String),
       shiftId: $checkedConvert('shift_id', (v) => v as String),
       status: $checkedConvert('status', (v) => v as String),
@@ -455,6 +467,7 @@ OrderFull _$OrderFullFromJson(Map<String, dynamic> json) => $checkedCreate(
     'discountType': 'discount_type',
     'discountValue': 'discount_value',
     'orderNumber': 'order_number',
+    'orderRef': 'order_ref',
     'paymentMethod': 'payment_method',
     'shiftId': 'shift_id',
     'taxAmount': 'tax_amount',
@@ -483,6 +496,7 @@ Map<String, dynamic> _$OrderFullToJson(OrderFull instance) => <String, dynamic>{
   'id': instance.id,
   'notes': ?instance.notes,
   'order_number': instance.orderNumber,
+  'order_ref': ?instance.orderRef,
   'payment_method': instance.paymentMethod,
   'shift_id': instance.shiftId,
   'status': instance.status,

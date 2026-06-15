@@ -39,7 +39,7 @@ void main() {
       final comps = json['bundle_components'] as List;
       expect(comps[0]['size_label'], 'medium');
       expect(comps[0]['addons'], [
-        {'addon_item_id': 'oat', 'quantity': 1},
+        {'addon_item_id': 'oat', 'quantity': 1, 'unit_price': 500},
       ]);
     });
 

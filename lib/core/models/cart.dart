@@ -56,6 +56,9 @@ class SelectedAddon {
   Map<String, dynamic> toApiJson() => {
     'addon_item_id': addonItemId,
     'quantity':      quantity,
+    // The price the customer was charged for this addon (swap delta or extra).
+    // Recorded verbatim by the backend; absent → it re-prices from the catalog.
+    'unit_price':    priceModifier,
   };
 
   Map<String, dynamic> toStorageJson() => {
@@ -237,6 +240,8 @@ class CartItem {
       return {
         'bundle_id':          bundleId,
         'bundle_unit_price':  unitPrice,
+        // Charged bundle price (recorded verbatim; flagged if it drifts from catalog).
+        'unit_price':         unitPrice,
         'quantity':           quantity,
         'addons':             const [],           // required by backend serde
         'optional_field_ids': const [],           // required by backend serde
@@ -250,6 +255,9 @@ class CartItem {
       'menu_item_id':       menuItemId,
       'size_label':         sizeLabel,
       'quantity':           quantity,
+      // Charged line price (branch-effective). Recorded verbatim so the DB equals
+      // the receipt even if the synced menu was stale / the device was offline.
+      'unit_price':         unitPrice,
       'addons':             addons.map((a) => a.toApiJson()).toList(),
       'optional_field_ids': optionals.map((o) => o.optionalFieldId).toList(),
       if (notes != null) 'notes': notes,

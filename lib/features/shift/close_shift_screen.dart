@@ -19,6 +19,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatting.dart';
 import '../../core/utils/responsive.dart';
 import '../../shared/widgets/amount_field.dart';
+import '../../shared/widgets/animated_icons.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/app_top_bar.dart';
 import '../../shared/widgets/empty_state.dart';
@@ -341,12 +342,23 @@ class _CloseShiftScreenState extends ConsumerState<CloseShiftScreen> {
             actions: [
               if (shift != null)
                 printing
-                    ? const Padding(
-                        padding: EdgeInsetsDirectional.only(end: AppSpace.md),
+                    // Print-in-progress: the receipt feeds out of the printer
+                    // on a gentle loop while the report prints.
+                    ? Padding(
+                        padding: const EdgeInsetsDirectional.only(
+                            end: AppSpace.md),
                         child: SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                          width: 22,
+                          height: 22,
+                          child: LoopingIcon(
+                            duration: const Duration(milliseconds: 1500),
+                            builder: (_, a) => CustomPaint(
+                                size: const Size(22, 22),
+                                painter: PrinterPainter(
+                                    t: a,
+                                    color: t.navy,
+                                    paperFill: t.surface)),
+                          ),
                         ),
                       )
                     : IconButton(

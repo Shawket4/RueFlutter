@@ -18,9 +18,10 @@ import '../../core/services/offline_queue.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatting.dart';
 import '../../core/utils/responsive.dart';
+import '../../shared/widgets/new_order_banner.dart';
 import '../../shared/widgets/offline_banner.dart';
 import '../../shared/widgets/sync_status_chip.dart';
-import '../shift/cash_movement_sheet.dart';
+import '../delivery/widgets/delivery_realtime_host.dart';
 import 'checkout/checkout_sheet.dart';
 import 'widgets/action_drawer.dart';
 import 'widgets/cart_panel.dart';
@@ -52,6 +53,11 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
   final _searchFocus = FocusNode();
   Timer? _debounce;
   StreamSubscription<bool>? _connectivitySub;
+  Timer? _catalogSyncTimer;
+
+  /// How often to force-refresh the catalog while a shift is being worked, so a
+  /// long shift never drifts from central menu/price/discount/override changes.
+  static const _kCatalogSyncInterval = Duration(minutes: 10);
 
   @override
   void initState() {
@@ -77,6 +83,12 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
       if (online && mounted) _prefetch();
     });
 
+    // Periodic safety sync: while this screen is up (a shift is being worked),
+    // force-refresh the catalog every interval if online.
+    _catalogSyncTimer = Timer.periodic(_kCatalogSyncInterval, (_) {
+      if (mounted && ConnectivityService.instance.isOnline) _syncCatalog();
+    });
+
     // Desktop keyboard shortcuts.
     HardwareKeyboard.instance.addHandler(_handleKey);
   }
@@ -88,6 +100,7 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
     _searchFocus.dispose();
     _debounce?.cancel();
     _connectivitySub?.cancel();
+    _catalogSyncTimer?.cancel();
     super.dispose();
   }
 
@@ -119,6 +132,16 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
     return false;
   }
 
+  /// Force-refresh the catalog (menu incl. bundles + addons, discounts, payment
+  /// methods) for the current org. Fire-and-forget; errors keep the cache.
+  void _syncCatalog() {
+    final orgId = ref.read(authProvider).user?.orgId;
+    if (orgId == null) return;
+    unawaited(ref.read(menuProvider.notifier).load(orgId, force: true).catchError((_) {}));
+    unawaited(ref.read(discountProvider.notifier).load(orgId, force: true).catchError((_) {}));
+    unawaited(ref.read(paymentMethodProvider.notifier).load(orgId, force: true).catchError((_) {}));
+  }
+
   /// Bounded concurrent prefetch — same logic that was in HomeScreen._load().
   Future<void> _prefetch() async {
     final auth = ref.read(authProvider);
@@ -141,9 +164,11 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
               .read(orderHistoryProvider.notifier)
               .loadForShift(shift.id) // This serves local cache first
               .catchError((_) {}),
-        ref.read(menuProvider.notifier).load(orgId).catchError((_) {}),
-        ref.read(discountProvider.notifier).load(orgId).catchError((_) {}),
-        ref.read(paymentMethodProvider.notifier).load(orgId).catchError((_) {}),
+        // force: a fresh shift (this screen mounts right after open) and every
+        // reconnect both warrant a real catalog refresh, not a TTL-gated skip.
+        ref.read(menuProvider.notifier).load(orgId, force: true).catchError((_) {}),
+        ref.read(discountProvider.notifier).load(orgId, force: true).catchError((_) {}),
+        ref.read(paymentMethodProvider.notifier).load(orgId, force: true).catchError((_) {}),
       ]));
     }
 
@@ -173,8 +198,13 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
               SafeArea(
                 bottom: false,
                 child: Column(children: [
+                  // Invisible: keeps the delivery SSE/poll connection + alerts
+                  // alive app-wide while a shift is worked.
+                  const DeliveryRealtimeHost(),
                   TopBar(ctrl: _searchCtrl, query: query, searchFocus: _searchFocus),
                   const OfflineBanner(
+                      margin: EdgeInsetsDirectional.fromSTEB(10, 6, 10, 0)),
+                  const NewOrderBanner(
                       margin: EdgeInsetsDirectional.fromSTEB(10, 6, 10, 0)),
                   Expanded(
                     child: Row(children: [
@@ -304,11 +334,7 @@ class _BottomActionBar extends ConsumerWidget {
                         compact: compact,
                         disabled: !isOnline || shift == null,
                         tooltip: !isOnline ? s.commonCashOfflineHint : null,
-                        onTap: () {
-                          if (shift != null) {
-                            CashMovementSheet.show(context, shiftId: shift.id);
-                          }
-                        },
+                        onTap: () => context.push('/cash-movements'),
                       ),
                       _BarAction(
                         icon: Icons.schedule_rounded,

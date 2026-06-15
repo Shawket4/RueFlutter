@@ -12,10 +12,13 @@ class MenuApi {
     return (res.data as List).map((c) => Category.fromJson(c)).toList();
   }
 
-  Future<List<MenuItem>> items(String orgId) async {
+  Future<List<MenuItem>> items(String orgId, {String? branchId}) async {
     final res = await _c.dio.get('/menu-items', queryParameters: {
       'org_id': orgId,
       'full': 'true',
+      // With a branch, prices are branch-effective and branch-disabled items
+      // are excluded — so the teller charges (and now sends) the right price.
+      if (branchId != null && branchId.isNotEmpty) 'branch_id': branchId,
     });
     return (res.data as List)
         .map((m) => MenuItem.fromJson(m as Map<String, dynamic>))
@@ -27,8 +30,12 @@ class MenuApi {
     return MenuItem.fromJson(res.data as Map<String, dynamic>);
   }
 
-  Future<List<AddonItem>> addonItems(String orgId) async {
-    final res = await _c.dio.get('/addon-items', queryParameters: {'org_id': orgId});
+  Future<List<AddonItem>> addonItems(String orgId, {String? branchId}) async {
+    final res = await _c.dio.get('/addon-items', queryParameters: {
+      'org_id': orgId,
+      // Branch-effective addon prices + branch-disabled addons excluded.
+      if (branchId != null && branchId.isNotEmpty) 'branch_id': branchId,
+    });
     return (res.data as List)
         .map((a) => AddonItem.fromJson(a as Map<String, dynamic>))
         .toList();

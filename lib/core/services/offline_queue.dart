@@ -426,6 +426,7 @@ class OfflineQueueNotifier extends Notifier<OfflineQueueState> {
               shiftId: action.shiftId,
               openingCash: action.openingCash,
               openedAt: action.openedAt,
+              editReason: action.editReason,
             );
         onShiftOpenSynced?.call(result);
 
@@ -444,6 +445,11 @@ class OfflineQueueNotifier extends Notifier<OfflineQueueState> {
               tipAmount: action.tipAmount,
               tipPaymentMethod: action.tipPaymentMethod,
               paymentSplits: action.paymentSplits,
+              subtotal: action.subtotal,
+              discountAmount: action.discountAmount,
+              taxAmount: action.taxAmount,
+              totalAmount: action.totalAmount,
+              changeGiven: action.changeGiven,
               idempotencyKey: action.localId,
               createdAt: action.orderedAt,
         );

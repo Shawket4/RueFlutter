@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/models/shift.dart';
 import '../../../core/providers/auth_notifier.dart';
+import '../../../core/providers/delivery_orders_notifier.dart';
 import '../../../core/providers/shift_notifier.dart';
 import '../../../core/repositories/shift_repository.dart';
 import '../../../core/services/connectivity_service.dart';
@@ -14,7 +15,6 @@ import '../../../shared/widgets/offline_banner.dart';
 import '../../../shared/widgets/responsive_sheet.dart';
 import '../../../shared/widgets/section_header.dart';
 import '../../../shared/widgets/surface_card.dart';
-import '../../shift/cash_movement_sheet.dart';
 import '../../shift/shift_report_preview_sheet.dart';
 
 /// Bottom drawer with shift-level actions: navigation that doesn't fit the
@@ -77,6 +77,16 @@ class ActionDrawer extends ConsumerWidget {
                   padding: EdgeInsets.zero,
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
                     _ActionTile(
+                      icon: Icons.delivery_dining_rounded,
+                      label: 'Delivery Orders',
+                      disabled: shift == null,
+                      badge:
+                          ref.watch(deliveryOrdersProvider.select((d) => d.activeCount)),
+                      onTap: () =>
+                          _popThen(() => parentContext.push('/delivery-orders')),
+                    ),
+                    Divider(height: 1, color: t.borderLight),
+                    _ActionTile(
                       icon: Icons.schedule_rounded,
                       label: s.shellPastShifts,
                       onTap: () =>
@@ -102,12 +112,8 @@ class ActionDrawer extends ConsumerWidget {
                       label: s.shellCashInOut,
                       disabled: !isOnline || shift == null,
                       subtitle: !isOnline ? s.commonCashOfflineHint : null,
-                      onTap: () => _popThen(() {
-                        if (shift != null) {
-                          CashMovementSheet.show(parentContext,
-                              shiftId: shift.id);
-                        }
-                      }),
+                      onTap: () =>
+                          _popThen(() => parentContext.push('/cash-movements')),
                     ),
                     Divider(height: 1, color: t.borderLight),
                     _ActionTile(
@@ -321,6 +327,9 @@ class _ActionTile extends StatelessWidget {
   final bool disabled;
   final String? subtitle;
 
+  /// Optional trailing count badge (e.g. active delivery orders). 0 hides it.
+  final int badge;
+
   const _ActionTile({
     required this.icon,
     required this.label,
@@ -328,6 +337,7 @@ class _ActionTile extends StatelessWidget {
     this.danger = false,
     this.disabled = false,
     this.subtitle,
+    this.badge = 0,
   });
 
   @override
@@ -373,6 +383,19 @@ class _ActionTile extends StatelessWidget {
               ],
             ),
           ),
+          if (badge > 0 && !disabled)
+            Container(
+              margin: const EdgeInsetsDirectional.only(start: AppSpace.sm),
+              padding: const EdgeInsetsDirectional.symmetric(
+                  horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: t.accent,
+                borderRadius: BorderRadius.circular(AppRadius.pill),
+              ),
+              child: Text('$badge',
+                  style: ui(
+                      size: 12, weight: FontWeight.w800, color: Colors.white)),
+            ),
         ]),
       ),
     );

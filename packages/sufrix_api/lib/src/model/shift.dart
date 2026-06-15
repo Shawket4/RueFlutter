@@ -22,6 +22,8 @@ class Shift {
 
     required  this.branchId,
 
+     this.branchName,
+
      this.cashDiscrepancy,
 
      this.closedAt,
@@ -68,6 +70,19 @@ class Shift {
 
 
   final String branchId;
+
+
+
+      /// Branch label — only populated by the shifts list (so the \"All branches\" view can show which branch each shift belongs to). Other shift endpoints leave it `null`.
+  @JsonKey(
+    
+    name: r'branch_name',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final String? branchName;
 
 
 
@@ -292,6 +307,7 @@ class Shift {
     @override
     bool operator ==(Object other) => identical(this, other) || other is Shift &&
       other.branchId == branchId &&
+      other.branchName == branchName &&
       other.cashDiscrepancy == cashDiscrepancy &&
       other.closedAt == closedAt &&
       other.closedBy == closedBy &&
@@ -314,6 +330,7 @@ class Shift {
     @override
     int get hashCode =>
         branchId.hashCode +
+        (branchName == null ? 0 : branchName.hashCode) +
         (cashDiscrepancy == null ? 0 : cashDiscrepancy.hashCode) +
         (closedAt == null ? 0 : closedAt.hashCode) +
         (closedBy == null ? 0 : closedBy.hashCode) +

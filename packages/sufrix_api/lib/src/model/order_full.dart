@@ -45,6 +45,8 @@ class OrderFull {
 
     required  this.orderNumber,
 
+     this.orderRef,
+
     required  this.paymentMethod,
 
     required  this.shiftId,
@@ -219,6 +221,19 @@ class OrderFull {
 
 
   final int orderNumber;
+
+
+
+      /// Human-readable, org-unique reference (e.g. \"DT-260614-0042\"). Additive alongside the per-shift order_number. Optional only during the rollout window before the historical backfill runs; never null afterwards.
+  @JsonKey(
+    
+    name: r'order_ref',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final String? orderRef;
 
 
 
@@ -431,6 +446,7 @@ class OrderFull {
       other.id == id &&
       other.notes == notes &&
       other.orderNumber == orderNumber &&
+      other.orderRef == orderRef &&
       other.paymentMethod == paymentMethod &&
       other.shiftId == shiftId &&
       other.status == status &&
@@ -462,6 +478,7 @@ class OrderFull {
         id.hashCode +
         notes.hashCode +
         orderNumber.hashCode +
+        orderRef.hashCode +
         paymentMethod.hashCode +
         shiftId.hashCode +
         status.hashCode +

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/models/bundle.dart';
@@ -10,7 +9,6 @@ import '../../../core/utils/formatting.dart';
 import '../../../shared/widgets/status_chip.dart';
 import '../helpers/category_style.dart';
 import 'bundle_detail_sheet.dart';
-import 'menu_card.dart';
 
 class BundleCard extends ConsumerWidget {
   final Bundle bundle;
@@ -23,7 +21,6 @@ class BundleCard extends ConsumerWidget {
   });
 
   void _onTap(BuildContext context, WidgetRef ref) {
-    HapticFeedback.lightImpact();
     BundleDetailSheet.configureAndAdd(
       context,
       ref,
@@ -40,7 +37,7 @@ class BundleCard extends ConsumerWidget {
     final style =
         CatStyle.of(bundle.name, brightness: Theme.of(context).brightness);
     final imageUrl = bundle.previewImageUrl(menuItems);
-    final hasImage = imageUrl != null && imageUrl.isNotEmpty;
+    final hasImage = isLoadableImageUrl(imageUrl);
     final savings = bundle.savingsVsComponents(menuItems);
     final compCount = bundle.components.length;
 
@@ -63,9 +60,11 @@ class BundleCard extends ConsumerWidget {
                 children: [
                   hasImage
                       ? MenuImage(
-                          url: imageUrl,
+                          url: imageUrl!,
                           fit: BoxFit.cover,
-                          placeholder: const ImageSkeleton(),
+                          // Avatar as placeholder too — never a blank grey box
+                          // while a slow/dead image host is tried.
+                          placeholder: _BundlePlaceholder(style: style),
                           errorWidget: _BundlePlaceholder(style: style),
                         )
                       : _BundlePlaceholder(style: style),

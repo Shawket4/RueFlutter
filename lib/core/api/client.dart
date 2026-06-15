@@ -112,6 +112,13 @@ String? _extractServerMessage(dynamic body) {
   return null;
 }
 
+/// True when the error is an HTTP 401 — the token was rejected (expired or
+/// invalid), as opposed to a transport failure. Used to tell a dead session
+/// apart from a flaky connection so we never proceed as "authenticated" on a
+/// token the server has already refused.
+bool isUnauthorizedError(Object e) =>
+    e is DioException && e.response?.statusCode == 401;
+
 bool isNetworkError(Object e) {
   if (e is DioException) {
     if (e.type == DioExceptionType.connectionError    ||

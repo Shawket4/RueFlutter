@@ -186,6 +186,15 @@ class StorageService {
   List<Map<String, dynamic>>? loadOrders(String shiftId) =>
       _decodeList('orders_$shiftId');
 
+  // ── Delivery orders ────────────────────────────────────────────────────────────
+
+  Future<void> saveDeliveryOrders(
+          String branchId, List<Map<String, dynamic>> orders) =>
+      _kv.setString('delivery_orders_$branchId', jsonEncode(orders));
+
+  List<Map<String, dynamic>>? loadDeliveryOrders(String branchId) =>
+      _decodeList('delivery_orders_$branchId');
+
   // ── Shifts list ───────────────────────────────────────────────────────────────
 
   Future<void> saveShifts(

@@ -278,6 +278,42 @@ abstract class AppLocalizations {
   /// **'Cash Out'**
   String get cashOut;
 
+  /// No description provided for @cashMovementsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash Movements'**
+  String get cashMovementsTitle;
+
+  /// No description provided for @cashMovementsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash added to or removed from the drawer'**
+  String get cashMovementsSubtitle;
+
+  /// No description provided for @cashMovementsNew.
+  ///
+  /// In en, this message translates to:
+  /// **'New Movement'**
+  String get cashMovementsNew;
+
+  /// No description provided for @cashMovementsNet.
+  ///
+  /// In en, this message translates to:
+  /// **'Net'**
+  String get cashMovementsNet;
+
+  /// No description provided for @cashMovementsEmptyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Record cash put into or taken out of the drawer during this shift.'**
+  String get cashMovementsEmptyBody;
+
+  /// No description provided for @cashMovementsNeedShift.
+  ///
+  /// In en, this message translates to:
+  /// **'Open a shift to record cash movements.'**
+  String get cashMovementsNeedShift;
+
   /// No description provided for @cashMovementOfflineError.
   ///
   /// In en, this message translates to:
@@ -727,6 +763,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Suggested — carried over from the last close'**
   String get shiftSuggestedFromLastClose;
+
+  /// No description provided for @shiftOpeningReasonLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason for difference'**
+  String get shiftOpeningReasonLabel;
+
+  /// No description provided for @shiftOpeningReasonHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. added a float, removed cash for a safe drop'**
+  String get shiftOpeningReasonHint;
+
+  /// No description provided for @shiftOpeningReasonRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a reason — the opening differs from the carried-over closing cash'**
+  String get shiftOpeningReasonRequired;
+
+  /// No description provided for @shiftOpeningDiffersHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Differs from the carried-over {amount} — a reason is required'**
+  String shiftOpeningDiffersHint(Object amount);
 
   /// No description provided for @shiftErrorValidCash.
   ///
@@ -1489,6 +1549,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Orders'**
   String get orderHistoryTitle;
+
+  /// No description provided for @orderShowMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Show {count} more'**
+  String orderShowMore(Object count);
 
   /// No description provided for @orderCurrentShift.
   ///

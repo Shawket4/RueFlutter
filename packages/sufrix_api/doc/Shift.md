@@ -9,6 +9,7 @@ import 'package:sufrix_api/api.dart';
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **branchId** | **String** |  | 
+**branchName** | **String** | Branch label — only populated by the shifts list (so the \"All branches\" view can show which branch each shift belongs to). Other shift endpoints leave it `null`. | [optional] 
 **cashDiscrepancy** | **int** |  | [optional] 
 **closedAt** | [**DateTime**](DateTime.md) |  | [optional] 
 **closedBy** | **String** |  | [optional] 

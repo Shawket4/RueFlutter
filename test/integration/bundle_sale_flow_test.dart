@@ -91,7 +91,7 @@ void main() {
     expect(api['quantity'], 2);
     final comps = api['bundle_components'] as List;
     expect(comps[0]['addons'], [
-      {'addon_item_id': 'oat', 'quantity': 1},
+      {'addon_item_id': 'oat', 'quantity': 1, 'unit_price': 500},
     ]);
 
     final stored = CartItem.fromStorageJson(line.toStorageJson());

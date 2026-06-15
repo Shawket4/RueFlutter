@@ -11,8 +11,10 @@ import '../../core/repositories/order_repository.dart';
 import '../../core/repositories/shift_repository.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatting.dart';
+import '../../shared/widgets/animated_icons.dart';
 import '../../shared/widgets/app_top_bar.dart';
 import '../../shared/widgets/empty_state.dart';
+import '../../shared/widgets/refresh_button.dart';
 import '../../shared/widgets/status_chip.dart';
 import '../../shared/widgets/surface_card.dart';
 import '../order/widgets/receipt_preview_sheet.dart';
@@ -25,9 +27,37 @@ import 'shift_report_preview_sheet.dart';
 
 class _HistoryState {
   final List<Shift> shifts;
-  final bool loading;
+  final bool loading;      // first page / refresh in flight
+  final bool loadingMore;  // appending a later page
+  final bool hasMore;      // server reported further pages
+  final int page;          // highest page loaded so far (0 = none)
   final String? error;
-  const _HistoryState({this.shifts = const [], this.loading = true, this.error});
+  const _HistoryState({
+    this.shifts = const [],
+    this.loading = true,
+    this.loadingMore = false,
+    this.hasMore = false,
+    this.page = 0,
+    this.error,
+  });
+
+  _HistoryState copyWith({
+    List<Shift>? shifts,
+    bool? loading,
+    bool? loadingMore,
+    bool? hasMore,
+    int? page,
+    String? error,
+    bool clearError = false,
+  }) =>
+      _HistoryState(
+        shifts: shifts ?? this.shifts,
+        loading: loading ?? this.loading,
+        loadingMore: loadingMore ?? this.loadingMore,
+        hasMore: hasMore ?? this.hasMore,
+        page: page ?? this.page,
+        error: clearError ? null : (error ?? this.error),
+      );
 }
 
 final _historyProvider =
@@ -43,30 +73,83 @@ class _HistoryController extends AutoDisposeNotifier<_HistoryState> {
     return const _HistoryState();
   }
 
-  void noBranch(String message) =>
-      state = _HistoryState(shifts: state.shifts, loading: false, error: message);
+  void noBranch(String message) => state =
+      state.copyWith(loading: false, loadingMore: false, error: message);
 
+  /// (Re)load from the first page. Paints cached shifts instantly, then
+  /// replaces them with the freshest page from the server.
   Future<void> load(String branchId) async {
-    state = _HistoryState(shifts: state.shifts, loading: true);
+    state = state.copyWith(loading: true, clearError: true);
     try {
-      final local = ref.read(shiftRepositoryProvider).loadShiftsLocal(branchId);
+      final repo = ref.read(shiftRepositoryProvider);
+
+      // Instant paint from the last cached page.
+      final local = repo.loadShiftsLocal(branchId);
       if (local != null && local.isNotEmpty && !_disposed) {
-        state = _HistoryState(shifts: local, loading: false);
+        state = state.copyWith(shifts: local, loading: false);
       }
-      final fresh =
-          await ref.read(shiftRepositoryProvider).fetchShiftsFresh(branchId);
-      if (!_disposed) {
-        state = _HistoryState(shifts: fresh, loading: false);
-      }
+
+      final pageData = await repo.fetchShiftsPage(branchId, page: 1);
+      if (_disposed) return;
+      await repo.cacheShifts(branchId, pageData.shifts);
+      state = _HistoryState(
+        shifts: _withLocalOpenShift(branchId, pageData.shifts),
+        loading: false,
+        hasMore: pageData.hasMore,
+        page: 1,
+      );
     } catch (e) {
       if (!_disposed) {
-        state = _HistoryState(
-          shifts: state.shifts,
+        state = state.copyWith(
           loading: false,
+          loadingMore: false,
+          hasMore: false,
           error: state.shifts.isEmpty ? e.toString() : null,
         );
       }
     }
+  }
+
+  /// Append the next page. No-op while already busy or when no more pages.
+  Future<void> loadMore(String branchId) async {
+    if (_disposed ||
+        state.loading ||
+        state.loadingMore ||
+        !state.hasMore) {
+      return;
+    }
+    state = state.copyWith(loadingMore: true);
+    try {
+      final next = state.page + 1;
+      final pageData = await ref
+          .read(shiftRepositoryProvider)
+          .fetchShiftsPage(branchId, page: next);
+      if (_disposed) return;
+      final seen = state.shifts.map((s) => s.id).toSet();
+      final merged = [
+        ...state.shifts,
+        ...pageData.shifts.where((s) => !seen.contains(s.id)),
+      ];
+      state = state.copyWith(
+        shifts: merged,
+        loadingMore: false,
+        hasMore: pageData.hasMore,
+        page: next,
+      );
+    } catch (_) {
+      if (!_disposed) state = state.copyWith(loadingMore: false);
+    }
+  }
+
+  /// Surface a locally-open shift (e.g. opened while offline, not yet synced)
+  /// at the top of the first page so the teller always sees their live shift.
+  List<Shift> _withLocalOpenShift(String branchId, List<Shift> serverShifts) {
+    final pre = ref.read(shiftRepositoryProvider).loadShiftLocal(branchId);
+    final local = (pre != null && pre.hasOpenShift) ? pre.openShift : null;
+    if (local == null || serverShifts.any((s) => s.id == local.id)) {
+      return serverShifts;
+    }
+    return [local, ...serverShifts];
   }
 }
 
@@ -162,10 +245,25 @@ class ShiftHistoryScreen extends ConsumerStatefulWidget {
 }
 
 class _ShiftHistoryScreenState extends ConsumerState<ShiftHistoryScreen> {
+  final ScrollController _scroll = ScrollController();
+
   @override
   void initState() {
     super.initState();
+    _scroll.addListener(_onScroll);
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+  }
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (!_scroll.hasClients) return;
+    final pos = _scroll.position;
+    if (pos.pixels >= pos.maxScrollExtent - 320) _loadMore();
   }
 
   void _load() {
@@ -180,20 +278,24 @@ class _ShiftHistoryScreenState extends ConsumerState<ShiftHistoryScreen> {
     ref.read(_historyProvider.notifier).load(branchId);
   }
 
+  void _loadMore() {
+    if (!mounted) return;
+    final branchId = ref.read(authProvider).user?.branchId;
+    if (branchId == null) return;
+    ref.read(_historyProvider.notifier).loadMore(branchId);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final t = context.tokens;
-
     return Scaffold(
       body: Column(children: [
         AppTopBar(
           title: l10n(context).shiftHistoryTitle,
           subtitle: l10n(context).shiftHistorySubtitle,
           actions: [
-            IconButton(
-              onPressed: _load,
-              tooltip: l10n(context).commonRefresh,
-              icon: Icon(Icons.refresh_rounded, size: 20, color: t.textPrimary),
+            RefreshButton(
+              onTap: _load,
+              loading: ref.watch(_historyProvider.select((h) => h.loading)),
             ),
           ],
         ),
@@ -234,12 +336,19 @@ class _ShiftHistoryScreenState extends ConsumerState<ShiftHistoryScreen> {
             ],
             Expanded(
               child: ListView.builder(
+                controller: _scroll,
                 padding: EdgeInsets.zero,
-                itemCount: history.shifts.length,
-                itemBuilder: (_, i) => _ShiftRow(
-                    shift: history.shifts[i],
-                    isEven: i.isEven,
-                    compact: compact),
+                itemCount: history.shifts.length +
+                    (history.hasMore || history.loadingMore ? 1 : 0),
+                itemBuilder: (_, i) {
+                  if (i >= history.shifts.length) {
+                    return const _LoadMoreFooter();
+                  }
+                  return _ShiftRow(
+                      shift: history.shifts[i],
+                      isEven: i.isEven,
+                      compact: compact);
+                },
               ),
             ),
           ]),
@@ -247,6 +356,23 @@ class _ShiftHistoryScreenState extends ConsumerState<ShiftHistoryScreen> {
       );
     });
   }
+}
+
+/// Spinner pinned to the end of the list while the next page loads (or is about
+/// to, once the scroll listener fires).
+class _LoadMoreFooter extends StatelessWidget {
+  const _LoadMoreFooter();
+  @override
+  Widget build(BuildContext context) => const Padding(
+        padding: EdgeInsets.symmetric(vertical: AppSpace.lg),
+        child: Center(
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -671,6 +797,10 @@ class _PastOrderRow extends ConsumerWidget {
             const SizedBox(height: 2),
             Text(methodText,
                 style: ui(size: 11, weight: FontWeight.w600, color: t.navy)),
+            if (o.orderRef != null) ...[
+              const SizedBox(height: 2),
+              Text(o.orderRef!, style: ui(size: 10, color: t.textMuted)),
+            ],
           ]),
         ),
 
@@ -684,12 +814,20 @@ class _PastOrderRow extends ConsumerWidget {
                 decoration: isVoided ? TextDecoration.lineThrough : null)),
         const SizedBox(width: AppSpace.md),
 
-        // Print button
+        // Print button — while printing, the receipt feeds out of the
+        // printer on a gentle loop in place of a plain spinner.
         printing
-            ? const SizedBox(
+            ? SizedBox(
                 width: 24,
                 height: 24,
-                child: CircularProgressIndicator(strokeWidth: 2))
+                child: LoopingIcon(
+                  duration: const Duration(milliseconds: 1500),
+                  builder: (_, a) => CustomPaint(
+                      size: const Size(24, 24),
+                      painter: PrinterPainter(
+                          t: a, color: t.navy, paperFill: t.surface)),
+                ),
+              )
             : AnimatedPressScale(
                 onTap: () => _print(context, ref),
                 child: Container(

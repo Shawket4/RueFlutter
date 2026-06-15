@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/bundle.dart';
 import '../models/menu.dart';
 import '../repositories/menu_repository.dart';
+import 'auth_notifier.dart';
 import '../services/connectivity_service.dart';
 import '../services/menu_image_cache.dart';
 import '../storage/storage_service.dart';
@@ -162,12 +163,16 @@ class MenuNotifier extends Notifier<MenuState> {
 
     final repo      = ref.read(menuRepositoryProvider);
     final isOnline  = ConnectivityService.instance.isOnline;
-    final cachedAt  = ref.read(storageServiceProvider).menuCachedAt(orgId);
+    // The teller is bound to one branch — fetch & cache the branch-effective
+    // menu so displayed (and now charged) prices match this branch.
+    final branchId  = ref.read(authProvider).user?.branchId;
+    final scope     = menuScopeKey(orgId, branchId);
+    final cachedAt  = ref.read(storageServiceProvider).menuCachedAt(scope);
 
     // ── Phase 1: serve local immediately ──────────────────────────────────
-    final localMenu    = repo.loadMenuLocal(orgId);
+    final localMenu    = repo.loadMenuLocal(orgId, branchId: branchId);
     final localBundles = repo.loadBundlesLocal(orgId);
-    final localAddons  = repo.loadAddonsLocal(orgId);
+    final localAddons  = repo.loadAddonsLocal(orgId, branchId: branchId);
 
     if (localMenu != null) {
       state = state.copyWith(
@@ -205,12 +210,12 @@ class MenuNotifier extends Notifier<MenuState> {
 
     // ── Phase 2: background refresh ───────────────────────────────────────
     try {
-      final staleMenu    = await repo.isStale('menu:$orgId');
+      final staleMenu    = await repo.isStale('menu:$scope');
       final staleBundles = await repo.isStale('bundles:$orgId');
-      final staleAddons  = await repo.isStale('addons:$orgId');
+      final staleAddons  = await repo.isStale('addons:$scope');
       final results = await Future.wait([
         if (staleMenu || force || localMenu == null)
-          repo.fetchMenuFresh(orgId)
+          repo.fetchMenuFresh(orgId, branchId: branchId)
         else
           Future.value(localMenu),
         if (staleBundles || force || localBundles == null)
@@ -218,7 +223,7 @@ class MenuNotifier extends Notifier<MenuState> {
         else
           Future.value(localBundles),
         if (staleAddons || force || localAddons == null)
-          repo.fetchAddonsFresh(orgId)
+          repo.fetchAddonsFresh(orgId, branchId: branchId)
         else
           Future.value(localAddons),
       ]);

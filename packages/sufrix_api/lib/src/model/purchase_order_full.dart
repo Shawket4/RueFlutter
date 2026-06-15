@@ -23,6 +23,8 @@ class PurchaseOrderFull {
 
     required  this.branchId,
 
+     this.branchName,
+
     required  this.createdAt,
 
     required  this.createdBy,
@@ -61,6 +63,19 @@ class PurchaseOrderFull {
 
 
   final String branchId;
+
+
+
+      /// Branch label — populated by the order lists so the \"All branches\" view can show which branch each PO belongs to; other endpoints leave it null.
+  @JsonKey(
+    
+    name: r'branch_name',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final String? branchName;
 
 
 
@@ -237,6 +252,7 @@ class PurchaseOrderFull {
     @override
     bool operator ==(Object other) => identical(this, other) || other is PurchaseOrderFull &&
       other.branchId == branchId &&
+      other.branchName == branchName &&
       other.createdAt == createdAt &&
       other.createdBy == createdBy &&
       other.expectedAt == expectedAt &&
@@ -255,6 +271,7 @@ class PurchaseOrderFull {
     @override
     int get hashCode =>
         branchId.hashCode +
+        branchName.hashCode +
         createdAt.hashCode +
         createdBy.hashCode +
         expectedAt.hashCode +

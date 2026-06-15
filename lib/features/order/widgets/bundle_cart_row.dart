@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/models/cart.dart';
 import '../../../core/providers/cart_notifier.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatting.dart';
+import '../../../core/utils/haptics.dart';
+import '../../../shared/widgets/animated_icons.dart';
 import '../../../shared/widgets/confirm_sheet.dart';
 import 'shared_widgets.dart';
 
@@ -95,7 +96,7 @@ class BundleCartRow extends ConsumerWidget {
           InlineBtn(
               icon: Icons.remove,
               onTap: () {
-                HapticFeedback.lightImpact();
+                Haptics.selection();
                 if (item.quantity == 1) {
                   _confirmRemove(context, ref);
                 } else {
@@ -115,26 +116,25 @@ class BundleCartRow extends ConsumerWidget {
           InlineBtn(
               icon: Icons.add,
               onTap: () {
-                HapticFeedback.lightImpact();
+                Haptics.selection();
                 ref
                     .read(cartProvider.notifier)
                     .setQty(index, item.quantity + 1);
               }),
           const Spacer(),
-          GestureDetector(
-            onTap: () {
-              HapticFeedback.mediumImpact();
-              _confirmRemove(context, ref);
-            },
-            child: Container(
+          TapToPlayIcon(
+            onTapDown: Haptics.impact,
+            onPressed: () => _confirmRemove(context, ref),
+            builder: (_, anim) => Container(
                 width: 28,
                 height: 28,
+                alignment: Alignment.center,
                 decoration: BoxDecoration(
                     color: t.dangerBg,
                     borderRadius: BorderRadius.circular(AppRadius.sm)),
-                alignment: Alignment.center,
-                child: Icon(Icons.delete_outline_rounded,
-                    size: 14, color: t.danger)),
+                child: CustomPaint(
+                    size: const Size(20, 20),
+                    painter: TrashPainter(t: anim, color: t.danger))),
           ),
         ]),
       ]),

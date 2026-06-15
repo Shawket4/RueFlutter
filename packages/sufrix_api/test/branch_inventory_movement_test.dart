@@ -27,6 +27,12 @@ void main() {
       // TODO
     });
 
+    // Branch name; only populated by the all-branches waste roll-up (nil {branch_id}). `None` for single-branch queries that do not select it.
+    // String branchName
+    test('to test the property `branchName`', () async {
+      // TODO
+    });
+
     // DateTime createdAt
     test('to test the property `createdAt`', () async {
       // TODO

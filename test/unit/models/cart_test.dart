@@ -27,7 +27,7 @@ void main() {
       expect(modified.quantity, 3);
       expect(modified.name, 'Milk');
 
-      expect(addon.toApiJson(), {'addon_item_id': 'a1', 'quantity': 2});
+      expect(addon.toApiJson(), {'addon_item_id': 'a1', 'quantity': 2, 'unit_price': 100});
       
       final storage = addon.toStorageJson();
       expect(storage['addon_item_id'], 'a1');

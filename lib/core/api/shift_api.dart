@@ -1,7 +1,27 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../models/cash_movement.dart';
 import '../models/shift.dart';
 import '../models/shift_report.dart';
 import 'client.dart';
+
+/// One page of the shifts list (newest first). Mirrors the backend
+/// `PaginatedShifts` envelope.
+class ShiftPage {
+  final List<Shift> shifts;
+  final int total;
+  final int page;
+  final int perPage;
+  final int totalPages;
+  const ShiftPage({
+    required this.shifts,
+    required this.total,
+    required this.page,
+    required this.perPage,
+    required this.totalPages,
+  });
+
+  bool get hasMore => page < totalPages;
+}
 
 class ShiftApi {
   final DioClient _c;
@@ -12,16 +32,40 @@ class ShiftApi {
     return ShiftPreFill.fromJson(res.data as Map<String, dynamic>);
   }
 
-  Future<List<Shift>> list(String branchId) async {
-    final res = await _c.dio.get('/shifts/branches/$branchId');
-    return (res.data as List).map((s) => Shift.fromJson(s)).toList();
+  /// Paginated shifts list. The backend returns a `PaginatedShifts` envelope;
+  /// supplying `page`/`perPage` requests one bounded page (the list grows
+  /// without bound over time, so the history screen pages through it).
+  Future<ShiftPage> list(String branchId, {int? page, int? perPage}) async {
+    final res = await _c.dio.get(
+      '/shifts/branches/$branchId',
+      queryParameters: {
+        if (page != null) 'page': page,
+        if (perPage != null) 'per_page': perPage,
+      },
+    );
+    final body = res.data as Map<String, dynamic>;
+    final shifts = (body['data'] as List)
+        .map((s) => Shift.fromJson(s as Map<String, dynamic>))
+        .toList();
+    return ShiftPage(
+      shifts: shifts,
+      total: (body['total'] as num).toInt(),
+      page: (body['page'] as num).toInt(),
+      perPage: (body['per_page'] as num).toInt(),
+      totalPages: (body['total_pages'] as num).toInt(),
+    );
   }
 
-  /// Standard online open — server generates the UUID.
-  Future<Shift> open(String branchId, int openingCash) async {
+  /// Standard online open — server generates the UUID. `editReason` is sent when
+  /// the opening cash deviates from the carried-over closing (the server requires
+  /// it and derives `opening_cash_was_edited` itself).
+  Future<Shift> open(String branchId, int openingCash, {String? editReason}) async {
     final res = await _c.dio.post(
       '/shifts/branches/$branchId/open',
-      data: {'opening_cash': openingCash},
+      data: {
+        'opening_cash': openingCash,
+        if (editReason != null) 'edit_reason': editReason,
+      },
     );
     return Shift.fromJson(res.data as Map<String, dynamic>);
   }
@@ -33,6 +77,7 @@ class ShiftApi {
     required String shiftId,
     required int openingCash,
     required DateTime openedAt,
+    String? editReason,
   }) async {
     final res = await _c.dio.post(
       '/shifts/branches/$branchId/open',
@@ -40,6 +85,7 @@ class ShiftApi {
         'id': shiftId,
         'opening_cash': openingCash,
         'opened_at': openedAt.toUtc().toIso8601String(),
+        if (editReason != null) 'edit_reason': editReason,
       },
     );
     return Shift.fromJson(res.data as Map<String, dynamic>);
@@ -72,6 +118,14 @@ class ShiftApi {
           .fold<int>(0, (s, m) => s + (m['amount'] as int));
     } catch (_) {}
     return movements;
+  }
+
+  /// Full cash-movement list for a shift (newest-first is left to the caller).
+  Future<List<CashMovement>> listCashMovements(String shiftId) async {
+    final res = await _c.dio.get('/shifts/$shiftId/cash-movements');
+    return (res.data as List)
+        .map((m) => CashMovement.fromJson(m as Map<String, dynamic>))
+        .toList();
   }
 
   Future<ShiftReport> getReport(String shiftId) async {

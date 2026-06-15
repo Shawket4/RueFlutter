@@ -44,9 +44,12 @@ sealed class PendingAction {
 // ---------------------------------------------------------------------------
 class PendingShiftOpen extends PendingAction {
   final String branchId;
-  final String shiftId; 
+  final String shiftId;
   final int openingCash;
   final DateTime openedAt;
+  /// Reason the opening differs from the carried-over closing cash; required by
+  /// the backend on a deviation and must survive the offline round-trip.
+  final String? editReason;
 
   const PendingShiftOpen({
     required super.localId,
@@ -57,12 +60,14 @@ class PendingShiftOpen extends PendingAction {
     required this.shiftId,
     required this.openingCash,
     required this.openedAt,
+    this.editReason,
   }) : super(type: PendingActionType.shiftOpen);
 
   @override
   PendingShiftOpen withIncrementedRetry(String error) => PendingShiftOpen(
         localId: localId, createdAt: createdAt, branchId: branchId,
         shiftId: shiftId, openingCash: openingCash, openedAt: openedAt,
+        editReason: editReason,
         retryCount: retryCount + 1, lastError: error,
       );
 
@@ -70,6 +75,7 @@ class PendingShiftOpen extends PendingAction {
   PendingShiftOpen withResetRetry() => PendingShiftOpen(
         localId: localId, createdAt: createdAt, branchId: branchId,
         shiftId: shiftId, openingCash: openingCash, openedAt: openedAt,
+        editReason: editReason,
       );
 
   @override
@@ -77,6 +83,7 @@ class PendingShiftOpen extends PendingAction {
         'local_id': localId, 'type': type.name, 'created_at': createdAt.toUtc().toIso8601String(),
         'retry_count': retryCount, 'last_error': lastError, 'branch_id': branchId,
         'shift_id': shiftId, 'opening_cash': openingCash, 'opened_at': openedAt.toUtc().toIso8601String(),
+        'edit_reason': editReason,
       };
 
   factory PendingShiftOpen.fromJson(Map<String, dynamic> j) => PendingShiftOpen(
@@ -88,6 +95,7 @@ class PendingShiftOpen extends PendingAction {
         shiftId: j['shift_id'] as String,
         openingCash: j['opening_cash'] as int,
         openedAt: DateTime.parse(j['opened_at'] as String),
+        editReason: j['edit_reason'] as String?,
       );
 }
 
@@ -114,6 +122,15 @@ class PendingOrder extends PendingAction {
   /// Lets the shift drawer guidance include still-queued offline orders.
   final int cashAmount;
 
+  /// Charged money breakdown captured at checkout (piastres). Sent on sync so
+  /// the recorded amounts equal what the customer paid even if this order was
+  /// queued offline and the central menu/overrides changed before it synced.
+  final int? subtotal;
+  final int? discountAmount;
+  final int? taxAmount;
+  final int? totalAmount;
+  final int? changeGiven;
+
   const PendingOrder({
     required super.localId,
     required super.createdAt,
@@ -134,6 +151,11 @@ class PendingOrder extends PendingAction {
     required this.items,
     required this.orderedAt,
     this.cashAmount = 0,
+    this.subtotal,
+    this.discountAmount,
+    this.taxAmount,
+    this.totalAmount,
+    this.changeGiven,
   }) : super(type: PendingActionType.order);
 
   @override
@@ -143,6 +165,8 @@ class PendingOrder extends PendingAction {
         discountValue: discountValue, discountId: discountId, amountTendered: amountTendered,
         tipAmount: tipAmount, tipPaymentMethod: tipPaymentMethod, paymentSplits: paymentSplits,
         items: items, orderedAt: orderedAt, cashAmount: cashAmount,
+        subtotal: subtotal, discountAmount: discountAmount, taxAmount: taxAmount,
+        totalAmount: totalAmount, changeGiven: changeGiven,
         retryCount: retryCount + 1, lastError: error,
       );
 
@@ -153,6 +177,8 @@ class PendingOrder extends PendingAction {
         discountValue: discountValue, discountId: discountId, amountTendered: amountTendered,
         tipAmount: tipAmount, tipPaymentMethod: tipPaymentMethod, paymentSplits: paymentSplits,
         items: items, orderedAt: orderedAt, cashAmount: cashAmount,
+        subtotal: subtotal, discountAmount: discountAmount, taxAmount: taxAmount,
+        totalAmount: totalAmount, changeGiven: changeGiven,
       );
 
   @override
@@ -165,6 +191,11 @@ class PendingOrder extends PendingAction {
         if (paymentSplits != null) 'payment_splits': paymentSplits!.map((s) => s.toApiJson()).toList(),
         'ordered_at': orderedAt.toUtc().toIso8601String(),
         'cash_amount': cashAmount,
+        if (subtotal       != null) 'subtotal':        subtotal,
+        if (discountAmount != null) 'discount_amount': discountAmount,
+        if (taxAmount      != null) 'tax_amount':      taxAmount,
+        if (totalAmount    != null) 'total_amount':    totalAmount,
+        if (changeGiven    != null) 'change_given':    changeGiven,
         'items': items.map((i) => i.toStorageJson()).toList(),
       };
 
@@ -191,6 +222,11 @@ class PendingOrder extends PendingAction {
             .toList(),
         orderedAt: DateTime.parse((j['ordered_at'] as String?) ?? j['created_at'] as String),
         cashAmount: (j['cash_amount'] as num?)?.toInt() ?? 0,
+        subtotal: (j['subtotal'] as num?)?.toInt(),
+        discountAmount: (j['discount_amount'] as num?)?.toInt(),
+        taxAmount: (j['tax_amount'] as num?)?.toInt(),
+        totalAmount: (j['total_amount'] as num?)?.toInt(),
+        changeGiven: (j['change_given'] as num?)?.toInt(),
         items: (j['items'] as List).map((i) => CartItem.fromStorageJson(i as Map<String, dynamic>)).toList(),
       );
 }

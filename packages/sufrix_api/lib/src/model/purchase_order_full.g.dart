@@ -9,6 +9,8 @@ part of 'purchase_order_full.dart';
 abstract class _$PurchaseOrderFullCWProxy {
   PurchaseOrderFull branchId(String branchId);
 
+  PurchaseOrderFull branchName(String? branchName);
+
   PurchaseOrderFull createdAt(DateTime createdAt);
 
   PurchaseOrderFull createdBy(String createdBy);
@@ -45,6 +47,7 @@ abstract class _$PurchaseOrderFullCWProxy {
   /// ````
   PurchaseOrderFull call({
     String branchId,
+    String? branchName,
     DateTime createdAt,
     String createdBy,
     DateTime? expectedAt,
@@ -70,6 +73,10 @@ class _$PurchaseOrderFullCWProxyImpl implements _$PurchaseOrderFullCWProxy {
 
   @override
   PurchaseOrderFull branchId(String branchId) => this(branchId: branchId);
+
+  @override
+  PurchaseOrderFull branchName(String? branchName) =>
+      this(branchName: branchName);
 
   @override
   PurchaseOrderFull createdAt(DateTime createdAt) => this(createdAt: createdAt);
@@ -127,6 +134,7 @@ class _$PurchaseOrderFullCWProxyImpl implements _$PurchaseOrderFullCWProxy {
   /// ````
   PurchaseOrderFull call({
     Object? branchId = const $CopyWithPlaceholder(),
+    Object? branchName = const $CopyWithPlaceholder(),
     Object? createdAt = const $CopyWithPlaceholder(),
     Object? createdBy = const $CopyWithPlaceholder(),
     Object? expectedAt = const $CopyWithPlaceholder(),
@@ -147,6 +155,10 @@ class _$PurchaseOrderFullCWProxyImpl implements _$PurchaseOrderFullCWProxy {
           ? _value.branchId
           // ignore: cast_nullable_to_non_nullable
           : branchId as String,
+      branchName: branchName == const $CopyWithPlaceholder()
+          ? _value.branchName
+          // ignore: cast_nullable_to_non_nullable
+          : branchName as String?,
       createdAt: createdAt == const $CopyWithPlaceholder()
           ? _value.createdAt
           // ignore: cast_nullable_to_non_nullable
@@ -238,6 +250,7 @@ PurchaseOrderFull _$PurchaseOrderFullFromJson(Map<String, dynamic> json) =>
         );
         final val = PurchaseOrderFull(
           branchId: $checkedConvert('branch_id', (v) => v as String),
+          branchName: $checkedConvert('branch_name', (v) => v as String?),
           createdAt: $checkedConvert(
             'created_at',
             (v) => DateTime.parse(v as String),
@@ -276,6 +289,7 @@ PurchaseOrderFull _$PurchaseOrderFullFromJson(Map<String, dynamic> json) =>
       },
       fieldKeyMap: const {
         'branchId': 'branch_id',
+        'branchName': 'branch_name',
         'createdAt': 'created_at',
         'createdBy': 'created_by',
         'expectedAt': 'expected_at',
@@ -291,6 +305,7 @@ PurchaseOrderFull _$PurchaseOrderFullFromJson(Map<String, dynamic> json) =>
 Map<String, dynamic> _$PurchaseOrderFullToJson(PurchaseOrderFull instance) =>
     <String, dynamic>{
       'branch_id': instance.branchId,
+      'branch_name': ?instance.branchName,
       'created_at': instance.createdAt.toIso8601String(),
       'created_by': instance.createdBy,
       'expected_at': ?instance.expectedAt?.toIso8601String(),

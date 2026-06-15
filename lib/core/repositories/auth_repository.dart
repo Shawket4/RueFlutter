@@ -194,6 +194,12 @@ class AuthRepository {
     await _storage.clearAuth();
   }
 
+  /// Pings `/auth/me` purely to confirm the token is still valid. Throws on
+  /// failure; a 401 is turned into a force-logout by the Dio interceptor.
+  Future<void> validateToken() async {
+    await _api.me();
+  }
+
   // ── PIN hashing ────────────────────────────────────────────────────────────
 
   String _saltedHash(String name, String pin) {

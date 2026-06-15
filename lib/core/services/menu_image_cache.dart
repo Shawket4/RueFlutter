@@ -12,6 +12,8 @@
 //   [MenuImageCache.invalidate] is called — typically on a forced menu
 //   refresh / sync.
 
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
@@ -75,13 +77,29 @@ final menuImageCacheProvider = Provider<MenuImageCache>((ref) {
   return MenuImageCache(MenuImageCacheManager());
 });
 
+/// True only for an absolute http(s) URL worth attempting to fetch. Blank,
+/// relative, or otherwise malformed values fall straight through to the
+/// avatar/monogram fallback instead of a spinner that can never resolve.
+bool isLoadableImageUrl(String? url) {
+  if (url == null) return false;
+  final trimmed = url.trim();
+  if (trimmed.isEmpty) return false;
+  final uri = Uri.tryParse(trimmed);
+  return uri != null &&
+      (uri.scheme == 'http' || uri.scheme == 'https') &&
+      uri.host.isNotEmpty;
+}
+
 /// Drop-in replacement for Image.network for menu item images.
 ///
 /// - On first load in a session: fetches from disk cache (or network if
 ///   not yet cached), shows placeholder while loading, no fade animation.
 /// - On subsequent mounts (category switch, scroll recycle, etc.): renders
 ///   synchronously from Flutter's in-memory image cache — zero flicker.
-class MenuImage extends StatelessWidget {
+/// - If the image neither decodes nor errors within [_timeout] (e.g. a stale
+///   image host that accepts no connection), it falls back to [errorWidget]
+///   so the card never sits on its loading shimmer forever.
+class MenuImage extends StatefulWidget {
   const MenuImage({
     super.key,
     required this.url,
@@ -102,10 +120,63 @@ class MenuImage extends StatelessWidget {
   final Widget? errorWidget;
 
   @override
+  State<MenuImage> createState() => _MenuImageState();
+}
+
+class _MenuImageState extends State<MenuImage> {
+  static const _timeout = Duration(seconds: 8);
+
+  bool _loaded = false;
+  bool _failed = false;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _startTimeout();
+  }
+
+  @override
+  void didUpdateWidget(MenuImage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Grid cells recycle MenuImage across items — reset for the new URL.
+    if (oldWidget.url != widget.url) {
+      _timer?.cancel();
+      _loaded = false;
+      _failed = false;
+      _startTimeout();
+    }
+  }
+
+  void _startTimeout() {
+    _timer = Timer(_timeout, () {
+      if (mounted && !_loaded) setState(() => _failed = true);
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  Widget _wrap(Widget child) => widget.borderRadius != null
+      ? ClipRRect(borderRadius: widget.borderRadius!, child: child)
+      : child;
+
+  Widget _errorBox() => SizedBox(
+        width: widget.width,
+        height: widget.height,
+        child: widget.errorWidget ?? _defaultError(),
+      );
+
+  @override
   Widget build(BuildContext context) {
-    final image = Image(
+    if (_failed) return _wrap(_errorBox());
+
+    return _wrap(Image(
       image: CachedNetworkImageProvider(
-        url,
+        widget.url,
         cacheManager: MenuImageCacheManager(),
         // Menu photos arrive at camera resolution; decode bounded to what a
         // grid card can ever display (~200dp @3x) instead of multi-MB
@@ -114,32 +185,29 @@ class MenuImage extends StatelessWidget {
         maxWidth: 600,
         maxHeight: 600,
       ),
-      width: width,
-      height: height,
-      fit: fit,
+      width: widget.width,
+      height: widget.height,
+      fit: widget.fit,
       gaplessPlayback: true,
       frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-        // Cache hit on mount — render immediately, no placeholder flash.
-        if (wasSynchronouslyLoaded) return child;
-        // First decode complete — swap to the image, no animation.
-        if (frame != null) return child;
+        // Decoded (cache hit on mount, or first decode complete) — render it
+        // and stand down the timeout.
+        if (wasSynchronouslyLoaded || frame != null) {
+          if (!_loaded) {
+            _loaded = true;
+            _timer?.cancel();
+          }
+          return child;
+        }
         // Still loading from disk / network.
         return SizedBox(
-          width: width,
-          height: height,
-          child: placeholder ?? _defaultPlaceholder(),
+          width: widget.width,
+          height: widget.height,
+          child: widget.placeholder ?? _defaultPlaceholder(),
         );
       },
-      errorBuilder: (context, error, stack) => SizedBox(
-        width: width,
-        height: height,
-        child: errorWidget ?? _defaultError(),
-      ),
-    );
-    if (borderRadius != null) {
-      return ClipRRect(borderRadius: borderRadius!, child: image);
-    }
-    return image;
+      errorBuilder: (context, error, stack) => _errorBox(),
+    ));
   }
 
   Widget _defaultPlaceholder() => const ColoredBox(

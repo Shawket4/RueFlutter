@@ -12,6 +12,12 @@ void main() {
       // TODO
     });
 
+    // Branch label — only populated by the stocktakes list (so the \"All branches\" view can show which branch each stocktake belongs to). Other stocktake endpoints leave it `null`.
+    // String branchName
+    test('to test the property `branchName`', () async {
+      // TODO
+    });
+
     // DateTime createdAt
     test('to test the property `createdAt`', () async {
       // TODO

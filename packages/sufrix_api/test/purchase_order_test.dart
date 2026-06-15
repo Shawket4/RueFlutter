@@ -12,6 +12,12 @@ void main() {
       // TODO
     });
 
+    // Branch label — populated by the order lists so the \"All branches\" view can show which branch each PO belongs to; other endpoints leave it null.
+    // String branchName
+    test('to test the property `branchName`', () async {
+      // TODO
+    });
+
     // DateTime createdAt
     test('to test the property `createdAt`', () async {
       // TODO

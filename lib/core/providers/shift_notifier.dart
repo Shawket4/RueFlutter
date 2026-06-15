@@ -149,14 +149,18 @@ class ShiftNotifier extends Notifier<ShiftState> {
     }
   }
 
-  Future<bool> openShift(String branchId, int openingCash) async {
+  /// `editReason` is supplied by the open-shift screen when the entered opening
+  /// cash differs from the carried-over closing; the backend requires it on a
+  /// deviation and derives `opening_cash_was_edited` itself.
+  Future<bool> openShift(String branchId, int openingCash, {String? editReason}) async {
     state = state.copyWith(isLoading: true, clearError: true);
     final isOnline = ConnectivityService.instance.isOnline;
 
     if (isOnline) {
       try {
-        final shift =
-            await ref.read(shiftRepositoryProvider).openShift(branchId, openingCash);
+        final shift = await ref
+            .read(shiftRepositoryProvider)
+            .openShift(branchId, openingCash, editReason: editReason);
         state = state.copyWith(
             isLoading: false, shift: shift, isLocalShift: false,
             freshness: DataFreshness.live);
@@ -183,7 +187,8 @@ class ShiftNotifier extends Notifier<ShiftState> {
       tellerName:  user.name,
       status:      'open',
       openingCash: openingCash,
-      openingCashWasEdited: false,
+      openingCashWasEdited: editReason != null,
+      openingCashEditReason: editReason,
       openedAt:    now,
     );
 
@@ -196,6 +201,7 @@ class ShiftNotifier extends Notifier<ShiftState> {
         shiftId:     shiftId,
         openingCash: openingCash,
         openedAt:    now,
+        editReason:  editReason,
       ),
     );
 

@@ -42,6 +42,8 @@ class ShiftReportResponse {
     required  this.totalPayments,
 
     required  this.voidedAmount,
+
+    this.expectedCashAmount,
   });
 
   @JsonKey(
@@ -165,6 +167,22 @@ class ShiftReportResponse {
 
 
 
+      /// Authoritative system (expected) cash in the drawer, computed by the
+      /// backend (snapshot for a closed shift, live formula for an open one).
+      /// Nullable: reports cached before this field existed fall back to a
+      /// client-side derivation in the app façade.
+  @JsonKey(
+
+    name: r'expected_cash',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final int? expectedCashAmount;
+
+
+
 
 
     @override
@@ -178,7 +196,8 @@ class ShiftReportResponse {
       other.printedAt == printedAt &&
       other.shift == shift &&
       other.totalPayments == totalPayments &&
-      other.voidedAmount == voidedAmount;
+      other.voidedAmount == voidedAmount &&
+      other.expectedCashAmount == expectedCashAmount;
 
     @override
     int get hashCode =>
@@ -191,7 +210,8 @@ class ShiftReportResponse {
         printedAt.hashCode +
         shift.hashCode +
         totalPayments.hashCode +
-        voidedAmount.hashCode;
+        voidedAmount.hashCode +
+        expectedCashAmount.hashCode;
 
   factory ShiftReportResponse.fromJson(Map<String, dynamic> json) => _$ShiftReportResponseFromJson(json);
 

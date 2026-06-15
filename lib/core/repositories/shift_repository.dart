@@ -77,6 +77,9 @@ class ShiftRepository {
 
   // ── Shifts list ──────────────────────────────────────────────────────────
 
+  /// Default page size for the shifts history screen.
+  static const int kShiftsPageSize = 20;
+
   List<Shift>? loadShiftsLocal(String branchId) {
     final cached = _storage.loadShifts(branchId);
     if (cached == null) return null;
@@ -87,17 +90,34 @@ class ShiftRepository {
     }
   }
 
-  Future<List<Shift>> fetchShiftsFresh(String branchId) async {
-    final shifts = await _shiftApi.list(branchId);
-    await _storage.saveShifts(branchId, shifts.map((s) => s.toJson()).toList());
+  /// Fetch one page of shifts (newest first). Bumps sync_meta but does NOT
+  /// write the list cache — the caller owns the accumulated list it persists
+  /// (see [cacheShifts]), so paging forward doesn't clobber earlier pages.
+  Future<ShiftPage> fetchShiftsPage(String branchId,
+      {required int page, int perPage = kShiftsPageSize}) async {
+    final pageData =
+        await _shiftApi.list(branchId, page: page, perPage: perPage);
     await _bumpSyncMeta('shifts:$branchId');
-    return shifts;
+    return pageData;
+  }
+
+  /// Persist the shift list currently shown to the user, so the next launch can
+  /// paint it instantly and offline still shows recent shifts.
+  Future<void> cacheShifts(String branchId, List<Shift> shifts) =>
+      _storage.saveShifts(branchId, shifts.map((s) => s.toJson()).toList());
+
+  /// Warm the local cache with the most-recent page of shifts. Fire-and-forget
+  /// helper used when the order screen mounts; returns what it cached.
+  Future<List<Shift>> fetchShiftsFresh(String branchId) async {
+    final pageData = await fetchShiftsPage(branchId, page: 1);
+    await cacheShifts(branchId, pageData.shifts);
+    return pageData.shifts;
   }
 
   // ── Shift open / close ───────────────────────────────────────────────────
 
-  Future<Shift> openShift(String branchId, int openingCash) async {
-    final shift = await _shiftApi.open(branchId, openingCash);
+  Future<Shift> openShift(String branchId, int openingCash, {String? editReason}) async {
+    final shift = await _shiftApi.open(branchId, openingCash, editReason: editReason);
     await _storage.saveShift(branchId, shift.toJson());
     return shift;
   }

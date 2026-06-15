@@ -99,6 +99,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cashOut => 'Cash Out';
 
   @override
+  String get cashMovementsTitle => 'Cash Movements';
+
+  @override
+  String get cashMovementsSubtitle =>
+      'Cash added to or removed from the drawer';
+
+  @override
+  String get cashMovementsNew => 'New Movement';
+
+  @override
+  String get cashMovementsNet => 'Net';
+
+  @override
+  String get cashMovementsEmptyBody =>
+      'Record cash put into or taken out of the drawer during this shift.';
+
+  @override
+  String get cashMovementsNeedShift => 'Open a shift to record cash movements.';
+
+  @override
   String get cashMovementOfflineError =>
       'Cash movements require an internet connection';
 
@@ -365,6 +385,22 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get shiftSuggestedFromLastClose =>
       'Suggested — carried over from the last close';
+
+  @override
+  String get shiftOpeningReasonLabel => 'Reason for difference';
+
+  @override
+  String get shiftOpeningReasonHint =>
+      'e.g. added a float, removed cash for a safe drop';
+
+  @override
+  String get shiftOpeningReasonRequired =>
+      'Add a reason — the opening differs from the carried-over closing cash';
+
+  @override
+  String shiftOpeningDiffersHint(Object amount) {
+    return 'Differs from the carried-over $amount — a reason is required';
+  }
 
   @override
   String get shiftErrorValidCash => 'Enter a valid cash amount';
@@ -808,6 +844,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get orderHistoryTitle => 'Orders';
+
+  @override
+  String orderShowMore(Object count) {
+    return 'Show $count more';
+  }
 
   @override
   String get orderCurrentShift => 'Current shift';

@@ -12,6 +12,12 @@ void main() {
       // TODO
     });
 
+    // Branch label — only populated by the shifts list (so the \"All branches\" view can show which branch each shift belongs to). Other shift endpoints leave it `null`.
+    // String branchName
+    test('to test the property `branchName`', () async {
+      // TODO
+    });
+
     // int cashDiscrepancy
     test('to test the property `cashDiscrepancy`', () async {
       // TODO

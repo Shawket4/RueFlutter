@@ -22,6 +22,7 @@ import '../../../core/services/connectivity_service.dart';
 import '../../../core/services/offline_queue.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatting.dart';
+import '../../../core/utils/haptics.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/offline_banner.dart';
 import '../../../shared/widgets/responsive_sheet.dart';
@@ -492,6 +493,12 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
         orderedAt: TimeUtils.now(),
         createdAt: TimeUtils.now(),
         cashAmount: cashAdded,
+        // Charged breakdown — recorded verbatim so the receipt equals the DB.
+        subtotal: syncedCart.subtotal,
+        discountAmount: syncedCart.discountAmount,
+        taxAmount: syncedCart.taxAmount,
+        totalAmount: syncedCart.total,
+        changeGiven: syncedCart.changeGiven,
       ));
       final optimistic = _buildOptimisticOrder(
         localId: localId,
@@ -551,7 +558,10 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
             debugPrint('[CheckoutSheet._place] status: ${e.response?.statusCode}');
             debugPrint('[CheckoutSheet._place] body: ${e.response?.data}');
           }
-          if (mounted) _ui.setError(friendlyError(e));
+          if (mounted) {
+            Haptics.warning();
+            _ui.setError(friendlyError(e));
+          }
         }
       }
     } finally {
@@ -682,6 +692,10 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
     required int? tendered,
     required int cashAdded,
   }) async {
+    // The most important confirmation in the app — every successful placement
+    // (online or queued offline) flows through here, so the success tick lives
+    // here rather than at the button.
+    Haptics.success();
     await ref.read(orderHistoryProvider.notifier).addOrder(order);
     ref.read(cartProvider.notifier).clear();
 
@@ -918,6 +932,7 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
               child: Row(
                 children: [
                   Expanded(
+                    flex: 2,
                     child: AppButton(
                       label: s.orderPlaceOrder,
                       loading: checkout.loading,
@@ -928,12 +943,16 @@ class _CheckoutSheetState extends ConsumerState<CheckoutSheet> {
                     ),
                   ),
                   const SizedBox(width: AppSpace.md),
-                  AppButton(
-                    label: s.checkoutPreview,
-                    variant: BtnVariant.outline,
-                    height: 52,
-                    icon: Icons.receipt_long_rounded,
-                    onTap: _previewReceipt,
+                  Expanded(
+                    flex: 1,
+                    child: AppButton(
+                      label: s.checkoutPreview,
+                      variant: BtnVariant.outline,
+                      width: double.infinity,
+                      height: 52,
+                      icon: Icons.receipt_long_rounded,
+                      onTap: _previewReceipt,
+                    ),
                   ),
                 ],
               ),

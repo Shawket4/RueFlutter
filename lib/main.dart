@@ -11,6 +11,8 @@ import 'core/providers/order_history_notifier.dart';
 import 'core/providers/shift_notifier.dart';
 import 'core/router/router.dart';
 import 'core/services/connectivity_service.dart';
+import 'core/services/delivery_realtime_service.dart';
+import 'core/services/notification_service.dart';
 import 'core/services/offline_queue.dart';
 import 'core/providers/locale_notifier.dart';
 import 'core/providers/theme_mode_notifier.dart';
@@ -44,6 +46,7 @@ void main() async {
   await tokenStore.init(migrateFrom: kv);
 
   await ConnectivityService.instance.init();
+  await NotificationService.instance.init();
 
   runApp(ProviderScope(
     overrides: [
@@ -60,10 +63,11 @@ class _App extends ConsumerStatefulWidget {
   ConsumerState<_App> createState() => _AppState();
 }
 
-class _AppState extends ConsumerState<_App> {
+class _AppState extends ConsumerState<_App> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final queue      = ref.read(offlineQueueProvider.notifier);
       final history    = ref.read(orderHistoryProvider.notifier);
@@ -92,6 +96,29 @@ class _AppState extends ConsumerState<_App> {
 
       queue.init();
     });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Coming back to the foreground is when a long-backgrounded JWT is most
+    // likely to have expired. Re-validate the session proactively so an expired
+    // token routes to /login instead of stranding the teller mid-app.
+    if (state == AppLifecycleState.resumed) {
+      ref.read(authProvider.notifier).revalidateSession();
+      // Re-open the delivery stream (it was dropped on pause) + re-GET to catch
+      // anything that arrived while backgrounded.
+      ref.read(deliveryRealtimeProvider).reevaluate();
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      // Don't hold a dead socket while backgrounded.
+      ref.read(deliveryRealtimeProvider).pause();
+    }
   }
 
   @override

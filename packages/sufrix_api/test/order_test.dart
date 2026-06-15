@@ -67,6 +67,12 @@ void main() {
       // TODO
     });
 
+    // Human-readable, org-unique reference (e.g. \"DT-260614-0042\"). Additive alongside the per-shift order_number. Optional only during the rollout window before the historical backfill runs; never null afterwards.
+    // String orderRef
+    test('to test the property `orderRef`', () async {
+      // TODO
+    });
+
     // String paymentMethod
     test('to test the property `paymentMethod`', () async {
       // TODO

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lottie/lottie.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/models/branch.dart';
 import '../../../core/models/order.dart';
@@ -8,6 +7,7 @@ import '../../../core/providers/auth_notifier.dart';
 import '../../../core/services/printer_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatting.dart';
+import '../../../shared/widgets/animated_icons.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/responsive_sheet.dart';
 import '../../../shared/widgets/status_chip.dart';
@@ -115,11 +115,7 @@ class _ReceiptSheetState extends ConsumerState<ReceiptSheet> {
                       color: t.border,
                       borderRadius: BorderRadius.circular(2)))),
           const SizedBox(height: AppSpace.lg),
-          SizedBox(
-              width: 100,
-              height: 100,
-              child: Lottie.asset('assets/lottie/success.json',
-                  repeat: false, fit: BoxFit.contain)),
+          SuccessCheckIcon(size: 88, color: t.success),
           const SizedBox(height: AppSpace.sm),
           Text(s.orderPlaced,
               style:
@@ -130,9 +126,13 @@ class _ReceiptSheetState extends ConsumerState<ReceiptSheet> {
                 label: s.orderQueuedSyncs,
                 tone: ChipTone.warning,
                 icon: Icons.cloud_upload_outlined)
-          else
+          else ...[
             Text(s.orderNumber(o.orderNumber),
                 style: ui(size: 15, color: t.textSecondary)),
+            if (o.orderRef != null)
+              Text(o.orderRef!,
+                  style: ui(size: 12, color: t.textMuted)),
+          ],
           const SizedBox(height: AppSpace.lg),
 
           SurfaceCard(
@@ -228,10 +228,16 @@ class _PrintStatus extends StatelessWidget {
         ),
         child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
           SizedBox(
-              width: 16,
-              height: 16,
-              child:
-                  CircularProgressIndicator(strokeWidth: 2, color: t.navy)),
+            width: 22,
+            height: 22,
+            child: LoopingIcon(
+              duration: const Duration(milliseconds: 1500),
+              builder: (_, a) => CustomPaint(
+                  size: const Size(22, 22),
+                  painter: PrinterPainter(
+                      t: a, color: t.navy, paperFill: t.surface)),
+            ),
+          ),
           const SizedBox(width: 10),
           Text(s.orderPrintingReceipt,
               style: ui(size: 13, weight: FontWeight.w600, color: t.navy)),

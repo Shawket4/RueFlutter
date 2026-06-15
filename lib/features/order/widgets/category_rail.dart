@@ -94,9 +94,11 @@ class _RailTile extends StatelessWidget {
     return AnimatedPressScale(
       onTap: onTap,
       scaleDown: 0.95,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 160),
-        curve: Curves.easeOutCubic,
+      // Highlight snaps instead of fading: a color tween here animates across
+      // the same frames the (heavy) grid rebuild drops, which read as a
+      // stutter. An instant highlight is crisp and matches the icon/label,
+      // which already switch colour instantly.
+      child: Container(
         margin: const EdgeInsetsDirectional.symmetric(
             horizontal: AppSpace.sm, vertical: 3),
         padding: const EdgeInsetsDirectional.symmetric(
@@ -155,8 +157,7 @@ class CategoryStrip extends ConsumerWidget {
           final selected = e.id == selectedId;
           return AnimatedPressScale(
             onTap: () => ref.read(menuProvider.notifier).selectCategory(e.id),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 160),
+            child: Container(
               padding: const EdgeInsetsDirectional.symmetric(horizontal: 12),
               decoration: BoxDecoration(
                 color: selected ? t.accentBg : t.surfaceAlt,

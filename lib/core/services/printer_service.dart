@@ -7,6 +7,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:starxpand_sdk_wrapper/starxpand_sdk_wrapper.dart';
 import '../models/branch.dart';
+import '../models/delivery_order.dart';
 import '../models/order.dart';
 import '../models/shift_report.dart';
 import '../models/payment_method.dart';
@@ -38,6 +39,23 @@ class PrinterService {
       pdfBytes: pdfBytes,
       kickDrawer: kickDrawer,
     );
+  }
+
+  /// Customer receipt for a delivery order, built from the frozen cart
+  /// snapshot (the delivery order has no `Order` row until finalize). Printed
+  /// once, at the Confirm/accept step — the same transport + layout helpers as
+  /// the in-store [print] path.
+  static Future<String?> printDeliveryReceipt({
+    required String ip,
+    required int port,
+    required PrinterBrand brand,
+    required DeliveryOrder order,
+    required String branchName,
+    String? logoUrl,
+  }) async {
+    final pdfBytes = await _buildDeliveryReceiptPdf(
+        order: order, branchName: branchName, logoUrl: logoUrl);
+    return _send(ip: ip, port: port, brand: brand, pdfBytes: pdfBytes);
   }
 
   static Future<String?> printShiftReport({
@@ -320,6 +338,8 @@ class PrinterService {
           ),
         _row('Order #${order.orderNumber}', dts,
             font: font, fontB: fontB, bold: true, sz: 8),
+        if (order.orderRef != null)
+          _row('Ref: ${order.orderRef}', dts, font: font, fontB: fontB, sz: 8),
         _divider(),
 
         // Items
@@ -422,6 +442,150 @@ class PrinterService {
         pw.Center(
             child:
                 pw.Text('Thank you for visiting!', style: ts(font, sz: 7.5))),
+        pw.SizedBox(height: 2),
+        _divider(),
+      ]),
+    ));
+    return pdf.save();
+  }
+
+  // ── Delivery order customer receipt PDF ─────────────────────────────────────
+
+  static Future<Uint8List> _buildDeliveryReceiptPdf({
+    required DeliveryOrder order,
+    required String branchName,
+    String? logoUrl,
+  }) async {
+    final pdf = pw.Document();
+    final font = pw.Font.ttf(
+        (await rootBundle.load('assets/fonts/Cairo-Regular.ttf'))
+            .buffer
+            .asByteData());
+    final fontB = pw.Font.ttf(
+        (await rootBundle.load('assets/fonts/Cairo-SemiBold.ttf'))
+            .buffer
+            .asByteData());
+
+    pw.MemoryImage? logo;
+    if (logoUrl != null && logoUrl.isNotEmpty) {
+      try {
+        final bytes = await _downloadImage(logoUrl);
+        if (bytes != null) logo = pw.MemoryImage(bytes);
+      } catch (_) {}
+    }
+    logo ??= pw.MemoryImage((await rootBundle.load('assets/IconForeground.png'))
+        .buffer
+        .asUint8List());
+
+    pw.TextStyle ts(pw.Font f, {double sz = 8, PdfColor? color}) =>
+        pw.TextStyle(font: f, fontSize: sz, color: color);
+
+    final dts = _fmtDt(order.createdAt);
+
+    // Compose the address from whatever parts are present.
+    final addressParts = <String>[
+      if (order.placeName != null && order.placeName!.isNotEmpty)
+        order.placeName!,
+      if (order.floor != null && order.floor!.isNotEmpty)
+        'Floor ${order.floor}',
+      if (order.unitNumber != null && order.unitNumber!.isNotEmpty)
+        'Unit ${order.unitNumber}',
+      if (order.addressLine != null && order.addressLine!.isNotEmpty)
+        order.addressLine!,
+      if (order.landmark != null && order.landmark!.isNotEmpty)
+        order.landmark!,
+    ];
+
+    pdf.addPage(pw.Page(
+      pageFormat: const PdfPageFormat(72 * PdfPageFormat.mm, double.infinity,
+          marginTop: 2 * PdfPageFormat.mm,
+          marginBottom: 2 * PdfPageFormat.mm,
+          marginLeft: 2 * PdfPageFormat.mm,
+          marginRight: 2 * PdfPageFormat.mm),
+      build: (ctx) => pw
+          .Column(crossAxisAlignment: pw.CrossAxisAlignment.stretch, children: [
+        // Header
+        pw.Center(child: pw.Image(logo!, width: 56)),
+        pw.SizedBox(height: 2),
+        pw.Center(child: pw.Text(branchName, style: ts(font, sz: 7.5))),
+        pw.SizedBox(height: 1),
+        pw.Center(
+            child: pw.Text(
+                order.isInMall ? 'IN-MALL DELIVERY' : 'DELIVERY',
+                style: ts(fontB, sz: 8))),
+        pw.SizedBox(height: 2),
+        _divider(),
+
+        // Ref + timestamp
+        if (order.deliveryRef != null)
+          _row('Order ${order.deliveryRef}', dts,
+              font: font, fontB: fontB, bold: true, sz: 8)
+        else
+          _row('Delivery Order', dts, font: font, fontB: fontB, bold: true, sz: 8),
+        _divider(),
+
+        // Customer + address
+        _row('Customer', order.customerName, font: font, fontB: fontB, sz: 7.5),
+        _row('Phone', order.customerPhone, font: font, fontB: fontB, sz: 7.5),
+        if (addressParts.isNotEmpty)
+          pw.Padding(
+            padding: const pw.EdgeInsets.only(top: 1.5, bottom: 1.5),
+            child: pw.Text('Address: ${addressParts.join(', ')}',
+                style: ts(font, sz: 7.5)),
+          ),
+        if (order.deliveryNotes != null && order.deliveryNotes!.isNotEmpty)
+          pw.Padding(
+            padding: const pw.EdgeInsets.only(bottom: 1.5),
+            child: pw.Text('Notes: ${order.deliveryNotes}',
+                style: ts(font, sz: 7.5)),
+          ),
+        _divider(),
+
+        // Items (delivery carts are à-la-carte only — no bundles)
+        ...order.cart.lines.expand((line) {
+          final sizePart =
+              line.sizeLabel != null ? ' (${line.sizeLabel})' : '';
+          return [
+            _row('${line.quantity}x ${line.itemName}$sizePart',
+                egp(line.lineTotal),
+                font: font, fontB: fontB, bold: true, sz: 8),
+            ...line.addons.map((a) {
+              final aPrice = a.unitPrice > 0 ? '+${egp(a.unitPrice)}' : '';
+              return aPrice.isNotEmpty
+                  ? _row('  + ${a.addonName}', aPrice,
+                      font: font, fontB: fontB, sz: 7.5, leftIndent: 4)
+                  : pw.Padding(
+                      padding: const pw.EdgeInsets.only(left: 4, bottom: 1.5),
+                      child: pw.Text('  + ${a.addonName}',
+                          style: ts(font, sz: 7.5)));
+            }),
+            ...line.optionals.map((o) {
+              final oPrice = o.price > 0 ? '+${egp(o.price)}' : '';
+              return oPrice.isNotEmpty
+                  ? _row('  + ${o.fieldName}', oPrice,
+                      font: font, fontB: fontB, sz: 7.5, leftIndent: 4)
+                  : pw.Padding(
+                      padding: const pw.EdgeInsets.only(left: 4, bottom: 1.5),
+                      child: pw.Text('  + ${o.fieldName}',
+                          style: ts(font, sz: 7.5)));
+            }),
+          ];
+        }),
+        _divider(),
+
+        // Totals
+        _row('Subtotal', egp(order.subtotal), font: font, fontB: fontB, sz: 8),
+        if (order.deliveryFee > 0)
+          _row('Delivery Fee', egp(order.deliveryFee),
+              font: font, fontB: fontB, sz: 8),
+        _row('TOTAL', egp(order.total),
+            font: font, fontB: fontB, bold: true, boldValue: true, sz: 10),
+        _divider(),
+
+        pw.SizedBox(height: 4),
+        pw.Center(
+            child: pw.Text('Thank you for your order!',
+                style: ts(font, sz: 7.5))),
         pw.SizedBox(height: 2),
         _divider(),
       ]),

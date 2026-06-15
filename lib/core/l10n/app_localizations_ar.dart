@@ -99,6 +99,25 @@ class AppLocalizationsAr extends AppLocalizations {
   String get cashOut => 'سحب نقدي';
 
   @override
+  String get cashMovementsTitle => 'حركات النقدية';
+
+  @override
+  String get cashMovementsSubtitle => 'النقد المُضاف إلى الدرج أو المسحوب منه';
+
+  @override
+  String get cashMovementsNew => 'حركة جديدة';
+
+  @override
+  String get cashMovementsNet => 'الصافي';
+
+  @override
+  String get cashMovementsEmptyBody =>
+      'سجّل النقد المُضاف إلى الدرج أو المسحوب منه خلال هذه الوردية.';
+
+  @override
+  String get cashMovementsNeedShift => 'افتح وردية لتسجيل حركات النقدية.';
+
+  @override
   String get cashMovementOfflineError => 'حركات النقد تتطلب اتصالاً بالإنترنت';
 
   @override
@@ -368,6 +387,21 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get shiftSuggestedFromLastClose => 'مقترح — مُرحّل من آخر إغلاق';
+
+  @override
+  String get shiftOpeningReasonLabel => 'سبب الاختلاف';
+
+  @override
+  String get shiftOpeningReasonHint => 'مثال: إضافة عهدة، أو سحب نقدية للخزنة';
+
+  @override
+  String get shiftOpeningReasonRequired =>
+      'أضف سببًا — يختلف الافتتاح عن النقدية المُرحّلة من الإغلاق السابق';
+
+  @override
+  String shiftOpeningDiffersHint(Object amount) {
+    return 'يختلف عن المبلغ المُرحّل $amount — السبب مطلوب';
+  }
 
   @override
   String get shiftErrorValidCash => 'أدخل مبلغًا نقديًا صالحًا';
@@ -809,6 +843,11 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get orderHistoryTitle => 'الطلبات';
+
+  @override
+  String orderShowMore(Object count) {
+    return 'عرض $count إضافية';
+  }
 
   @override
   String get orderCurrentShift => 'الوردية الحالية';

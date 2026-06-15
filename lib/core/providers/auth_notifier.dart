@@ -207,7 +207,9 @@ class AuthNotifier extends Notifier<AuthState> {
         await ref
             .read(storageServiceProvider)
             .saveBranch(user.branchId!, branch.toJson());
-      } catch (_) {
+      } catch (e) {
+        // A 401 means the token is dead — don't proceed as authenticated.
+        if (isUnauthorizedError(e)) return _expireDuringHydrate();
         final cached =
             ref.read(storageServiceProvider).loadBranch(user.branchId!);
         if (cached != null) branch = _tryDecodeBranch(cached);
@@ -241,8 +243,11 @@ class AuthNotifier extends Notifier<AuthState> {
               .read(storageServiceProvider)
               .saveShift(user.branchId!, openShift.toJson());
         }
-      } catch (_) {
-        // Network error during shift check — allow login
+      } catch (e) {
+        // A 401 means the token is dead — fail the session rather than land the
+        // teller on the open-shift screen "authenticated" with no usable token.
+        if (isUnauthorizedError(e)) return _expireDuringHydrate();
+        // Any other error (network) — allow login and run offline-first.
       }
     }
 
@@ -265,6 +270,23 @@ class AuthNotifier extends Notifier<AuthState> {
     // A fresh token means a 401-parked outbox can sync again.
     ref.read(offlineQueueProvider.notifier).resumeAfterAuth();
     return null;
+  }
+
+  /// Re-checks the token after the app returns to the foreground. A real
+  /// session whose JWT expired while the app was backgrounded is funnelled to
+  /// /login here (the 401 from `/auth/me` trips the Dio interceptor →
+  /// [_forceLogout]) instead of waiting for the next screen to happen to make a
+  /// request — which is how a teller could land on the open-shift screen with a
+  /// dead token. Offline sessions (no token by design) and in-flight auth are
+  /// skipped; a plain network error is ignored so a flaky link can't sign the
+  /// teller out mid-shift.
+  Future<void> revalidateSession() async {
+    if (state.user == null || state.isOfflineSession || state.isLoading) return;
+    try {
+      await ref.read(authRepositoryProvider).validateToken();
+    } catch (_) {
+      // 401 → interceptor handles logout; other errors are non-fatal here.
+    }
   }
 
   Future<bool> canLogout() async {
@@ -293,6 +315,17 @@ class AuthNotifier extends Notifier<AuthState> {
     await _clearCartSession();
     await ref.read(authRepositoryProvider).logout();
     state = const AuthState(isLoading: false);
+  }
+
+  /// The token was refused (401) while bootstrapping the session — treat it as
+  /// expired: clear auth and surface the sign-in prompt, instead of proceeding
+  /// as "authenticated" with a dead token (which would strand the teller on the
+  /// open-shift screen, unable to actually open anything).
+  Future<String?> _expireDuringHydrate() async {
+    await ref.read(authRepositoryProvider).logout();
+    state = const AuthState(
+        isLoading: false, sessionExpiry: SessionExpiry.expired);
+    return 'Session expired — please sign in again';
   }
 
   // Task 1.7: Await logout

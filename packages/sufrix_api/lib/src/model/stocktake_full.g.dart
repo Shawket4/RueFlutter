@@ -9,6 +9,8 @@ part of 'stocktake_full.dart';
 abstract class _$StocktakeFullCWProxy {
   StocktakeFull branchId(String branchId);
 
+  StocktakeFull branchName(String? branchName);
+
   StocktakeFull createdAt(DateTime createdAt);
 
   StocktakeFull finalizedAt(DateTime? finalizedAt);
@@ -41,6 +43,7 @@ abstract class _$StocktakeFullCWProxy {
   /// ````
   StocktakeFull call({
     String branchId,
+    String? branchName,
     DateTime createdAt,
     DateTime? finalizedAt,
     String? finalizedBy,
@@ -64,6 +67,9 @@ class _$StocktakeFullCWProxyImpl implements _$StocktakeFullCWProxy {
 
   @override
   StocktakeFull branchId(String branchId) => this(branchId: branchId);
+
+  @override
+  StocktakeFull branchName(String? branchName) => this(branchName: branchName);
 
   @override
   StocktakeFull createdAt(DateTime createdAt) => this(createdAt: createdAt);
@@ -114,6 +120,7 @@ class _$StocktakeFullCWProxyImpl implements _$StocktakeFullCWProxy {
   /// ````
   StocktakeFull call({
     Object? branchId = const $CopyWithPlaceholder(),
+    Object? branchName = const $CopyWithPlaceholder(),
     Object? createdAt = const $CopyWithPlaceholder(),
     Object? finalizedAt = const $CopyWithPlaceholder(),
     Object? finalizedBy = const $CopyWithPlaceholder(),
@@ -132,6 +139,10 @@ class _$StocktakeFullCWProxyImpl implements _$StocktakeFullCWProxy {
           ? _value.branchId
           // ignore: cast_nullable_to_non_nullable
           : branchId as String,
+      branchName: branchName == const $CopyWithPlaceholder()
+          ? _value.branchName
+          // ignore: cast_nullable_to_non_nullable
+          : branchName as String?,
       createdAt: createdAt == const $CopyWithPlaceholder()
           ? _value.createdAt
           // ignore: cast_nullable_to_non_nullable
@@ -215,6 +226,7 @@ StocktakeFull _$StocktakeFullFromJson(Map<String, dynamic> json) =>
         );
         final val = StocktakeFull(
           branchId: $checkedConvert('branch_id', (v) => v as String),
+          branchName: $checkedConvert('branch_name', (v) => v as String?),
           createdAt: $checkedConvert(
             'created_at',
             (v) => DateTime.parse(v as String),
@@ -252,6 +264,7 @@ StocktakeFull _$StocktakeFullFromJson(Map<String, dynamic> json) =>
       },
       fieldKeyMap: const {
         'branchId': 'branch_id',
+        'branchName': 'branch_name',
         'createdAt': 'created_at',
         'finalizedAt': 'finalized_at',
         'finalizedBy': 'finalized_by',
@@ -266,6 +279,7 @@ StocktakeFull _$StocktakeFullFromJson(Map<String, dynamic> json) =>
 Map<String, dynamic> _$StocktakeFullToJson(StocktakeFull instance) =>
     <String, dynamic>{
       'branch_id': instance.branchId,
+      'branch_name': ?instance.branchName,
       'created_at': instance.createdAt.toIso8601String(),
       'finalized_at': ?instance.finalizedAt?.toIso8601String(),
       'finalized_by': ?instance.finalizedBy,

@@ -31,6 +31,8 @@ abstract class _$OrderExportCWProxy {
 
   OrderExport orderNumber(int orderNumber);
 
+  OrderExport orderRef(String? orderRef);
+
   OrderExport paymentMethod(String paymentMethod);
 
   OrderExport shiftId(String shiftId);
@@ -82,6 +84,7 @@ abstract class _$OrderExportCWProxy {
     String id,
     String? notes,
     int orderNumber,
+    String? orderRef,
     String paymentMethod,
     String shiftId,
     String status,
@@ -147,6 +150,9 @@ class _$OrderExportCWProxyImpl implements _$OrderExportCWProxy {
 
   @override
   OrderExport orderNumber(int orderNumber) => this(orderNumber: orderNumber);
+
+  @override
+  OrderExport orderRef(String? orderRef) => this(orderRef: orderRef);
 
   @override
   OrderExport paymentMethod(String paymentMethod) =>
@@ -218,6 +224,7 @@ class _$OrderExportCWProxyImpl implements _$OrderExportCWProxy {
     Object? id = const $CopyWithPlaceholder(),
     Object? notes = const $CopyWithPlaceholder(),
     Object? orderNumber = const $CopyWithPlaceholder(),
+    Object? orderRef = const $CopyWithPlaceholder(),
     Object? paymentMethod = const $CopyWithPlaceholder(),
     Object? shiftId = const $CopyWithPlaceholder(),
     Object? status = const $CopyWithPlaceholder(),
@@ -284,6 +291,10 @@ class _$OrderExportCWProxyImpl implements _$OrderExportCWProxy {
           ? _value.orderNumber
           // ignore: cast_nullable_to_non_nullable
           : orderNumber as int,
+      orderRef: orderRef == const $CopyWithPlaceholder()
+          ? _value.orderRef
+          // ignore: cast_nullable_to_non_nullable
+          : orderRef as String?,
       paymentMethod: paymentMethod == const $CopyWithPlaceholder()
           ? _value.paymentMethod
           // ignore: cast_nullable_to_non_nullable
@@ -412,6 +423,7 @@ OrderExport _$OrderExportFromJson(Map<String, dynamic> json) => $checkedCreate(
       id: $checkedConvert('id', (v) => v as String),
       notes: $checkedConvert('notes', (v) => v as String?),
       orderNumber: $checkedConvert('order_number', (v) => (v as num).toInt()),
+      orderRef: $checkedConvert('order_ref', (v) => v as String?),
       paymentMethod: $checkedConvert('payment_method', (v) => v as String),
       shiftId: $checkedConvert('shift_id', (v) => v as String),
       status: $checkedConvert('status', (v) => v as String),
@@ -458,6 +470,7 @@ OrderExport _$OrderExportFromJson(Map<String, dynamic> json) => $checkedCreate(
     'discountType': 'discount_type',
     'discountValue': 'discount_value',
     'orderNumber': 'order_number',
+    'orderRef': 'order_ref',
     'paymentMethod': 'payment_method',
     'shiftId': 'shift_id',
     'taxAmount': 'tax_amount',
@@ -487,6 +500,7 @@ Map<String, dynamic> _$OrderExportToJson(OrderExport instance) =>
       'id': instance.id,
       'notes': ?instance.notes,
       'order_number': instance.orderNumber,
+      'order_ref': ?instance.orderRef,
       'payment_method': instance.paymentMethod,
       'shift_id': instance.shiftId,
       'status': instance.status,

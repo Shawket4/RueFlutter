@@ -9,6 +9,7 @@ import 'package:sufrix_api/api.dart';
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **branchId** | **String** |  | 
+**branchName** | **String** | Branch label — populated by the order lists so the \"All branches\" view can show which branch each PO belongs to; other endpoints leave it null. | [optional] 
 **createdAt** | [**DateTime**](DateTime.md) |  | 
 **createdBy** | **String** |  | 
 **expectedAt** | [**DateTime**](DateTime.md) |  | [optional] 

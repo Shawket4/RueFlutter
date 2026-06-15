@@ -15,6 +15,7 @@ import '../../core/utils/formatting.dart';
 import '../../shared/widgets/app_top_bar.dart';
 import '../../shared/widgets/empty_state.dart';
 import '../../shared/widgets/offline_banner.dart';
+import '../../shared/widgets/refresh_button.dart';
 import '../../shared/widgets/status_chip.dart';
 import '../../shared/widgets/surface_card.dart';
 import '../../shared/widgets/sync_status_chip.dart';
@@ -57,6 +58,12 @@ extension on _SyncFilter {
 /// Below this body width the table collapses into cards.
 const double _kTableBreakpoint = 680;
 
+/// How many orders the list renders at once. The full shift is always held in
+/// memory (so offline + not-yet-synced orders stay visible and the stats/filter
+/// counts cover everything) — this only caps how many rows paint, with a
+/// "show more" footer to reveal the next chunk.
+const int _kOrderPageSize = 20;
+
 // ─────────────────────────────────────────────────────────────────────────────
 //  EPHEMERAL VIEW STATE — sort · filter · row expansion · shift report
 //
@@ -73,6 +80,7 @@ class _ViewState {
   final Order? expandedOrder;
   final bool loadingDetail;
   final ShiftReport? report;
+  final int visibleLimit;
 
   const _ViewState({
     this.sortCol = _Col.number,
@@ -82,6 +90,7 @@ class _ViewState {
     this.expandedOrder,
     this.loadingDetail = false,
     this.report,
+    this.visibleLimit = _kOrderPageSize,
   });
 
   _ViewState copyWith({
@@ -92,6 +101,7 @@ class _ViewState {
     Order? expandedOrder,
     bool? loadingDetail,
     ShiftReport? report,
+    int? visibleLimit,
     bool clearExpansion = false,
   }) =>
       _ViewState(
@@ -103,6 +113,7 @@ class _ViewState {
             clearExpansion ? null : (expandedOrder ?? this.expandedOrder),
         loadingDetail: loadingDetail ?? this.loadingDetail,
         report: report ?? this.report,
+        visibleLimit: visibleLimit ?? this.visibleLimit,
       );
 }
 
@@ -118,14 +129,23 @@ class _ViewNotifier extends AutoDisposeNotifier<_ViewState> {
   void setReport(ShiftReport report) => state = state.copyWith(report: report);
 
   void onSort(_Col col) {
+    // Changing the order re-examines the list from the top.
     if (state.sortCol == col) {
-      state = state.copyWith(sortAsc: !state.sortAsc);
+      state = state.copyWith(
+          sortAsc: !state.sortAsc, visibleLimit: _kOrderPageSize);
     } else {
-      state = state.copyWith(sortCol: col, sortAsc: col == _Col.number);
+      state = state.copyWith(
+          sortCol: col,
+          sortAsc: col == _Col.number,
+          visibleLimit: _kOrderPageSize);
     }
   }
 
-  void setFilter(_SyncFilter f) => state = state.copyWith(filter: f);
+  void setFilter(_SyncFilter f) =>
+      state = state.copyWith(filter: f, visibleLimit: _kOrderPageSize);
+
+  void showMore() =>
+      state = state.copyWith(visibleLimit: state.visibleLimit + _kOrderPageSize);
 
   /// Mirrors a void into the history list and the expanded panel.
   void onVoided(Order voided) {
@@ -267,13 +287,13 @@ class _OrderHistoryScreenState extends ConsumerState<OrderHistoryScreen> {
           actions: [
             const SyncStatusChip(),
             const SizedBox(width: AppSpace.sm),
-            IconButton(
-              tooltip: s.commonRefresh,
-              onPressed: shift == null
-                  ? null
+            RefreshButton(
+              enabled: shift != null,
+              loading: history.isLoading,
+              onTap: shift == null
+                  ? () {}
                   : () =>
                       ref.read(orderHistoryProvider.notifier).refresh(shift.id),
-              icon: Icon(Icons.refresh_rounded, color: t.textPrimary, size: 22),
             ),
           ],
         ),
@@ -296,9 +316,13 @@ class _Content extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final s = l10n(context);
-    final (filter, sortCol, sortAsc) = ref.watch(
-        _viewProvider.select((v) => (v.filter, v.sortCol, v.sortAsc)));
-    final visible = _sorted(_applyFilter(orders, filter), sortCol, sortAsc);
+    final (filter, sortCol, sortAsc, limit) = ref.watch(_viewProvider
+        .select((v) => (v.filter, v.sortCol, v.sortAsc, v.visibleLimit)));
+    final all = _sorted(_applyFilter(orders, filter), sortCol, sortAsc);
+    // Render only the first `limit` rows; the rest reveal via the footer. The
+    // full `all` set still drives the stats and filter counts above.
+    final visible = all.length > limit ? all.sublist(0, limit) : all;
+    final remaining = all.length - visible.length;
 
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Padding(
@@ -322,8 +346,10 @@ class _Content extends ConsumerWidget {
               )
             : LayoutBuilder(builder: (context, constraints) {
                 return constraints.maxWidth < _kTableBreakpoint
-                    ? _CardList(visible: visible, methods: methods)
-                    : _OrderTable(visible: visible, methods: methods);
+                    ? _CardList(
+                        visible: visible, methods: methods, remaining: remaining)
+                    : _OrderTable(
+                        visible: visible, methods: methods, remaining: remaining);
               }),
       ),
     ]);
@@ -360,7 +386,9 @@ class _FilterRow extends ConsumerWidget {
 class _CardList extends ConsumerWidget {
   final List<Order> visible;
   final List<PaymentMethod> methods;
-  const _CardList({required this.visible, required this.methods});
+  final int remaining;
+  const _CardList(
+      {required this.visible, required this.methods, required this.remaining});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -370,8 +398,13 @@ class _CardList extends ConsumerWidget {
     return ListView.builder(
       padding: const EdgeInsetsDirectional.fromSTEB(
           AppSpace.lg, 0, AppSpace.lg, AppSpace.lg),
-      itemCount: visible.length,
+      itemCount: visible.length + (remaining > 0 ? 1 : 0),
       itemBuilder: (context, i) {
+        if (i >= visible.length) {
+          return _ShowMoreFooter(
+              remaining: remaining,
+              onTap: () => ref.read(_viewProvider.notifier).showMore());
+        }
         final o = visible[i];
         final isExp = expandedId == o.id;
         return _OrderCard(
@@ -392,7 +425,9 @@ class _CardList extends ConsumerWidget {
 class _OrderTable extends ConsumerWidget {
   final List<Order> visible;
   final List<PaymentMethod> methods;
-  const _OrderTable({required this.visible, required this.methods});
+  final int remaining;
+  const _OrderTable(
+      {required this.visible, required this.methods, required this.remaining});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -411,8 +446,14 @@ class _OrderTable extends ConsumerWidget {
           Expanded(
             child: ListView.builder(
               padding: EdgeInsets.zero,
-              itemCount: visible.length,
+              itemCount: visible.length + (remaining > 0 ? 1 : 0),
               itemBuilder: (context, i) {
+                if (i >= visible.length) {
+                  return _ShowMoreFooter(
+                      remaining: remaining,
+                      onTap: () =>
+                          ref.read(_viewProvider.notifier).showMore());
+                }
                 final o = visible[i];
                 final isExp = expandedId == o.id;
                 return _TableRow(
@@ -429,6 +470,46 @@ class _OrderTable extends ConsumerWidget {
             ),
           ),
         ]),
+      ),
+    );
+  }
+}
+
+/// Footer button revealing the next chunk of orders. Sits at the end of the
+/// list; the full order set is already in memory, so this is purely cosmetic.
+class _ShowMoreFooter extends StatelessWidget {
+  final int remaining;
+  final VoidCallback onTap;
+  const _ShowMoreFooter({required this.remaining, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+          vertical: AppSpace.md, horizontal: AppSpace.lg),
+      child: Center(
+        child: AnimatedPressScale(
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsetsDirectional.symmetric(
+                horizontal: AppSpace.lg, vertical: AppSpace.sm + 2),
+            decoration: BoxDecoration(
+              color: t.surfaceAlt,
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+              border: Border.all(color: t.border),
+            ),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Icon(Icons.expand_more_rounded, size: 16, color: t.textSecondary),
+              const SizedBox(width: 6),
+              Text(
+                l10n(context).orderShowMore(remaining),
+                style:
+                    ui(size: 13, weight: FontWeight.w700, color: t.textSecondary),
+              ),
+            ]),
+          ),
+        ),
       ),
     );
   }
@@ -582,7 +663,7 @@ class _Stat extends StatelessWidget {
 // Column flex/width spec shared between header and rows.
 // Layout: [#56] [payment flex3] [time flex2] [teller flex2] [amount 110] [chevron 44]
 class _ColSpec {
-  static const double numW = 56;
+  static const double numW = 104; // widened to fit order_ref under the #
   static const int payFlex = 3;
   static const int timeFlex = 2;
   static const int tellerFlex = 2;
@@ -701,17 +782,28 @@ class _TableRow extends StatelessWidget {
           child: Opacity(
             opacity: isVoided ? 0.55 : 1.0,
             child: Row(children: [
-              // # column
+              // # column (per-shift number + unique order_ref beneath)
               SizedBox(
                 width: _ColSpec.numW,
                 child: isPending
                     ? Icon(Icons.cloud_upload_outlined,
                         size: 16, color: t.warning)
-                    : Text('#${o.orderNumber}',
-                        style: ui(
-                            size: 14,
-                            weight: FontWeight.w700,
-                            color: isVoided ? t.textMuted : t.navy)),
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('#${o.orderNumber}',
+                              style: ui(
+                                  size: 14,
+                                  weight: FontWeight.w700,
+                                  color: isVoided ? t.textMuted : t.navy)),
+                          if (o.orderRef != null)
+                            Text(o.orderRef!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: ui(size: 9, color: t.textMuted)),
+                        ],
+                      ),
               ),
               // Payment column
               Expanded(
@@ -874,11 +966,20 @@ class _OrderCard extends StatelessWidget {
                       Icon(Icons.cloud_upload_outlined,
                           size: 16, color: t.warning)
                     else
-                      Text('#${o.orderNumber}',
-                          style: ui(
-                              size: 14,
-                              weight: FontWeight.w700,
-                              color: isVoided ? t.textMuted : t.navy)),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('#${o.orderNumber}',
+                              style: ui(
+                                  size: 14,
+                                  weight: FontWeight.w700,
+                                  color: isVoided ? t.textMuted : t.navy)),
+                          if (o.orderRef != null)
+                            Text(o.orderRef!,
+                                style: ui(size: 10, color: t.textMuted)),
+                        ],
+                      ),
                     const SizedBox(width: AppSpace.sm),
                     Flexible(
                       child: _PaymentBadge(

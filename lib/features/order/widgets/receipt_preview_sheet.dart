@@ -10,6 +10,7 @@ import '../../../core/providers/payment_method_notifier.dart';
 import '../../../core/services/printer_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatting.dart';
+import '../../../shared/widgets/animated_icons.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/responsive_sheet.dart';
 import '../helpers/payment_helpers.dart';
@@ -193,23 +194,55 @@ class _ReceiptPreviewSheetState extends ConsumerState<ReceiptPreviewSheet> {
         children: [
           if (printState.error != null && !printState.printing)
             _buildErrorBanner(t, printState.error!),
-          AppButton(
-            label: hasPrinter
-                ? (printState.error != null
-                    ? l10n(context).commonRetryPrint
-                    : l10n(context).printReceipt)
-                : l10n(context).noPrinterConfigured,
-            icon: printState.error != null
-                ? Icons.refresh_rounded
-                : Icons.print_rounded,
-            loading: printState.printing,
-            width: double.infinity,
-            height: 52,
-            onTap:
-                (hasPrinter && branch != null) ? () => _print(branch) : null,
-          ),
+          if (printState.printing)
+            _buildPrintingBanner(t)
+          else
+            AppButton(
+              label: hasPrinter
+                  ? (printState.error != null
+                      ? l10n(context).commonRetryPrint
+                      : l10n(context).printReceipt)
+                  : l10n(context).noPrinterConfigured,
+              icon: printState.error != null
+                  ? Icons.refresh_rounded
+                  : Icons.print_rounded,
+              width: double.infinity,
+              height: 52,
+              onTap:
+                  (hasPrinter && branch != null) ? () => _print(branch) : null,
+            ),
         ],
       ),
+    );
+  }
+
+  /// Print-in-progress banner — the receipt feeds out of the printer while the
+  /// job runs (matches the post-checkout receipt sheet).
+  Widget _buildPrintingBanner(AppTokens t) {
+    return Container(
+      width: double.infinity,
+      height: 52,
+      decoration: BoxDecoration(
+        color: t.navyBg,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+      ),
+      alignment: Alignment.center,
+      child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+        SizedBox(
+          width: 22,
+          height: 22,
+          child: LoopingIcon(
+            duration: const Duration(milliseconds: 1500),
+            builder: (_, a) => CustomPaint(
+                size: const Size(22, 22),
+                painter:
+                    PrinterPainter(t: a, color: t.navy, paperFill: t.surface)),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Text(l10n(context).orderPrintingReceipt,
+            style: ui(size: 13, weight: FontWeight.w600, color: t.navy)),
+      ]),
     );
   }
 
@@ -368,6 +401,10 @@ class ThermalReceiptCard extends StatelessWidget {
             label: s.receiptOrderLabel,
             value: order.orderNumber == 0 ? s.receiptDraft : '#${order.orderNumber}',
           ),
+          if (order.orderRef != null) ...[
+            const SizedBox(height: AppSpace.xs),
+            _ReceiptInfoRow(label: 'Ref', value: order.orderRef!),
+          ],
           const SizedBox(height: AppSpace.xs),
           _ReceiptInfoRow(label: s.receiptDate, value: dateTime(order.createdAt)),
           if (order.tellerName.isNotEmpty) ...[

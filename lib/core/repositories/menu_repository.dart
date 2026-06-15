@@ -9,6 +9,12 @@ import '../storage/storage_service.dart';
 /// TTL for menu freshness: 10 minutes in ms.
 const _kMenuTtlMs = 10 * 60 * 1000;
 
+/// Cache/sync-meta scope for the menu: the org, or org+branch when a branch is
+/// bound. Branch-keying keeps one branch's effective prices/availability from
+/// leaking into another branch on a shared device.
+String menuScopeKey(String orgId, String? branchId) =>
+    (branchId == null || branchId.isEmpty) ? orgId : '$orgId:$branchId';
+
 class MenuRepository {
   final MenuApi        _api;
   final StorageService _storage;
@@ -46,8 +52,8 @@ class MenuRepository {
   // ── Menu (categories + items) ────────────────────────────────────────────
 
   /// Reads local KV cache synchronously — may be null on first run.
-  ({List<Category> categories, List<MenuItem> items})? loadMenuLocal(String orgId) {
-    final cached = _storage.loadMenu(orgId);
+  ({List<Category> categories, List<MenuItem> items})? loadMenuLocal(String orgId, {String? branchId}) {
+    final cached = _storage.loadMenu(menuScopeKey(orgId, branchId));
     if (cached == null) return null;
     try {
       return (
@@ -64,17 +70,20 @@ class MenuRepository {
   }
 
   /// Fetches fresh data from the network and persists it. Throws on failure.
+  /// When [branchId] is set, items carry branch-effective prices and exclude
+  /// branch-disabled items; the cache is keyed by org+branch.
   Future<({List<Category> categories, List<MenuItem> items})> fetchMenuFresh(
-      String orgId) async {
+      String orgId, {String? branchId}) async {
+    final scope = menuScopeKey(orgId, branchId);
     final results =
-        await Future.wait([_api.categories(orgId), _api.items(orgId)]);
+        await Future.wait([_api.categories(orgId), _api.items(orgId, branchId: branchId)]);
     final cats  = results[0] as List<Category>;
     final items = results[1] as List<MenuItem>;
-    await _storage.saveMenu(orgId, {
+    await _storage.saveMenu(scope, {
       'categories': cats.map((c) => c.toJson()).toList(),
       'items':      items.map((i) => i.toJson()).toList(),
     });
-    await _bumpSyncMeta('menu:$orgId');
+    await _bumpSyncMeta('menu:$scope');
     return (categories: cats, items: items);
   }
 
@@ -104,8 +113,8 @@ class MenuRepository {
 
   // ── Addon items ──────────────────────────────────────────────────────────
 
-  List<AddonItem>? loadAddonsLocal(String orgId) {
-    final cached = _storage.loadAddons(orgId);
+  List<AddonItem>? loadAddonsLocal(String orgId, {String? branchId}) {
+    final cached = _storage.loadAddons(menuScopeKey(orgId, branchId));
     if (cached == null) return null;
     try {
       return cached
@@ -116,10 +125,11 @@ class MenuRepository {
     }
   }
 
-  Future<List<AddonItem>> fetchAddonsFresh(String orgId) async {
-    final addons = await _api.addonItems(orgId);
-    await _storage.saveAddons(orgId, addons.map((a) => a.toJson()).toList());
-    await _bumpSyncMeta('addons:$orgId');
+  Future<List<AddonItem>> fetchAddonsFresh(String orgId, {String? branchId}) async {
+    final scope = menuScopeKey(orgId, branchId);
+    final addons = await _api.addonItems(orgId, branchId: branchId);
+    await _storage.saveAddons(scope, addons.map((a) => a.toJson()).toList());
+    await _bumpSyncMeta('addons:$scope');
     return addons;
   }
 

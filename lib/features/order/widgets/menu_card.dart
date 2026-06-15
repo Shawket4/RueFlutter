@@ -19,7 +19,7 @@ class MenuCard extends StatelessWidget {
     final locale = Localizations.localeOf(context).languageCode;
     final style =
         CatStyle.of(item.name, brightness: Theme.of(context).brightness);
-    final hasImage = item.imageUrl != null && item.imageUrl!.isNotEmpty;
+    final hasImage = isLoadableImageUrl(item.imageUrl);
 
     return AnimatedPressScale(
       onTap: () => ItemDetailSheet.show(context, item),
@@ -39,7 +39,10 @@ class MenuCard extends StatelessWidget {
                   ? MenuImage(
                       url: item.imageUrl!,
                       fit: BoxFit.cover,
-                      placeholder: const ImageSkeleton(),
+                      // Avatar as the placeholder too: a slow/dead image host
+                      // shows the monogram immediately instead of a blank grey
+                      // shimmer, and the photo only replaces it if it loads.
+                      placeholder: MissingItemCard(item: item, style: style),
                       errorWidget: MissingItemCard(item: item, style: style),
                     )
                   : MissingItemCard(item: item, style: style),
@@ -231,41 +234,5 @@ class _MenuCardSkeletonState extends State<MenuCardSkeleton>
         );
       },
     );
-  }
-}
-
-class ImageSkeleton extends StatefulWidget {
-  const ImageSkeleton({super.key});
-
-  @override
-  State<ImageSkeleton> createState() => _ImageSkeletonState();
-}
-
-class _ImageSkeletonState extends State<ImageSkeleton>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
-  late final Animation<double> _anim;
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 1100))
-      ..repeat(reverse: true);
-    _anim = CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut);
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final (base, highlight) = skeletonColors(context);
-    return AnimatedBuilder(
-        animation: _anim,
-        builder: (_, __) =>
-            Container(color: Color.lerp(base, highlight, _anim.value)));
   }
 }

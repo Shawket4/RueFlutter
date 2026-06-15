@@ -15,6 +15,8 @@ abstract class _$BranchInventoryMovementCWProxy {
 
   BranchInventoryMovement branchInventoryId(String? branchInventoryId);
 
+  BranchInventoryMovement branchName(String? branchName);
+
   BranchInventoryMovement createdAt(DateTime createdAt);
 
   BranchInventoryMovement createdBy(String? createdBy);
@@ -54,6 +56,7 @@ abstract class _$BranchInventoryMovementCWProxy {
     bool belowZero,
     String branchId,
     String? branchInventoryId,
+    String? branchName,
     DateTime createdAt,
     String? createdBy,
     String? createdByName,
@@ -92,6 +95,10 @@ class _$BranchInventoryMovementCWProxyImpl
   @override
   BranchInventoryMovement branchInventoryId(String? branchInventoryId) =>
       this(branchInventoryId: branchInventoryId);
+
+  @override
+  BranchInventoryMovement branchName(String? branchName) =>
+      this(branchName: branchName);
 
   @override
   BranchInventoryMovement createdAt(DateTime createdAt) =>
@@ -155,6 +162,7 @@ class _$BranchInventoryMovementCWProxyImpl
     Object? belowZero = const $CopyWithPlaceholder(),
     Object? branchId = const $CopyWithPlaceholder(),
     Object? branchInventoryId = const $CopyWithPlaceholder(),
+    Object? branchName = const $CopyWithPlaceholder(),
     Object? createdAt = const $CopyWithPlaceholder(),
     Object? createdBy = const $CopyWithPlaceholder(),
     Object? createdByName = const $CopyWithPlaceholder(),
@@ -187,6 +195,10 @@ class _$BranchInventoryMovementCWProxyImpl
           ? _value.branchInventoryId
           // ignore: cast_nullable_to_non_nullable
           : branchInventoryId as String?,
+      branchName: branchName == const $CopyWithPlaceholder()
+          ? _value.branchName
+          // ignore: cast_nullable_to_non_nullable
+          : branchName as String?,
       createdAt: createdAt == const $CopyWithPlaceholder()
           ? _value.createdAt
           // ignore: cast_nullable_to_non_nullable
@@ -289,6 +301,7 @@ BranchInventoryMovement _$BranchInventoryMovementFromJson(
         'branch_inventory_id',
         (v) => v as String?,
       ),
+      branchName: $checkedConvert('branch_name', (v) => v as String?),
       createdAt: $checkedConvert(
         'created_at',
         (v) => DateTime.parse(v as String),
@@ -314,6 +327,7 @@ BranchInventoryMovement _$BranchInventoryMovementFromJson(
     'belowZero': 'below_zero',
     'branchId': 'branch_id',
     'branchInventoryId': 'branch_inventory_id',
+    'branchName': 'branch_name',
     'createdAt': 'created_at',
     'createdBy': 'created_by',
     'createdByName': 'created_by_name',
@@ -333,6 +347,7 @@ Map<String, dynamic> _$BranchInventoryMovementToJson(
   'below_zero': instance.belowZero,
   'branch_id': instance.branchId,
   'branch_inventory_id': ?instance.branchInventoryId,
+  'branch_name': ?instance.branchName,
   'created_at': instance.createdAt.toIso8601String(),
   'created_by': ?instance.createdBy,
   'created_by_name': ?instance.createdByName,

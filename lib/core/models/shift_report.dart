@@ -27,8 +27,14 @@ extension ShiftReportX on ShiftReportResponse {
   bool get isOpen => shift.status == 'open';
 
   int expectedCash() {
+    // Server-authoritative figure: the backend computes expected cash with the
+    // exact formula it snapshots at close, so the teller's preview can't drift
+    // from what gets recorded. Present on every fresh report.
+    final server = expectedCashAmount;
+    if (server != null) return server;
+    // Fallbacks for reports cached before `expected_cash` existed:
     if (closingCashSystem != null) {
-      return closingCashSystem!; // closed shift — use server value
+      return closingCashSystem!; // closed shift — use the snapshot
     }
     final cashPayments =
         paymentSummary.where((p) => p.isCash).fold(0, (s, p) => s + p.total);

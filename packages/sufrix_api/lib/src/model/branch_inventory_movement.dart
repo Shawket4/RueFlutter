@@ -28,6 +28,8 @@ class BranchInventoryMovement {
 
      this.branchInventoryId,
 
+     this.branchName,
+
     required  this.createdAt,
 
      this.createdBy,
@@ -102,6 +104,19 @@ class BranchInventoryMovement {
 
 
   final String? branchInventoryId;
+
+
+
+      /// Branch name; only populated by the all-branches waste roll-up (nil {branch_id}). `None` for single-branch queries that do not select it.
+  @JsonKey(
+    
+    name: r'branch_name',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final String? branchName;
 
 
 
@@ -284,6 +299,7 @@ class BranchInventoryMovement {
       other.belowZero == belowZero &&
       other.branchId == branchId &&
       other.branchInventoryId == branchInventoryId &&
+      other.branchName == branchName &&
       other.createdAt == createdAt &&
       other.createdBy == createdBy &&
       other.createdByName == createdByName &&
@@ -305,6 +321,7 @@ class BranchInventoryMovement {
         belowZero.hashCode +
         branchId.hashCode +
         (branchInventoryId == null ? 0 : branchInventoryId.hashCode) +
+        (branchName == null ? 0 : branchName.hashCode) +
         createdAt.hashCode +
         (createdBy == null ? 0 : createdBy.hashCode) +
         (createdByName == null ? 0 : createdByName.hashCode) +

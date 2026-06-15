@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../features/auth/login_screen.dart';
+import '../../features/delivery/delivery_orders_screen.dart';
 import '../../features/order/order_history_screen.dart';
 import '../../features/order/order_screen.dart';
 import '../../features/order/pending_orders_screen.dart';
 import '../../features/settings/settings_screen.dart';
 import '../../features/setup/device_setup_screen.dart';
+import '../../features/shift/cash_movements_screen.dart';
 import '../../features/shift/close_shift_screen.dart';
 import '../../features/shift/open_shift_screen.dart';
 import '../../features/shift/shift_history_screen.dart';
@@ -15,10 +17,15 @@ import '../providers/shift_notifier.dart';
 import '../repositories/shift_repository.dart';
 import '../storage/storage_service.dart';
 
+/// Root navigator key — lets non-widget code (e.g. a tapped OS notification)
+/// navigate without a [BuildContext].
+final rootNavigatorKey = GlobalKey<NavigatorState>();
+
 final routerProvider = Provider<GoRouter>((ref) {
   final authListenable = _AuthListenable(ref);
 
   return GoRouter(
+    navigatorKey: rootNavigatorKey,
     initialLocation: '/login',
     refreshListenable: authListenable,
     redirect: (context, state) {
@@ -68,8 +75,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/close-shift',    builder: (_, __) => const CloseShiftScreen()),
       GoRoute(path: '/order',          builder: (_, __) => const OrderScreen()),
       GoRoute(path: '/order-history',  builder: (_, __) => const OrderHistoryScreen()),
+      GoRoute(path: '/delivery-orders', builder: (_, __) => const DeliveryOrdersScreen()),
       GoRoute(path: '/pending-orders', builder: (_, __) => const PendingOrdersScreen()),
       GoRoute(path: '/shift-history',  builder: (_, __) => const ShiftHistoryScreen()),
+      GoRoute(path: '/cash-movements', builder: (_, __) => const CashMovementsScreen()),
       GoRoute(path: '/settings',       builder: (_, __) => const SettingsScreen()),
     ],
   );

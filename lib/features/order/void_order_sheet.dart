@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/api/client.dart';
 import '../../core/l10n/l10n.dart';
+import '../../core/utils/haptics.dart';
 import '../../core/api/order_api.dart';
 import '../../core/models/order.dart';
 import '../../core/models/pending_action.dart';
@@ -106,11 +106,11 @@ class _VoidOrderSheetState extends ConsumerState<VoidOrderSheet> {
   }
 
   Future<void> _submit() async {
-    HapticFeedback.mediumImpact();
     final s = l10n(context);
     final form = ref.read(_voidFormProvider(widget.order.id));
 
     if (form.reason == null) {
+      Haptics.warning();
       _form.setError(s.orderVoidSelectReason);
       return;
     }
@@ -120,6 +120,7 @@ class _VoidOrderSheetState extends ConsumerState<VoidOrderSheet> {
     if (reason == 'other') {
       final otherText = _otherCtrl.text.trim();
       if (otherText.isEmpty) {
+        Haptics.warning();
         _form.setError(s.orderVoidSpecifyReason);
         return;
       }
@@ -131,7 +132,9 @@ class _VoidOrderSheetState extends ConsumerState<VoidOrderSheet> {
     // Voiding is irreversible — always pass through the confirm sheet.
     final confirmed = await ConfirmSheet.show(
       context,
-      title: s.orderVoidConfirmTitle(widget.order.orderNumber),
+      title: widget.order.orderRef != null
+          ? '${s.orderVoidConfirmTitle(widget.order.orderNumber)} (${widget.order.orderRef})'
+          : s.orderVoidConfirmTitle(widget.order.orderNumber),
       body: isOnline
           ? s.orderVoidConfirmBodyOnline
           : s.orderVoidConfirmBodyOffline,
@@ -221,6 +224,9 @@ class _VoidOrderSheetState extends ConsumerState<VoidOrderSheet> {
               const SizedBox(height: AppSpace.lg),
               Text(s.orderVoidTitle(widget.order.orderNumber),
                   style: Theme.of(context).textTheme.titleLarge),
+              if (widget.order.orderRef != null)
+                Text(widget.order.orderRef!,
+                    style: ui(size: 13, color: t.textSecondary)),
               const SizedBox(height: AppSpace.xs),
               Text(
                 s.orderVoidCannotUndo,

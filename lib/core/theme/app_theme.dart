@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/haptics.dart';
 
 // ═════════════════════════════════════════════════════════════════════════════
 //  SUFRIX DESIGN SYSTEM
@@ -382,12 +383,18 @@ class AnimatedPressScale extends StatefulWidget {
   final VoidCallback? onLongPress;
   final double scaleDown;
 
+  /// Fires [Haptics.selection] on tap (and [Haptics.impact] on long-press) so
+  /// every press surface buzzes consistently. Set false for the rare surface
+  /// that shouldn't (e.g. a tap that only expands/collapses inert content).
+  final bool haptic;
+
   const AnimatedPressScale({
     super.key,
     required this.child,
     this.onTap,
     this.onLongPress,
     this.scaleDown = 0.97,
+    this.haptic = true,
   });
 
   @override
@@ -424,8 +431,18 @@ class _AnimatedPressScaleState extends State<AnimatedPressScale>
 
   @override
   Widget build(BuildContext context) => GestureDetector(
-        onTap: widget.onTap,
-        onLongPress: widget.onLongPress,
+        onTap: widget.onTap == null
+            ? null
+            : () {
+                if (widget.haptic) Haptics.selection();
+                widget.onTap!();
+              },
+        onLongPress: widget.onLongPress == null
+            ? null
+            : () {
+                if (widget.haptic) Haptics.impact();
+                widget.onLongPress!();
+              },
         onTapDown: _onDown,
         onTapUp: _onUp,
         onTapCancel: _onCancel,

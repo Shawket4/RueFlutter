@@ -65,6 +65,18 @@
   "@cashIn": {},
   "cashOut": "Cash Out",
   "@cashOut": {},
+  "cashMovementsTitle": "Cash Movements",
+  "@cashMovementsTitle": {},
+  "cashMovementsSubtitle": "Cash added to or removed from the drawer",
+  "@cashMovementsSubtitle": {},
+  "cashMovementsNew": "New Movement",
+  "@cashMovementsNew": {},
+  "cashMovementsNet": "Net",
+  "@cashMovementsNet": {},
+  "cashMovementsEmptyBody": "Record cash put into or taken out of the drawer during this shift.",
+  "@cashMovementsEmptyBody": {},
+  "cashMovementsNeedShift": "Open a shift to record cash movements.",
+  "@cashMovementsNeedShift": {},
   "cashMovementOfflineError": "Cash movements require an internet connection",
   "@cashMovementOfflineError": {},
   "printReceipt": "Print Receipt",
@@ -260,6 +272,16 @@
   "@shiftOpenCardBody": {},
   "shiftSuggestedFromLastClose": "Suggested — carried over from the last close",
   "@shiftSuggestedFromLastClose": {},
+  "shiftOpeningReasonLabel": "Reason for difference",
+  "@shiftOpeningReasonLabel": {},
+  "shiftOpeningReasonHint": "e.g. added a float, removed cash for a safe drop",
+  "@shiftOpeningReasonHint": {},
+  "shiftOpeningReasonRequired": "Add a reason — the opening differs from the carried-over closing cash",
+  "@shiftOpeningReasonRequired": {},
+  "shiftOpeningDiffersHint": "Differs from the carried-over {amount} — a reason is required",
+  "@shiftOpeningDiffersHint": {
+    "placeholders": { "amount": {} }
+  },
   "shiftErrorValidCash": "Enter a valid cash amount",
   "@shiftErrorValidCash": {},
   "shiftErrorNoBranch": "No branch assigned to your account",
@@ -631,6 +653,12 @@
   "@orderNoOptionsToConfigure": {},
   "orderHistoryTitle": "Orders",
   "@orderHistoryTitle": {},
+  "orderShowMore": "Show {count} more",
+  "@orderShowMore": {
+    "placeholders": {
+      "count": {}
+    }
+  },
   "orderCurrentShift": "Current shift",
   "@orderCurrentShift": {},
   "orderFilterAll": "All",

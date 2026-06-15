@@ -22,6 +22,14 @@ class OrderApi {
     int?                         tipAmount,
     String?                      tipPaymentMethod,
     List<PaymentSplit>?          paymentSplits,
+    // Charged money breakdown — recorded verbatim by the backend (it uses the
+    // catalog only to flag deviations). Lets the DB equal the printed receipt
+    // even when the POS priced from a stale/offline menu.
+    int?                         subtotal,
+    int?                         discountAmount,
+    int?                         taxAmount,
+    int?                         totalAmount,
+    int?                         changeGiven,
     required String              idempotencyKey,
     DateTime?                    createdAt,
   }) async {
@@ -41,6 +49,11 @@ class OrderApi {
         if (tipPaymentMethod != null) 'tip_payment_method': tipPaymentMethod,
         if (paymentSplits != null && paymentSplits.isNotEmpty)
           'payment_splits': paymentSplits.map((s) => s.toApiJson()).toList(),
+        if (subtotal       != null) 'subtotal':        subtotal,
+        if (discountAmount != null) 'discount_amount': discountAmount,
+        if (taxAmount      != null) 'tax_amount':      taxAmount,
+        if (totalAmount    != null) 'total_amount':    totalAmount,
+        if (changeGiven    != null) 'change_given':    changeGiven,
         'items': items.map((i) => i.toApiJson()).toList(),
         if (createdAt != null) 'created_at': createdAt.toUtc().toIso8601String(),
       },

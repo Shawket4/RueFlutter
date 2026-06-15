@@ -34,6 +34,8 @@ dependencies:
   flutter_svg: ^2.0.10+1
   flutter_secure_storage: ^10.3.1
   crypto: ^3.0.7
+  flutter_local_notifications: ^17.2.3
+  audioplayers: ^6.1.0
 
 dev_dependencies:
   flutter_test:
@@ -86,3 +88,4 @@ flutter:
     - assets/Icon.svg
     - assets/Logo.svg
     - assets/lottie/
+    - assets/sounds/

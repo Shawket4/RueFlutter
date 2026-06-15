@@ -9,6 +9,8 @@ part of 'shift.dart';
 abstract class _$ShiftCWProxy {
   Shift branchId(String branchId);
 
+  Shift branchName(String? branchName);
+
   Shift cashDiscrepancy(int? cashDiscrepancy);
 
   Shift closedAt(DateTime? closedAt);
@@ -53,6 +55,7 @@ abstract class _$ShiftCWProxy {
   /// ````
   Shift call({
     String branchId,
+    String? branchName,
     int? cashDiscrepancy,
     DateTime? closedAt,
     String? closedBy,
@@ -82,6 +85,9 @@ class _$ShiftCWProxyImpl implements _$ShiftCWProxy {
 
   @override
   Shift branchId(String branchId) => this(branchId: branchId);
+
+  @override
+  Shift branchName(String? branchName) => this(branchName: branchName);
 
   @override
   Shift cashDiscrepancy(int? cashDiscrepancy) =>
@@ -155,6 +161,7 @@ class _$ShiftCWProxyImpl implements _$ShiftCWProxy {
   /// ````
   Shift call({
     Object? branchId = const $CopyWithPlaceholder(),
+    Object? branchName = const $CopyWithPlaceholder(),
     Object? cashDiscrepancy = const $CopyWithPlaceholder(),
     Object? closedAt = const $CopyWithPlaceholder(),
     Object? closedBy = const $CopyWithPlaceholder(),
@@ -179,6 +186,10 @@ class _$ShiftCWProxyImpl implements _$ShiftCWProxy {
           ? _value.branchId
           // ignore: cast_nullable_to_non_nullable
           : branchId as String,
+      branchName: branchName == const $CopyWithPlaceholder()
+          ? _value.branchName
+          // ignore: cast_nullable_to_non_nullable
+          : branchName as String?,
       cashDiscrepancy: cashDiscrepancy == const $CopyWithPlaceholder()
           ? _value.cashDiscrepancy
           // ignore: cast_nullable_to_non_nullable
@@ -285,6 +296,7 @@ Shift _$ShiftFromJson(Map<String, dynamic> json) => $checkedCreate(
     );
     final val = Shift(
       branchId: $checkedConvert('branch_id', (v) => v as String),
+      branchName: $checkedConvert('branch_name', (v) => v as String?),
       cashDiscrepancy: $checkedConvert(
         'cash_discrepancy',
         (v) => (v as num?)?.toInt(),
@@ -338,6 +350,7 @@ Shift _$ShiftFromJson(Map<String, dynamic> json) => $checkedCreate(
   },
   fieldKeyMap: const {
     'branchId': 'branch_id',
+    'branchName': 'branch_name',
     'cashDiscrepancy': 'cash_discrepancy',
     'closedAt': 'closed_at',
     'closedBy': 'closed_by',
@@ -358,6 +371,7 @@ Shift _$ShiftFromJson(Map<String, dynamic> json) => $checkedCreate(
 
 Map<String, dynamic> _$ShiftToJson(Shift instance) => <String, dynamic>{
   'branch_id': instance.branchId,
+  'branch_name': ?instance.branchName,
   'cash_discrepancy': ?instance.cashDiscrepancy,
   'closed_at': ?instance.closedAt?.toIso8601String(),
   'closed_by': ?instance.closedBy,

@@ -23,6 +23,7 @@ Widget _buildGrid(int count, Widget Function(BuildContext, int) builder) =>
         childAspectRatio: 1 / 1.22,
       ),
       itemCount: count,
+      // GridView already wraps each child in a RepaintBoundary.
       itemBuilder: builder,
     );
 
@@ -36,13 +37,28 @@ class MenuGrid extends ConsumerWidget {
     // changes (e.g. systemCash refresh after every checkout).
     final branchId =
         ref.watch(authProvider.select((s) => s.user?.branchId ?? ''));
+    final categoryId =
+        ref.watch(menuProvider.select((m) => m.selectedCategoryId));
     final entries = menu.gridEntriesForCategory(branchId: branchId);
 
+    // Each state carries a distinct key so the AnimatedSwitcher below
+    // cross-fades between them — and keying the grid per category gives each
+    // category a FRESH GridView, so cells never recycle a previous category's
+    // images (the source of the abrupt swap + ghosting on category change).
+    // Each state is wrapped so the AnimatedSwitcher has a distinct keyed child
+    // to cross-fade. The grid sits in a RepaintBoundary so it composites as ONE
+    // cached layer — the fade then just blends two layers (GPU-cheap) instead
+    // of repainting every card each frame. Keying it per category also gives a
+    // FRESH GridView, so cells never recycle a previous category's images.
+    final Widget body;
     if (menu.isLoading) {
-      return _buildGrid(8, (_, __) => const MenuCardSkeleton());
-    }
-    if (menu.error != null) {
-      return ErrorState(
+      body = RepaintBoundary(
+        key: const ValueKey('menu_loading'),
+        child: _buildGrid(8, (_, __) => const MenuCardSkeleton()),
+      );
+    } else if (menu.error != null) {
+      body = ErrorState(
+        key: const ValueKey('menu_error'),
         message: menu.error!,
         onRetry: () {
           final orgId = ref.read(authProvider).user?.orgId;
@@ -51,23 +67,34 @@ class MenuGrid extends ConsumerWidget {
           }
         },
       );
-    }
-    if (entries.isEmpty) {
-      return EmptyState(
+    } else if (entries.isEmpty) {
+      body = EmptyState(
+        key: ValueKey('menu_empty_$categoryId'),
         icon: Icons.coffee_outlined,
         title: l10n(context).orderNoItemsCategory,
         body: l10n(context).orderPickAnotherCategory,
       );
+    } else {
+      body = RepaintBoundary(
+        key: ValueKey('menu_grid_$categoryId'),
+        child: _buildGrid(entries.length, (_, i) {
+          final e = entries[i];
+          switch (e.kind) {
+            case MenuGridEntryKind.item:
+              return MenuCard(item: e.item!);
+            case MenuGridEntryKind.bundle:
+              return BundleCard(bundle: e.bundle!, menuItems: menu.items);
+          }
+        }),
+      );
     }
-    return _buildGrid(entries.length, (_, i) {
-      final e = entries[i];
-      switch (e.kind) {
-        case MenuGridEntryKind.item:
-          return MenuCard(item: e.item!);
-        case MenuGridEntryKind.bundle:
-          return BundleCard(bundle: e.bundle!, menuItems: menu.items);
-      }
-    });
+
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 190),
+      switchInCurve: Curves.easeOut,
+      switchOutCurve: Curves.easeIn,
+      child: body,
+    );
   }
 }
 
@@ -92,7 +119,8 @@ class SearchResults extends ConsumerWidget {
 
     if (itemFound.isEmpty && bundleFound.isEmpty) {
       return EmptyState(
-        icon: Icons.search_off_rounded,
+        lottieAsset: 'assets/lottie/no_results.json',
+        lottieSize: 160,
         title: l10n(context).orderNoResultsFor(query),
         body: l10n(context).orderTryShorterName,
       );

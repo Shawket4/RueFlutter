@@ -12,6 +12,7 @@ Name | Type | Description | Notes
 **belowZero** | **bool** |  | 
 **branchId** | **String** |  | 
 **branchInventoryId** | **String** |  | [optional] 
+**branchName** | **String** | Branch name; only populated by the all-branches waste roll-up (nil {branch_id}). `None` for single-branch queries that do not select it. | [optional] 
 **createdAt** | [**DateTime**](DateTime.md) |  | 
 **createdBy** | **String** |  | [optional] 
 **createdByName** | **String** |  | [optional] 

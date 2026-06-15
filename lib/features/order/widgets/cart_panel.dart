@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/l10n/l10n.dart';
 import '../../../core/providers/cart_notifier.dart';
 import '../../../core/providers/draft_carts_notifier.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/entrance_focus.dart';
 import '../../../core/utils/formatting.dart';
+import '../../../core/utils/haptics.dart';
+import '../../../shared/widgets/animated_icons.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/confirm_sheet.dart';
 import '../../../shared/widgets/empty_state.dart';
@@ -65,7 +67,8 @@ class CartPanel extends ConsumerWidget {
           child: isEmpty
               ? EmptyState(
                   key: const ValueKey('empty'),
-                  icon: Icons.shopping_bag_outlined,
+                  lottieAsset: 'assets/lottie/empty_cart.json',
+                  lottieSize: 130,
                   title: l10n(context).orderCartEmpty,
                   body: l10n(context).orderTapToAdd,
                 )
@@ -257,7 +260,8 @@ class MobileCartSheet extends ConsumerWidget {
         Expanded(
           child: isEmpty
               ? EmptyState(
-                  icon: Icons.shopping_bag_outlined,
+                  lottieAsset: 'assets/lottie/empty_cart.json',
+                  lottieSize: 130,
                   title: l10n(context).orderCartEmpty,
                   body: l10n(context).orderTapToAdd,
                 )
@@ -354,7 +358,7 @@ class DraftTabsBar extends ConsumerWidget {
                   total: d.cartState.total),
               isActive: false,
               onTap: () async {
-                HapticFeedback.lightImpact();
+                Haptics.selection();
                 await ref
                     .read(draftCartsProvider.notifier)
                     .switchDraft(d.id, ref.read(cartProvider));
@@ -365,14 +369,17 @@ class DraftTabsBar extends ConsumerWidget {
             );
           }),
 
-          // Park current cart and start a fresh one.
-          GestureDetector(
-            onTap: () async {
-              HapticFeedback.mediumImpact();
+          // Hold the current order: the bookmark swings, then (after a short
+          // beat) the cart is parked as a draft and a fresh one starts.
+          TapToPlayIcon(
+            onTapDown: Haptics.impact,
+            duration: const Duration(milliseconds: 600),
+            onPressed: () async {
               final parked = await ref
                   .read(draftCartsProvider.notifier)
                   .parkCurrentCart(ref.read(cartProvider));
               if (!parked) {
+                Haptics.warning();
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -387,16 +394,20 @@ class DraftTabsBar extends ConsumerWidget {
                 Navigator.pop(context);
               }
             },
-            child: Container(
+            builder: (_, anim) => Container(
               margin: const EdgeInsetsDirectional.only(start: 4),
               padding:
                   const EdgeInsetsDirectional.symmetric(horizontal: 12),
+              alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: t.surface,
                 borderRadius: BorderRadius.circular(AppRadius.xs),
                 border: Border.all(color: t.border),
               ),
-              child: Icon(Icons.add_rounded, size: 16, color: t.accent),
+              child: CustomPaint(
+                  size: const Size(13, 16),
+                  painter: BookmarkPainter(
+                      t: anim, color: t.accent, fill: t.accentBg)),
             ),
           ),
         ],
@@ -525,7 +536,7 @@ class _TabWidget extends StatelessWidget {
               const SizedBox(width: 6),
               GestureDetector(
                 onTap: () {
-                  HapticFeedback.lightImpact();
+                  Haptics.selection();
                   onDelete!();
                 },
                 child: Icon(
@@ -561,13 +572,22 @@ class _RenameSheet extends StatefulWidget {
   State<_RenameSheet> createState() => _RenameSheetState();
 }
 
-class _RenameSheetState extends State<_RenameSheet> {
+class _RenameSheetState extends State<_RenameSheet>
+    with EntranceFocus<_RenameSheet> {
   late final TextEditingController _ctrl =
       TextEditingController(text: widget.initial);
+  final FocusNode _focus = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    focusAfterEntrance(_focus);
+  }
 
   @override
   void dispose() {
     _ctrl.dispose();
+    _focus.dispose();
     super.dispose();
   }
 
@@ -599,7 +619,7 @@ class _RenameSheetState extends State<_RenameSheet> {
             const SizedBox(height: AppSpace.lg),
             TextField(
               controller: _ctrl,
-              autofocus: true,
+              focusNode: _focus,
               onSubmitted: (_) => _submit(),
               decoration: InputDecoration(
                 hintText: l10n(context).orderRenamePlaceholder,

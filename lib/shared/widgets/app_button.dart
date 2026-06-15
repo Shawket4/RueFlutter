@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/haptics.dart';
 
 enum BtnVariant { primary, danger, outline, ghost }
 
@@ -88,6 +89,9 @@ class _AppButtonState extends State<AppButton>
       onTapUp: (_) {
         if (_enabled) {
           _ctrl.reverse();
+          widget.variant == BtnVariant.danger
+              ? Haptics.impact()
+              : Haptics.tap();
           widget.onTap!();
         }
       },

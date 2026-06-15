@@ -9,6 +9,7 @@ import 'package:sufrix_api/api.dart';
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **branchId** | **String** |  | 
+**branchName** | **String** | Branch label — only populated by the stocktakes list (so the \"All branches\" view can show which branch each stocktake belongs to). Other stocktake endpoints leave it `null`. | [optional] 
 **createdAt** | [**DateTime**](DateTime.md) |  | 
 **finalizedAt** | [**DateTime**](DateTime.md) |  | [optional] 
 **finalizedBy** | **String** |  | [optional] 

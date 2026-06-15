@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +8,7 @@ import '../../core/l10n/l10n.dart';
 import '../../core/models/shift.dart';
 import '../../core/providers/auth_notifier.dart';
 import '../../core/providers/cart_notifier.dart';
+import '../../core/providers/delivery_orders_notifier.dart';
 import '../../core/providers/discount_notifier.dart';
 import '../../core/providers/menu_notifier.dart';
 import '../../core/providers/order_history_notifier.dart';
@@ -18,6 +20,7 @@ import '../../core/services/offline_queue.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatting.dart';
 import '../../core/utils/responsive.dart';
+import '../../shared/widgets/animated_icons.dart';
 import '../../shared/widgets/new_order_banner.dart';
 import '../../shared/widgets/offline_banner.dart';
 import '../../shared/widgets/sync_status_chip.dart';
@@ -275,6 +278,12 @@ class _BottomActionBar extends ConsumerWidget {
         ref.watch(offlineQueueProvider.select((q) => q.hasStuck));
     final isOnline = ref.watch(isOnlineProvider);
     final shift = ref.watch(shiftProvider.select((s) => s.shift));
+    // Delivery is a first-class action on the bar (not buried in "More"):
+    // the badge counts in-flight orders, and brand-new ones pulse in red.
+    final deliveryActive =
+        ref.watch(deliveryOrdersProvider.select((d) => d.activeCount));
+    final deliveryNew =
+        ref.watch(deliveryOrdersProvider.select((d) => d.newCount));
 
     final bottomInset = MediaQuery.of(context).padding.bottom;
     return Container(
@@ -313,6 +322,17 @@ class _BottomActionBar extends ConsumerWidget {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    _BarAction(
+                      icon: Icons.delivery_dining_rounded,
+                      label: 'Delivery',
+                      compact: compact,
+                      disabled: shift == null,
+                      badgeCount: deliveryActive,
+                      badgeDanger: deliveryNew > 0,
+                      pulse: deliveryNew > 0,
+                      accent: true,
+                      onTap: () => context.push('/delivery-orders'),
+                    ),
                     _BarAction(
                       icon: Icons.receipt_long_rounded,
                       label: s.shellPastOrders,
@@ -428,6 +448,10 @@ class _BarAction extends StatelessWidget {
   final String? tooltip;
   final int badgeCount;
   final bool badgeDanger;
+  /// Gently pulse the icon to draw attention (e.g. new delivery orders).
+  final bool pulse;
+  /// Render with the accent tint so this reads as a primary action.
+  final bool accent;
   final VoidCallback onTap;
 
   const _BarAction({
@@ -439,14 +463,32 @@ class _BarAction extends StatelessWidget {
     this.tooltip,
     this.badgeCount = 0,
     this.badgeDanger = false,
+    this.pulse = false,
+    this.accent = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final t = context.tokens;
-    final fg = disabled ? t.textMuted : t.textSecondary;
+    final fg = disabled
+        ? t.textMuted
+        : accent
+            ? t.accent
+            : t.textSecondary;
 
     Widget iconWidget = Icon(icon, size: 17, color: fg);
+    if (pulse && !disabled) {
+      // Smooth breathing scale (1.0 → ~1.18 → 1.0) — matches the app's other
+      // looping micro-animations, used here to flag orders awaiting acceptance.
+      final inner = iconWidget;
+      iconWidget = LoopingIcon(
+        duration: const Duration(milliseconds: 1100),
+        builder: (ctx, p) => Transform.scale(
+          scale: 1.0 + 0.18 * math.sin(p * math.pi),
+          child: inner,
+        ),
+      );
+    }
     if (badgeCount > 0) {
       iconWidget = Badge(
         backgroundColor: badgeDanger ? t.danger : t.accent,
@@ -468,9 +510,14 @@ class _BarAction extends StatelessWidget {
               ? EdgeInsets.zero
               : const EdgeInsetsDirectional.symmetric(horizontal: 10),
           decoration: BoxDecoration(
-            color: t.surfaceAlt,
+            color: accent && !disabled
+                ? t.accent.withOpacity(0.12)
+                : t.surfaceAlt,
             borderRadius: BorderRadius.circular(AppRadius.xs),
-            border: Border.all(color: t.borderLight),
+            border: Border.all(
+                color: accent && !disabled
+                    ? t.accent.withOpacity(0.45)
+                    : t.borderLight),
           ),
           alignment: Alignment.center,
           child: compact

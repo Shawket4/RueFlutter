@@ -26,6 +26,11 @@ class DeliveryOrdersState {
 
   int get activeCount => orders.where((o) => o.status.isActive).length;
 
+  /// Brand-new orders awaiting acceptance (status == received). Drives the
+  /// attention (pulse + danger badge) on the order screen's Delivery button.
+  int get newCount =>
+      orders.where((o) => o.status == DeliveryStatus.received).length;
+
   bool get fromCache => freshness != DataFreshness.live;
 
   DeliveryOrdersState copyWith({

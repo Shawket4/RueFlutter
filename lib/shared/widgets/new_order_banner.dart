@@ -3,28 +3,39 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/models/delivery_order.dart';
+import '../../core/providers/delivery_orders_notifier.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatting.dart';
 
 /// Holds the most recent brand-new delivery order to surface as an in-app
 /// banner, or null when there's nothing to show. Driven by
-/// [DeliveryRealtimeService] (the single new-order detection point) and cleared
-/// when the teller taps through or dismisses it.
+/// [DeliveryRealtimeService] (the single new-order detection point). It is
+/// cleared when the teller ACCEPTS the order (or explicitly dismisses it) —
+/// never by merely opening/viewing the queue.
 class NewOrderBannerNotifier extends Notifier<DeliveryOrder?> {
   @override
   DeliveryOrder? build() => null;
 
   void show(DeliveryOrder order) => state = order;
   void dismiss() => state = null;
+
+  /// Clear the banner only if it is currently showing [orderId], so accepting
+  /// one order doesn't hide an alert for a different, still-pending order.
+  void dismissFor(String orderId) {
+    if (state?.id == orderId) state = null;
+  }
 }
 
 final newOrderBannerProvider =
     NotifierProvider<NewOrderBannerNotifier, DeliveryOrder?>(
         NewOrderBannerNotifier.new);
 
-/// A prominent, dismissible "new delivery order" banner. Renders nothing when
-/// there's no pending order. Tapping it opens the delivery queue; the ✕
-/// dismisses. Mirrors [OfflineBanner]'s placement in a column.
+/// A prominent "new delivery order" banner. Renders nothing when there's no
+/// pending order. Tapping it opens the delivery queue (without clearing — the
+/// teller must ACCEPT the order to clear it); the ✕ explicitly dismisses. The
+/// banner also auto-hides once the order leaves the `received` state (accepted
+/// or resolved, including from another device). Mirrors [OfflineBanner]'s
+/// placement in a column.
 class NewOrderBanner extends ConsumerWidget {
   final EdgeInsetsGeometry margin;
   const NewOrderBanner(
@@ -35,16 +46,19 @@ class NewOrderBanner extends ConsumerWidget {
     final order = ref.watch(newOrderBannerProvider);
     if (order == null) return const SizedBox.shrink();
 
+    // Viewing must not clear the alert — only acceptance does. Auto-hide once
+    // the live order has been acted on (status advanced past `received`).
+    final accepted = ref.watch(deliveryOrdersProvider.select((d) => d.orders
+        .any((o) => o.id == order.id && o.status != DeliveryStatus.received)));
+    if (accepted) return const SizedBox.shrink();
+
     final t = context.tokens;
     final ref0 = order.deliveryRef ?? 'New delivery order';
 
     return Padding(
       padding: margin,
       child: AnimatedPressScale(
-        onTap: () {
-          ref.read(newOrderBannerProvider.notifier).dismiss();
-          context.push('/delivery-orders');
-        },
+        onTap: () => context.push('/delivery-orders'),
         child: Container(
           width: double.infinity,
           padding: const EdgeInsetsDirectional.fromSTEB(12, 10, 8, 10),

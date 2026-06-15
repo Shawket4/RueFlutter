@@ -14,6 +14,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatting.dart';
 import '../../shared/widgets/app_top_bar.dart';
 import '../../shared/widgets/empty_state.dart';
+import '../../core/services/notification_service.dart';
 import '../../shared/widgets/new_order_banner.dart';
 import '../../shared/widgets/offline_banner.dart';
 import '../../shared/widgets/refresh_button.dart';
@@ -129,8 +130,9 @@ class _DeliveryOrdersScreenState extends ConsumerState<DeliveryOrdersScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Opening the queue acknowledges any pending new-order alert banner.
-      ref.read(newOrderBannerProvider.notifier).dismiss();
+      // NB: opening the queue must NOT clear the new-order alert — the teller
+      // has to ACCEPT the order for that (handled in _confirm/_run). Merely
+      // viewing leaves the banner + OS notification in place.
       _load();
     });
   }
@@ -286,11 +288,23 @@ class _DeliveryCardState extends ConsumerState<_DeliveryCard> {
     try {
       final updated = await action();
       await ref.read(deliveryOrdersProvider.notifier).upsertOrder(updated);
+      _clearNewOrderAlert(updated);
     } catch (e) {
       _snack(_friendly(e), context.tokens.danger);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  /// Once an order has been acted on (accepted, rejected, or otherwise advanced
+  /// past `received`), stop alerting for it: drop the orders-screen banner and
+  /// clear the OS notification. The banner also hides reactively, but this
+  /// keeps the provider state and the notification center tidy. No-op while the
+  /// order is still awaiting acceptance, so merely viewing never clears it.
+  void _clearNewOrderAlert(DeliveryOrder o) {
+    if (o.status == DeliveryStatus.received) return;
+    NotificationService.instance.cancel(o.id);
+    ref.read(newOrderBannerProvider.notifier).dismissFor(o.id);
   }
 
   /// Confirm == the accept step. Print the customer receipt once (if a printer
@@ -304,6 +318,7 @@ class _DeliveryCardState extends ConsumerState<_DeliveryCard> {
           .read(deliveryOrderRepositoryProvider)
           .setStatus(order.id, DeliveryStatus.confirmed);
       await ref.read(deliveryOrdersProvider.notifier).upsertOrder(updated);
+      _clearNewOrderAlert(updated);
     } catch (e) {
       _snack(_friendly(e), context.tokens.danger);
     } finally {

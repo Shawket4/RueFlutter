@@ -110,6 +110,18 @@ class NotificationService {
     }
   }
 
+  /// Cancel a previously-shown new-order notification once the order has been
+  /// accepted (or otherwise resolved), so it clears from the OS notification
+  /// center. Uses the same id derivation as [showNewOrder].
+  Future<void> cancel(String orderId) async {
+    if (!_initialized) return;
+    try {
+      await _plugin.cancel(orderId.hashCode & 0x7fffffff);
+    } catch (e) {
+      if (kDebugMode) debugPrint('NotificationService.cancel failed: $e');
+    }
+  }
+
   void _onTap(NotificationResponse response) {
     final context = rootNavigatorKey.currentContext;
     if (context == null) return;

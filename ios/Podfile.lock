@@ -12,6 +12,8 @@ PODS:
   - flutter_secure_storage_darwin (10.0.0):
     - Flutter
     - FlutterMacOS
+  - package_info_plus (0.4.5):
+    - Flutter
   - path_provider_foundation (0.0.1):
     - Flutter
     - FlutterMacOS
@@ -22,6 +24,10 @@ PODS:
     - FlutterMacOS
   - starxpand_sdk_wrapper (0.0.1):
     - Flutter
+  - url_launcher_ios (0.0.1):
+    - Flutter
+  - wakelock_plus (0.0.1):
+    - Flutter
 
 DEPENDENCIES:
   - audioplayers_darwin (from `.symlinks/plugins/audioplayers_darwin/darwin`)
@@ -30,10 +36,13 @@ DEPENDENCIES:
   - flutter_local_notifications (from `.symlinks/plugins/flutter_local_notifications/ios`)
   - flutter_native_splash (from `.symlinks/plugins/flutter_native_splash/ios`)
   - flutter_secure_storage_darwin (from `.symlinks/plugins/flutter_secure_storage_darwin/darwin`)
+  - package_info_plus (from `.symlinks/plugins/package_info_plus/ios`)
   - path_provider_foundation (from `.symlinks/plugins/path_provider_foundation/darwin`)
   - printing (from `.symlinks/plugins/printing/ios`)
   - sqflite_darwin (from `.symlinks/plugins/sqflite_darwin/darwin`)
   - starxpand_sdk_wrapper (from `.symlinks/plugins/starxpand_sdk_wrapper/ios`)
+  - url_launcher_ios (from `.symlinks/plugins/url_launcher_ios/ios`)
+  - wakelock_plus (from `.symlinks/plugins/wakelock_plus/ios`)
 
 EXTERNAL SOURCES:
   audioplayers_darwin:
@@ -48,6 +57,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/flutter_native_splash/ios"
   flutter_secure_storage_darwin:
     :path: ".symlinks/plugins/flutter_secure_storage_darwin/darwin"
+  package_info_plus:
+    :path: ".symlinks/plugins/package_info_plus/ios"
   path_provider_foundation:
     :path: ".symlinks/plugins/path_provider_foundation/darwin"
   printing:
@@ -56,6 +67,10 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/sqflite_darwin/darwin"
   starxpand_sdk_wrapper:
     :path: ".symlinks/plugins/starxpand_sdk_wrapper/ios"
+  url_launcher_ios:
+    :path: ".symlinks/plugins/url_launcher_ios/ios"
+  wakelock_plus:
+    :path: ".symlinks/plugins/wakelock_plus/ios"
 
 SPEC CHECKSUMS:
   audioplayers_darwin: 835ced6edd4c9fc8ebb0a7cc9e294a91d99917d5
@@ -64,10 +79,13 @@ SPEC CHECKSUMS:
   flutter_local_notifications: ad39620c743ea4c15127860f4b5641649a988100
   flutter_native_splash: c32d145d68aeda5502d5f543ee38c192065986cf
   flutter_secure_storage_darwin: acdb3f316ed05a3e68f856e0353b133eec373a23
+  package_info_plus: af8e2ca6888548050f16fa2f1938db7b5a5df499
   path_provider_foundation: bb55f6dbba17d0dccd6737fe6f7f34fbd0376880
   printing: 54ff03f28fe9ba3aa93358afb80a8595a071dd07
   sqflite_darwin: 20b2a3a3b70e43edae938624ce550a3cbf66a3d0
   starxpand_sdk_wrapper: 06595334ddbdd976822e572ce15d3540b3a74229
+  url_launcher_ios: 7a95fa5b60cc718a708b8f2966718e93db0cef1b
+  wakelock_plus: e29112ab3ef0b318e58cfa5c32326458be66b556
 
 PODFILE CHECKSUM: 3c63482e143d1b91d2d2560aee9fb04ecc74ac7e
 

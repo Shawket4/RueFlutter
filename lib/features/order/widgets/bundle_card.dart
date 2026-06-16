@@ -85,8 +85,11 @@ class BundleCard extends ConsumerWidget {
               ),
             ),
             Container(
+              // Fixed height (two-line name + optional count) so the footer
+              // never steals from the image when names run long.
+              height: 52,
               color: t.navyBg.withOpacity(0.45),
-              padding: const EdgeInsetsDirectional.fromSTEB(10, 8, 10, 9),
+              padding: const EdgeInsetsDirectional.symmetric(horizontal: 10),
               child: Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
@@ -94,6 +97,7 @@ class BundleCard extends ConsumerWidget {
                     const SizedBox(width: 6),
                     Expanded(
                         child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(bundle.localizedName(locale),

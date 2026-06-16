@@ -48,8 +48,11 @@ class MenuCard extends StatelessWidget {
                   : MissingItemCard(item: item, style: style),
             ),
             Container(
+              // Fixed height (room for two lines) so the image/footer split is
+              // identical on every card regardless of how long the name is.
+              height: 48,
               color: t.surface,
-              padding: const EdgeInsetsDirectional.fromSTEB(10, 7, 10, 8),
+              padding: const EdgeInsetsDirectional.symmetric(horizontal: 10),
               child: Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [

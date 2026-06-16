@@ -50,37 +50,26 @@ class _AppButtonState extends State<AppButton>
 
   bool get _enabled => !widget.loading && widget.onTap != null;
 
-  Color get _bg => switch (widget.variant) {
-        BtnVariant.primary => AppColors.primary,
-        BtnVariant.danger => AppColors.danger,
+  Color _bg(AppTokens t) => switch (widget.variant) {
+        BtnVariant.primary => t.accent,
+        BtnVariant.danger => t.danger,
         BtnVariant.outline => Colors.transparent,
         BtnVariant.ghost => Colors.transparent,
       };
 
-  Color get _fg => switch (widget.variant) {
-        BtnVariant.primary => Colors.white,
+  Color _fg(AppTokens t) => switch (widget.variant) {
+        BtnVariant.primary => t.textOnAccent,
         BtnVariant.danger => Colors.white,
-        BtnVariant.outline => AppColors.primary,
-        BtnVariant.ghost => AppColors.textSecondary,
+        BtnVariant.outline => t.accent,
+        BtnVariant.ghost => t.textSecondary,
       };
-
-  List<BoxShadow> get _shadows {
-    if (!_enabled) return [];
-    return switch (widget.variant) {
-      BtnVariant.primary => AppShadows.primaryGlow(),
-      BtnVariant.danger => [
-          BoxShadow(
-              color: AppColors.danger.withOpacity(0.2),
-              blurRadius: 16,
-              offset: const Offset(0, 4))
-        ],
-      _ => [],
-    };
-  }
 
   @override
   Widget build(BuildContext context) {
+    final t = context.tokens;
     final hasBorder = widget.variant == BtnVariant.outline;
+    final bg = _bg(t);
+    final fg = _fg(t);
 
     return GestureDetector(
       onTapDown: (_) {
@@ -104,12 +93,12 @@ class _AppButtonState extends State<AppButton>
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 150),
             decoration: BoxDecoration(
-              color: _enabled ? _bg : _bg.withOpacity(0.45),
+              color: _enabled ? bg : bg.withOpacity(0.45),
               borderRadius: BorderRadius.circular(AppRadius.sm),
               border: hasBorder
-                  ? Border.all(color: AppColors.primary, width: 1.5)
+                  ? Border.all(
+                      color: _enabled ? t.accent : t.border, width: 1.5)
                   : null,
-              boxShadow: _enabled ? _shadows : [],
             ),
             alignment: Alignment.center,
             child: widget.loading
@@ -117,17 +106,15 @@ class _AppButtonState extends State<AppButton>
                     width: 20,
                     height: 20,
                     child:
-                        CircularProgressIndicator(strokeWidth: 2.5, color: _fg))
+                        CircularProgressIndicator(strokeWidth: 2.5, color: fg))
                 : Row(mainAxisSize: MainAxisSize.min, children: [
                     if (widget.icon != null) ...[
-                      Icon(widget.icon, size: 17, color: _fg),
-                      const SizedBox(width: 8),
+                      Icon(widget.icon, size: 17, color: fg),
+                      const SizedBox(width: AppSpace.sm),
                     ],
                     Text(widget.label,
-                        style: cairo(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: _fg)),
+                        style:
+                            ui(size: 14, weight: FontWeight.w700, color: fg)),
                   ]),
           ),
         ),

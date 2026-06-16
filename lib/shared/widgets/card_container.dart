@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 
+/// Legacy card wrapper. Prefer [SurfaceCard] for new code — this remains
+/// token-aware so any lingering callers stay consistent.
 class CardContainer extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry? padding;
@@ -18,15 +20,18 @@ class CardContainer extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) => Container(
-        width: double.infinity,
-        padding: padding ?? const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: color ?? AppColors.surface,
-          borderRadius: BorderRadius.circular(radius),
-          border: Border.all(color: AppColors.border, width: 1),
-          boxShadow: elevated ? AppShadows.md : AppShadows.card,
-        ),
-        child: child,
-      );
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    return Container(
+      width: double.infinity,
+      padding: padding ?? const EdgeInsets.all(AppSpace.xl),
+      decoration: BoxDecoration(
+        color: color ?? t.surface,
+        borderRadius: BorderRadius.circular(radius),
+        border: Border.all(color: t.border),
+        boxShadow: elevated ? AppShadows.raised(t) : AppShadows.of(t),
+      ),
+      child: child,
+    );
+  }
 }

@@ -17,14 +17,15 @@ class TopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.tokens;
     final top = MediaQuery.of(context).padding.top;
     return Container(
-      color: Colors.white,
-      padding: EdgeInsets.fromLTRB(16, top + 10, 16, 12),
+      color: t.surface,
+      padding: EdgeInsetsDirectional.fromSTEB(16, top + 10, 16, 12),
       child: Row(children: [
         _IconBtn(icon: Icons.arrow_back_rounded, onTap: onBack),
         const SizedBox(width: 14),
-        Text(title, style: cairo(fontSize: 18, fontWeight: FontWeight.w700)),
+        Text(title, style: ui(size: 18, weight: FontWeight.w700, color: t.textPrimary)),
         const Spacer(),
         if (trailing != null) trailing!,
         if (trailing == null && onRefresh != null)
@@ -40,18 +41,21 @@ class _IconBtn extends StatelessWidget {
   const _IconBtn({required this.icon, required this.onTap});
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
-        onTap: onTap,
-        child: Container(
-          width: 38,
-          height: 38,
-          decoration: BoxDecoration(
-            color: AppColors.bg,
-            borderRadius: BorderRadius.circular(AppRadius.sm),
-            border: Border.all(color: AppColors.border),
-          ),
-          alignment: Alignment.center,
-          child: Icon(icon, size: 18, color: AppColors.textPrimary),
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    return AnimatedPressScale(
+      onTap: onTap,
+      child: Container(
+        width: 38,
+        height: 38,
+        decoration: BoxDecoration(
+          color: t.surfaceAlt,
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          border: Border.all(color: t.border),
         ),
-      );
+        alignment: Alignment.center,
+        child: Icon(icon, size: 18, color: t.textPrimary),
+      ),
+    );
+  }
 }

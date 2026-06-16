@@ -27,9 +27,11 @@ class AsyncStateView<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.tokens;
+
     if (isLoading && isEmpty) {
-      return const Center(
-        child: CircularProgressIndicator(color: AppColors.primary),
+      return Center(
+        child: CircularProgressIndicator(color: t.accent),
       );
     }
 
@@ -37,40 +39,33 @@ class AsyncStateView<T> extends StatelessWidget {
       final isOffline = !ConnectivityService.instance.isOnline;
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(AppSpace.xl),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
                 isOffline ? Icons.wifi_off_rounded : Icons.error_outline_rounded,
                 size: 48,
-                color: AppColors.textMuted,
+                color: t.textMuted,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpace.lg),
               Text(
                 isOffline
                     ? l10n(context).commonOffline
                     : l10n(context).commonSomethingWentWrong,
-                style: cairo(fontSize: 18, fontWeight: FontWeight.w700),
+                style: ui(size: 18, weight: FontWeight.w700, color: t.textPrimary),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpace.sm),
               Text(
                 error!,
-                style: cairo(fontSize: 14, color: AppColors.textSecondary),
+                style: ui(size: 14, color: t.textSecondary),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: AppSpace.xl),
               ElevatedButton.icon(
                 onPressed: onRetry,
                 icon: const Icon(Icons.refresh_rounded, size: 18),
-                label: Text(l10n(context).retryAction,
-                    style: cairo(fontWeight: FontWeight.w600)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.sm)),
-                ),
+                label: Text(l10n(context).retryAction),
               ),
             ],
           ),
@@ -83,11 +78,11 @@ class AsyncStateView<T> extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(emptyIcon, size: 48, color: AppColors.textMuted),
-            const SizedBox(height: 16),
+            Icon(emptyIcon, size: 48, color: t.textMuted),
+            const SizedBox(height: AppSpace.lg),
             Text(
               emptyMessage ?? l10n(context).commonNoDataAvailable,
-              style: cairo(fontSize: 16, color: AppColors.textSecondary, fontWeight: FontWeight.w600),
+              style: ui(size: 16, color: t.textSecondary, weight: FontWeight.w600),
             ),
           ],
         ),

@@ -10,6 +10,7 @@ class AppToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = context.tokens;
     return GestureDetector(
       onTap: () {
         Haptics.selection();
@@ -23,7 +24,7 @@ class AppToggle extends StatelessWidget {
         padding: const EdgeInsets.all(2),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(13),
-          color: value ? AppColors.primary : AppColors.border,
+          color: value ? t.accent : t.border,
         ),
         alignment: value
             ? AlignmentDirectional.centerEnd
@@ -33,10 +34,10 @@ class AppToggle extends StatelessWidget {
           height: 22,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: Colors.white,
+            color: t.surface,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.15),
+                color: t.shadow,
                 blurRadius: 4,
                 offset: const Offset(0, 1),
               )

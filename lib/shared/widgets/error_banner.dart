@@ -9,31 +9,30 @@ class ErrorBanner extends StatelessWidget {
   const ErrorBanner({super.key, required this.message, this.onRetry});
 
   @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-        decoration: BoxDecoration(
-          color: AppColors.danger.withOpacity(0.06),
-          borderRadius: BorderRadius.circular(AppRadius.sm),
-          border: Border.all(color: AppColors.danger.withOpacity(0.18)),
-        ),
-        child: Row(children: [
-          const Icon(Icons.error_outline_rounded,
-              color: AppColors.danger, size: 17),
-          const SizedBox(width: 10),
-          Expanded(
-              child: Text(message,
-                  style: cairo(fontSize: 13, color: AppColors.danger))),
-          if (onRetry != null)
-            TextButton(
-              onPressed: onRetry,
-              style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 12)),
-              child: Text(l10n(context).retryAction,
-                  style: cairo(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.primary)),
-            ),
-        ]),
-      );
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    return Container(
+      padding: const EdgeInsetsDirectional.symmetric(horizontal: 16, vertical: 13),
+      decoration: BoxDecoration(
+        color: t.dangerBg,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(color: t.danger.withOpacity(0.18)),
+      ),
+      child: Row(children: [
+        Icon(Icons.error_outline_rounded, color: t.danger, size: 17),
+        const SizedBox(width: AppSpace.sm),
+        Expanded(
+            child: Text(message,
+                style: ui(size: 13, color: t.danger))),
+        if (onRetry != null)
+          TextButton(
+            onPressed: onRetry,
+            style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 12)),
+            child: Text(l10n(context).retryAction,
+                style: ui(size: 13, weight: FontWeight.w700, color: t.accent)),
+          ),
+      ]),
+    );
+  }
 }

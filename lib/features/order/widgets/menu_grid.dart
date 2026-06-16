@@ -20,7 +20,7 @@ Widget _buildGrid(int count, Widget Function(BuildContext, int) builder) =>
         maxCrossAxisExtent: 260,
         mainAxisSpacing: AppSpace.sm + 2,
         crossAxisSpacing: AppSpace.sm + 2,
-        childAspectRatio: 1 / 1.15,
+        childAspectRatio: 1 / 0.94,
       ),
       itemCount: count,
       // GridView already wraps each child in a RepaintBoundary.

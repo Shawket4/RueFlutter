@@ -185,14 +185,14 @@ class _SplashScreen extends StatelessWidget {
   Widget build(BuildContext context) => MaterialApp(
     debugShowCheckedModeBanner: false,
     theme: AppTheme.light,
-    home: const Scaffold(
-      backgroundColor: AppColors.bg,
+    home: Scaffold(
+      backgroundColor: AppTokens.light.bg,
       body: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        SufrixLongLogo(height: 56),
-        SizedBox(height: 32),
+        const SufrixLongLogo(height: 56),
+        const SizedBox(height: 32),
         SizedBox(width: 24, height: 24,
             child: CircularProgressIndicator(
-                strokeWidth: 2.5, color: AppColors.primary)),
+                strokeWidth: 2.5, color: AppTokens.light.accent)),
       ])),
     ),
   );

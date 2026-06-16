@@ -280,10 +280,6 @@ class FieldLabel extends StatelessWidget {
 //  SKELETON HELPERS
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Legacy light-theme constants — still consumed by not-yet-migrated sheets.
-const skeletonBase = Color(0xFFEEF0F4);
-const skeletonHighlight = Color(0xFFE4E7ED);
-
 /// Token-aware skeleton color pair for the current theme.
 (Color, Color) skeletonColors(BuildContext context) {
   final t = context.tokens;

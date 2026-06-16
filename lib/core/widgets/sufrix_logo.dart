@@ -60,9 +60,9 @@ class SufrixLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = backgroundColor ?? const Color(0xFF0A2540);
-    final cross = crossColor ?? const Color(0xFFFAF7F2);
-    final center = centerColor ?? const Color(0xFFC25B3F);
+    final bg = backgroundColor ?? AppBrand.navy;
+    final cross = crossColor ?? AppBrand.cream;
+    final center = centerColor ?? AppBrand.terracotta;
 
     // X-mark occupies ~52% of the badge for a bold, recognizable mark.
     final double symbolSize = size * 0.52;
@@ -107,9 +107,9 @@ class SufrixLongLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tc = textColor ?? const Color(0xFF0A2540);
-    final cc = crossColor ?? const Color(0xFF0A2540);
-    final cnc = centerColor ?? const Color(0xFFC25B3F);
+    final tc = textColor ?? AppBrand.navy;
+    final cc = crossColor ?? AppBrand.navy;
+    final cnc = centerColor ?? AppBrand.terracotta;
 
     // The symbol height is 75% of the row height to match the Logo.svg balance.
     final double symbolSize = height * 0.75;
@@ -129,9 +129,9 @@ class SufrixLongLogo extends StatelessWidget {
           // Native Cairo text rendering avoids SVG text-fallback issues.
           Text(
             'Sufrix',
-            style: cairo(
-              fontSize: height * 0.68,
-              fontWeight: FontWeight.w700,
+            style: ui(
+              size: height * 0.68,
+              weight: FontWeight.w700,
               color: tc,
               height: 1.0,
             ),

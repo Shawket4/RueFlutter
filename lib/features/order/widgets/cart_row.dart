@@ -238,8 +238,9 @@ class _QtyControl extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = context.tokens;
-    return GestureDetector(
+    return AnimatedPressScale(
         onTap: onTap,
+        haptic: false,
         child: Container(
             width: 28,
             height: 28,
@@ -264,7 +265,7 @@ class _ActionIcon extends StatelessWidget {
       required this.onTap});
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
+  Widget build(BuildContext context) => AnimatedPressScale(
       onTap: onTap,
       child: Container(
           width: 28,

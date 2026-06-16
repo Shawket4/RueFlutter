@@ -54,12 +54,11 @@ class MenuCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Container(
-                        width: 3,
-                        height: 22,
+                        width: 7,
+                        height: 7,
                         margin: const EdgeInsetsDirectional.only(end: 8),
                         decoration: BoxDecoration(
-                            color: style.accent,
-                            borderRadius: BorderRadius.circular(2))),
+                            color: style.accent, shape: BoxShape.circle)),
                     Expanded(
                         child: Text(item.localizedName(locale),
                             style: ui(

@@ -141,40 +141,49 @@ class CategoryStrip extends ConsumerWidget {
     if (entries.isEmpty) return const SizedBox.shrink();
 
     return Container(
-      height: 44,
+      height: 46,
       decoration: BoxDecoration(
         color: t.surface,
-        border: Border(bottom: BorderSide(color: t.borderLight)),
+        border: Border(bottom: BorderSide(color: t.border)),
       ),
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsetsDirectional.symmetric(
-            horizontal: AppSpace.md, vertical: 7),
+        padding: const EdgeInsetsDirectional.symmetric(horizontal: AppSpace.md),
         itemCount: entries.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 6),
+        separatorBuilder: (_, __) => const SizedBox(width: AppSpace.lg),
         itemBuilder: (_, i) {
           final e = entries[i];
           final selected = e.id == selectedId;
+          // Underline-indicator tab (dashboard style): the selected tab carries
+          // a 2px accent underline; no pill fill, no border.
           return AnimatedPressScale(
             onTap: () => ref.read(menuProvider.notifier).selectCategory(e.id),
-            child: Container(
-              padding: const EdgeInsetsDirectional.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                color: selected ? t.accentBg : t.surfaceAlt,
-                borderRadius: BorderRadius.circular(AppRadius.pill),
-                border: Border.all(
-                    color: selected ? t.accent.withOpacity(0.4) : t.border),
-              ),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Icon(e.icon,
-                    size: 14, color: selected ? t.accent : t.textMuted),
-                const SizedBox(width: 6),
-                Text(e.label,
-                    style: ui(
-                        size: 12,
-                        weight: selected ? FontWeight.w700 : FontWeight.w500,
-                        color: selected ? t.accent : t.textSecondary)),
-              ]),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(e.icon,
+                        size: 15, color: selected ? t.accent : t.textMuted),
+                    const SizedBox(width: 6),
+                    Text(e.label,
+                        style: ui(
+                            size: 13,
+                            weight:
+                                selected ? FontWeight.w700 : FontWeight.w500,
+                            color: selected ? t.accent : t.textSecondary)),
+                  ]),
+                ),
+                Container(
+                  height: 2,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: selected ? t.accent : Colors.transparent,
+                    borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(2)),
+                  ),
+                ),
+              ],
             ),
           );
         },

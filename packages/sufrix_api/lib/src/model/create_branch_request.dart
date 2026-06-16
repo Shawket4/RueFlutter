@@ -167,7 +167,7 @@ class CreateBranchRequest {
 
 
 
-      /// IANA timezone name. Defaults to `Africa/Cairo` if absent.
+      /// IANA timezone name. If absent, the branch inherits the org's timezone.
   @JsonKey(
     
     name: r'timezone',

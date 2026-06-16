@@ -22,7 +22,7 @@ Name | Type | Description | Notes
 **printerBrand** | [**PrinterBrand**](PrinterBrand.md) |  | [optional] 
 **printerIp** | **String** |  | [optional] 
 **printerPort** | **int** |  | [optional] 
-**timezone** | **String** | IANA timezone name. Defaults to `Africa/Cairo`. | 
+**timezone** | **String** | Effective IANA timezone name for this branch, resolved as `branch.timezone → org.timezone → Africa/Cairo`. Always present; clients should format all of this branch's timestamps in this zone. | 
 **updatedAt** | [**DateTime**](DateTime.md) |  | 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

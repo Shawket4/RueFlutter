@@ -17,6 +17,8 @@ abstract class _$OrderExportCWProxy {
 
   OrderExport customerName(String? customerName);
 
+  OrderExport deliveryChannel(String? deliveryChannel);
+
   OrderExport deliveryFee(int deliveryFee);
 
   OrderExport deliveryOrderId(String? deliveryOrderId);
@@ -83,6 +85,7 @@ abstract class _$OrderExportCWProxy {
     int? changeGiven,
     DateTime createdAt,
     String? customerName,
+    String? deliveryChannel,
     int deliveryFee,
     String? deliveryOrderId,
     int discountAmount,
@@ -135,6 +138,10 @@ class _$OrderExportCWProxyImpl implements _$OrderExportCWProxy {
   @override
   OrderExport customerName(String? customerName) =>
       this(customerName: customerName);
+
+  @override
+  OrderExport deliveryChannel(String? deliveryChannel) =>
+      this(deliveryChannel: deliveryChannel);
 
   @override
   OrderExport deliveryFee(int deliveryFee) => this(deliveryFee: deliveryFee);
@@ -236,6 +243,7 @@ class _$OrderExportCWProxyImpl implements _$OrderExportCWProxy {
     Object? changeGiven = const $CopyWithPlaceholder(),
     Object? createdAt = const $CopyWithPlaceholder(),
     Object? customerName = const $CopyWithPlaceholder(),
+    Object? deliveryChannel = const $CopyWithPlaceholder(),
     Object? deliveryFee = const $CopyWithPlaceholder(),
     Object? deliveryOrderId = const $CopyWithPlaceholder(),
     Object? discountAmount = const $CopyWithPlaceholder(),
@@ -285,6 +293,10 @@ class _$OrderExportCWProxyImpl implements _$OrderExportCWProxy {
           ? _value.customerName
           // ignore: cast_nullable_to_non_nullable
           : customerName as String?,
+      deliveryChannel: deliveryChannel == const $CopyWithPlaceholder()
+          ? _value.deliveryChannel
+          // ignore: cast_nullable_to_non_nullable
+          : deliveryChannel as String?,
       deliveryFee: deliveryFee == const $CopyWithPlaceholder()
           ? _value.deliveryFee
           // ignore: cast_nullable_to_non_nullable
@@ -446,6 +458,7 @@ OrderExport _$OrderExportFromJson(Map<String, dynamic> json) => $checkedCreate(
         (v) => DateTime.parse(v as String),
       ),
       customerName: $checkedConvert('customer_name', (v) => v as String?),
+      deliveryChannel: $checkedConvert('delivery_channel', (v) => v as String?),
       deliveryFee: $checkedConvert('delivery_fee', (v) => (v as num).toInt()),
       deliveryOrderId: $checkedConvert(
         'delivery_order_id',
@@ -507,6 +520,7 @@ OrderExport _$OrderExportFromJson(Map<String, dynamic> json) => $checkedCreate(
     'changeGiven': 'change_given',
     'createdAt': 'created_at',
     'customerName': 'customer_name',
+    'deliveryChannel': 'delivery_channel',
     'deliveryFee': 'delivery_fee',
     'deliveryOrderId': 'delivery_order_id',
     'discountAmount': 'discount_amount',
@@ -538,6 +552,7 @@ Map<String, dynamic> _$OrderExportToJson(OrderExport instance) =>
       'change_given': ?instance.changeGiven,
       'created_at': instance.createdAt.toIso8601String(),
       'customer_name': ?instance.customerName,
+      'delivery_channel': ?instance.deliveryChannel,
       'delivery_fee': instance.deliveryFee,
       'delivery_order_id': ?instance.deliveryOrderId,
       'discount_amount': instance.discountAmount,

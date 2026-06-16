@@ -21,6 +21,8 @@ abstract class _$UpdateOrgRequestCWProxy {
 
   UpdateOrgRequest taxRate(double? taxRate);
 
+  UpdateOrgRequest timezone(String? timezone);
+
   /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `UpdateOrgRequest(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
   ///
   /// Usage
@@ -35,6 +37,7 @@ abstract class _$UpdateOrgRequestCWProxy {
     String? receiptFooter,
     String? slug,
     double? taxRate,
+    String? timezone,
   });
 }
 
@@ -68,6 +71,9 @@ class _$UpdateOrgRequestCWProxyImpl implements _$UpdateOrgRequestCWProxy {
   UpdateOrgRequest taxRate(double? taxRate) => this(taxRate: taxRate);
 
   @override
+  UpdateOrgRequest timezone(String? timezone) => this(timezone: timezone);
+
+  @override
   /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `UpdateOrgRequest(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
   ///
   /// Usage
@@ -82,6 +88,7 @@ class _$UpdateOrgRequestCWProxyImpl implements _$UpdateOrgRequestCWProxy {
     Object? receiptFooter = const $CopyWithPlaceholder(),
     Object? slug = const $CopyWithPlaceholder(),
     Object? taxRate = const $CopyWithPlaceholder(),
+    Object? timezone = const $CopyWithPlaceholder(),
   }) {
     return UpdateOrgRequest(
       currencyCode: currencyCode == const $CopyWithPlaceholder()
@@ -112,6 +119,10 @@ class _$UpdateOrgRequestCWProxyImpl implements _$UpdateOrgRequestCWProxy {
           ? _value.taxRate
           // ignore: cast_nullable_to_non_nullable
           : taxRate as double?,
+      timezone: timezone == const $CopyWithPlaceholder()
+          ? _value.timezone
+          // ignore: cast_nullable_to_non_nullable
+          : timezone as String?,
     );
   }
 }
@@ -139,6 +150,7 @@ UpdateOrgRequest _$UpdateOrgRequestFromJson(Map<String, dynamic> json) =>
           receiptFooter: $checkedConvert('receipt_footer', (v) => v as String?),
           slug: $checkedConvert('slug', (v) => v as String?),
           taxRate: $checkedConvert('tax_rate', (v) => (v is String ? double.parse(v) : (v as num?)?.toDouble())),
+          timezone: $checkedConvert('timezone', (v) => v as String?),
         );
         return val;
       },
@@ -160,4 +172,5 @@ Map<String, dynamic> _$UpdateOrgRequestToJson(UpdateOrgRequest instance) =>
       'receipt_footer': ?instance.receiptFooter,
       'slug': ?instance.slug,
       'tax_rate': ?instance.taxRate,
+      'timezone': ?instance.timezone,
     };

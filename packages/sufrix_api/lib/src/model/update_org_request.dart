@@ -33,6 +33,8 @@ class UpdateOrgRequest {
      this.slug,
 
      this.taxRate,
+
+     this.timezone,
   });
 
   @JsonKey(
@@ -120,6 +122,19 @@ class UpdateOrgRequest {
 
 
 
+      /// IANA timezone name (e.g. `Africa/Cairo`). Validated against the PostgreSQL timezone database. Branches inherit this when their own timezone is unset.
+  @JsonKey(
+    
+    name: r'timezone',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final String? timezone;
+
+
+
 
 
     @override
@@ -130,7 +145,8 @@ class UpdateOrgRequest {
       other.name == name &&
       other.receiptFooter == receiptFooter &&
       other.slug == slug &&
-      other.taxRate == taxRate;
+      other.taxRate == taxRate &&
+      other.timezone == timezone;
 
     @override
     int get hashCode =>
@@ -140,7 +156,8 @@ class UpdateOrgRequest {
         (name == null ? 0 : name.hashCode) +
         (receiptFooter == null ? 0 : receiptFooter.hashCode) +
         (slug == null ? 0 : slug.hashCode) +
-        (taxRate == null ? 0 : taxRate.hashCode);
+        (taxRate == null ? 0 : taxRate.hashCode) +
+        (timezone == null ? 0 : timezone.hashCode);
 
   factory UpdateOrgRequest.fromJson(Map<String, dynamic> json) => _$UpdateOrgRequestFromJson(json);
 

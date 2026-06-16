@@ -7,6 +7,7 @@ import '../../../core/models/order.dart';
 import '../../../core/models/branch.dart';
 import '../../../core/providers/auth_notifier.dart';
 import '../../../core/providers/payment_method_notifier.dart';
+import '../../../core/repositories/order_repository.dart';
 import '../../../core/services/printer_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/formatting.dart';
@@ -76,11 +77,23 @@ class _ReceiptPreviewSheetState extends ConsumerState<ReceiptPreviewSheet> {
 
     final methods = ref.read(paymentMethodProvider).items;
 
+    // Delivery orders carry their customer/phone/address only on the detail
+    // fetch (the list omits it). Enrich before printing so the reprinted receipt
+    // shows the full delivery context, not just the flag + channel.
+    Order order = widget.order;
+    if (order.orderType == 'delivery' && order.delivery == null) {
+      try {
+        order = await ref.read(orderRepositoryProvider).getOrder(order.id);
+      } catch (_) {
+        // Offline / fetch failed — fall back to what we have (flag still prints).
+      }
+    }
+
     final err = await PrinterService.print(
       ip: branch.printerIp!,
       port: branch.printerPort ?? 9100,
       brand: branch.printerBrand!,
-      order: widget.order,
+      order: order,
       paymentMethods: methods,
       branchName: branch.name,
       logoUrl: branch.orgLogoUrl,

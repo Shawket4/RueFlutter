@@ -48,5 +48,11 @@ void main() {
       // TODO
     });
 
+    // IANA timezone name. The org-level default that branches inherit when their own timezone is unset. Defaults to `Africa/Cairo`.
+    // String timezone
+    test('to test the property `timezone`', () async {
+      // TODO
+    });
+
   });
 }

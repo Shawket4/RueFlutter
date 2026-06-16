@@ -1081,6 +1081,10 @@
   "@syncOfflineSessionBanner": {},
   "syncOfflineBanner": "Offline — everything keeps working and syncs when you reconnect.",
   "@syncOfflineBanner": {},
+  "clockSkewWarning": "This device's clock is off by about {minutes} min — fix the date & time so sales record on the right day.",
+  "@clockSkewWarning": {
+    "placeholders": { "minutes": { "type": "int" } }
+  },
   "syncSessionExpiredBanner": "{count, plural, =1{Session expired — sign in to resume syncing 1 queued item.} other{Session expired — sign in to resume syncing {count} queued items.}}",
   "@syncSessionExpiredBanner": {
     "placeholders": {

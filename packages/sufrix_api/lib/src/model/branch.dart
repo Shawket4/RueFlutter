@@ -227,7 +227,7 @@ class Branch {
 
 
 
-      /// IANA timezone name. Defaults to `Africa/Cairo`.
+      /// Effective IANA timezone name for this branch, resolved as `branch.timezone → org.timezone → Africa/Cairo`. Always present; clients should format all of this branch's timestamps in this zone.
   @JsonKey(
     
     name: r'timezone',

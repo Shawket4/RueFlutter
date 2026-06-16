@@ -24,7 +24,23 @@ class OrderSummary {
 
      this.deliveryFees,
 
+     this.deliveryOrders,
+
+     this.deliveryRevenue,
+
     required  this.discounts,
+
+     this.inMallFees,
+
+     this.inMallOrders,
+
+     this.inMallRevenue,
+
+     this.outsideFees,
+
+     this.outsideOrders,
+
+     this.outsideRevenue,
 
     required  this.revenue,
 
@@ -58,6 +74,32 @@ class OrderSummary {
 
 
 
+      /// Count of completed delivery orders.
+  @JsonKey(
+    
+    name: r'delivery_orders',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final int? deliveryOrders;
+
+
+
+      /// Gross revenue (total_amount) of completed delivery orders.
+  @JsonKey(
+    
+    name: r'delivery_revenue',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final int? deliveryRevenue;
+
+
+
   @JsonKey(
     
     name: r'discounts',
@@ -67,6 +109,80 @@ class OrderSummary {
 
 
   final int discounts;
+
+
+
+  @JsonKey(
+    
+    name: r'in_mall_fees',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final int? inMallFees;
+
+
+
+      /// In-mall channel: order count / gross revenue / delivery fees.
+  @JsonKey(
+    
+    name: r'in_mall_orders',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final int? inMallOrders;
+
+
+
+  @JsonKey(
+    
+    name: r'in_mall_revenue',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final int? inMallRevenue;
+
+
+
+  @JsonKey(
+    
+    name: r'outside_fees',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final int? outsideFees;
+
+
+
+      /// Outside channel: order count / gross revenue / delivery fees.
+  @JsonKey(
+    
+    name: r'outside_orders',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final int? outsideOrders;
+
+
+
+  @JsonKey(
+    
+    name: r'outside_revenue',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final int? outsideRevenue;
 
 
 
@@ -112,7 +228,15 @@ class OrderSummary {
     bool operator ==(Object other) => identical(this, other) || other is OrderSummary &&
       other.completed == completed &&
       other.deliveryFees == deliveryFees &&
+      other.deliveryOrders == deliveryOrders &&
+      other.deliveryRevenue == deliveryRevenue &&
       other.discounts == discounts &&
+      other.inMallFees == inMallFees &&
+      other.inMallOrders == inMallOrders &&
+      other.inMallRevenue == inMallRevenue &&
+      other.outsideFees == outsideFees &&
+      other.outsideOrders == outsideOrders &&
+      other.outsideRevenue == outsideRevenue &&
       other.revenue == revenue &&
       other.tips == tips &&
       other.voided == voided;
@@ -121,7 +245,15 @@ class OrderSummary {
     int get hashCode =>
         completed.hashCode +
         deliveryFees.hashCode +
+        deliveryOrders.hashCode +
+        deliveryRevenue.hashCode +
         discounts.hashCode +
+        inMallFees.hashCode +
+        inMallOrders.hashCode +
+        inMallRevenue.hashCode +
+        outsideFees.hashCode +
+        outsideOrders.hashCode +
+        outsideRevenue.hashCode +
         revenue.hashCode +
         tips.hashCode +
         voided.hashCode;

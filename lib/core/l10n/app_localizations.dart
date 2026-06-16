@@ -2312,6 +2312,12 @@ abstract class AppLocalizations {
   /// **'Offline — everything keeps working and syncs when you reconnect.'**
   String get syncOfflineBanner;
 
+  /// No description provided for @clockSkewWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'This device\'s clock is off by about {minutes} min — fix the date & time so sales record on the right day.'**
+  String clockSkewWarning(int minutes);
+
   /// No description provided for @syncSessionExpiredBanner.
   ///
   /// In en, this message translates to:

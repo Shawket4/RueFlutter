@@ -257,7 +257,8 @@ void main() {
       () async {
     when(() => orderApi.voidOrder(any(),
             reason: any(named: 'reason'),
-            restoreInventory: any(named: 'restoreInventory')))
+            restoreInventory: any(named: 'restoreInventory'),
+            voidedAt: any(named: 'voidedAt')))
         .thenThrow(dioStatus(404));
 
     await queue().enqueueVoid(PendingVoidOrder(
@@ -408,7 +409,8 @@ void main() {
     mockOrderCreateSuccess();
     when(() => orderApi.voidOrder(any(),
             reason: any(named: 'reason'),
-            restoreInventory: any(named: 'restoreInventory')))
+            restoreInventory: any(named: 'restoreInventory'),
+            voidedAt: any(named: 'voidedAt')))
         .thenAnswer((_) async => order('server-1'));
 
     // Offline-created order uses its localId as the optimistic order id.

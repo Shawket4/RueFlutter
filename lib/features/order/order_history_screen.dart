@@ -55,6 +55,40 @@ extension on _SyncFilter {
       };
 }
 
+/// Order-origin filter — an axis independent of the sync filter, so a teller
+/// can isolate delivery orders (and their KPIs) from dine-in sales.
+enum _TypeFilter { all, dineIn, delivery }
+
+extension on _TypeFilter {
+  String get label => switch (this) {
+        _TypeFilter.all => 'All',
+        _TypeFilter.dineIn => 'Dine-in',
+        _TypeFilter.delivery => 'Delivery',
+      };
+
+  IconData get icon => switch (this) {
+        _TypeFilter.all => Icons.tune_rounded,
+        _TypeFilter.dineIn => Icons.restaurant_rounded,
+        _TypeFilter.delivery => Icons.local_shipping_outlined,
+      };
+
+  bool matches(Order o) => switch (this) {
+        _TypeFilter.all => true,
+        _TypeFilter.dineIn => o.orderType != 'delivery',
+        _TypeFilter.delivery => o.orderType == 'delivery',
+      };
+}
+
+List<Order> _applyType(List<Order> orders, _TypeFilter f) =>
+    f == _TypeFilter.all ? orders : orders.where(f.matches).toList();
+
+/// Short human label for a delivery channel wire value.
+String _channelLabel(String? channel) => switch (channel) {
+      'in_mall' => 'In-mall',
+      'outside' => 'Outside',
+      _ => 'Delivery',
+    };
+
 /// Below this body width the table collapses into cards.
 const double _kTableBreakpoint = 680;
 
@@ -76,6 +110,7 @@ class _ViewState {
   final _Col sortCol;
   final bool sortAsc;
   final _SyncFilter filter;
+  final _TypeFilter typeFilter;
   final String? expandedId;
   final Order? expandedOrder;
   final bool loadingDetail;
@@ -86,6 +121,7 @@ class _ViewState {
     this.sortCol = _Col.number,
     this.sortAsc = false,
     this.filter = _SyncFilter.all,
+    this.typeFilter = _TypeFilter.all,
     this.expandedId,
     this.expandedOrder,
     this.loadingDetail = false,
@@ -97,6 +133,7 @@ class _ViewState {
     _Col? sortCol,
     bool? sortAsc,
     _SyncFilter? filter,
+    _TypeFilter? typeFilter,
     String? expandedId,
     Order? expandedOrder,
     bool? loadingDetail,
@@ -108,6 +145,7 @@ class _ViewState {
         sortCol: sortCol ?? this.sortCol,
         sortAsc: sortAsc ?? this.sortAsc,
         filter: filter ?? this.filter,
+        typeFilter: typeFilter ?? this.typeFilter,
         expandedId: clearExpansion ? null : (expandedId ?? this.expandedId),
         expandedOrder:
             clearExpansion ? null : (expandedOrder ?? this.expandedOrder),
@@ -143,6 +181,9 @@ class _ViewNotifier extends AutoDisposeNotifier<_ViewState> {
 
   void setFilter(_SyncFilter f) =>
       state = state.copyWith(filter: f, visibleLimit: _kOrderPageSize);
+
+  void setTypeFilter(_TypeFilter f) =>
+      state = state.copyWith(typeFilter: f, visibleLimit: _kOrderPageSize);
 
   void showMore() =>
       state = state.copyWith(visibleLimit: state.visibleLimit + _kOrderPageSize);
@@ -316,9 +357,10 @@ class _Content extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final s = l10n(context);
-    final (filter, sortCol, sortAsc, limit) = ref.watch(_viewProvider
-        .select((v) => (v.filter, v.sortCol, v.sortAsc, v.visibleLimit)));
-    final all = _sorted(_applyFilter(orders, filter), sortCol, sortAsc);
+    final (filter, typeFilter, sortCol, sortAsc, limit) = ref.watch(_viewProvider.select(
+        (v) => (v.filter, v.typeFilter, v.sortCol, v.sortAsc, v.visibleLimit)));
+    final all = _sorted(
+        _applyType(_applyFilter(orders, filter), typeFilter), sortCol, sortAsc);
     // Render only the first `limit` rows; the rest reveal via the footer. The
     // full `all` set still drives the stats and filter counts above.
     final visible = all.length > limit ? all.sublist(0, limit) : all;
@@ -332,7 +374,10 @@ class _Content extends ConsumerWidget {
             Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           const OfflineBanner(),
           _StatsHeader(orders: orders, methods: methods),
+          _DeliveryKpis(orders: orders),
           const SizedBox(height: AppSpace.md),
+          _TypeFilterRow(orders: orders),
+          const SizedBox(height: AppSpace.sm),
           _FilterRow(orders: orders),
         ]),
       ),
@@ -377,6 +422,126 @@ class _FilterRow extends ConsumerWidget {
           const SizedBox(width: AppSpace.sm),
         ],
       ]),
+    );
+  }
+}
+
+/// Order-origin chips (All / Dine-in / Delivery) — a filter axis separate from
+/// the sync chips, each annotated with its count.
+class _TypeFilterRow extends ConsumerWidget {
+  final List<Order> orders;
+  const _TypeFilterRow({required this.orders});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final typeFilter = ref.watch(_viewProvider.select((v) => v.typeFilter));
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(children: [
+        for (final f in _TypeFilter.values) ...[
+          StatusChip(
+            label: '${f.label} · ${_applyType(orders, f).length}',
+            icon: f.icon,
+            tone: typeFilter == f ? ChipTone.accent : ChipTone.neutral,
+            onTap: () => ref.read(_viewProvider.notifier).setTypeFilter(f),
+          ),
+          const SizedBox(width: AppSpace.sm),
+        ],
+      ]),
+    );
+  }
+}
+
+/// Delivery-only KPIs for the shift, split by channel. Computed over the full
+/// in-memory order set (mirrors [_StatsHeader]); hidden when the shift has no
+/// delivery orders, so dine-in-only shifts stay uncluttered.
+class _DeliveryKpis extends StatelessWidget {
+  final List<Order> orders;
+  const _DeliveryKpis({required this.orders});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    final delivery = orders
+        .where((o) => o.orderType == 'delivery' && o.status != 'voided')
+        .toList();
+    if (delivery.isEmpty) return const SizedBox.shrink();
+
+    int sumTotal(Iterable<Order> os) => os.fold(0, (a, o) => a + o.totalAmount);
+
+    final revenue = sumTotal(delivery);
+    final fees = delivery.fold<int>(0, (a, o) => a + o.deliveryFee);
+    final count = delivery.length;
+    final avg = count > 0 ? (revenue / count).round() : 0;
+
+    final inMall =
+        delivery.where((o) => o.deliveryChannel == 'in_mall').toList();
+    final outside =
+        delivery.where((o) => o.deliveryChannel == 'outside').toList();
+
+    Widget divider() => Container(
+          width: 1,
+          height: 28,
+          margin:
+              const EdgeInsetsDirectional.symmetric(horizontal: AppSpace.lg),
+          color: t.border,
+        );
+
+    return Padding(
+      padding: const EdgeInsetsDirectional.only(top: AppSpace.sm),
+      child: SurfaceCard(
+        padding: const EdgeInsetsDirectional.symmetric(
+            horizontal: AppSpace.lg, vertical: AppSpace.md),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(children: [
+            Icon(Icons.local_shipping_outlined, size: 16, color: t.navy),
+            const SizedBox(width: AppSpace.sm),
+            _Stat(
+              label: 'Delivery orders',
+              value: Text('$count',
+                  style: ui(
+                      size: 18, weight: FontWeight.w800, color: t.textPrimary)),
+            ),
+            divider(),
+            _Stat(
+              label: 'Delivery revenue',
+              value: Text(egp(revenue),
+                  style:
+                      money(size: 18, weight: FontWeight.w800, color: t.success)),
+            ),
+            divider(),
+            _Stat(
+              label: 'Delivery fees',
+              value: Text(egp(fees),
+                  style: money(
+                      size: 18, weight: FontWeight.w800, color: t.textPrimary)),
+            ),
+            divider(),
+            _Stat(
+              label: 'Avg ticket',
+              value: Text(egp(avg),
+                  style: money(
+                      size: 18, weight: FontWeight.w800, color: t.textPrimary)),
+            ),
+            if (inMall.isNotEmpty || outside.isNotEmpty) divider(),
+            if (inMall.isNotEmpty) ...[
+              StatusChip(
+                label:
+                    'In-mall · ${inMall.length} · ${egp(sumTotal(inMall))}',
+                tone: ChipTone.info,
+              ),
+              const SizedBox(width: AppSpace.sm),
+            ],
+            if (outside.isNotEmpty)
+              StatusChip(
+                label:
+                    'Outside · ${outside.length} · ${egp(sumTotal(outside))}',
+                tone: ChipTone.accent,
+              ),
+          ]),
+        ),
+      ),
     );
   }
 }
@@ -989,8 +1154,8 @@ class _OrderCard extends StatelessWidget {
                     ),
                     if (o.orderType == 'delivery') ...[
                       const SizedBox(width: AppSpace.xs),
-                      const StatusChip(
-                        label: 'Delivery',
+                      StatusChip(
+                        label: _channelLabel(o.deliveryChannel),
                         tone: ChipTone.info,
                         icon: Icons.local_shipping_outlined,
                       ),

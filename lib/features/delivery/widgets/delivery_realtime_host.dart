@@ -42,13 +42,20 @@ class _DeliveryRealtimeHostState extends ConsumerState<DeliveryRealtimeHost> {
   @override
   void initState() {
     super.initState();
-    // fireImmediately seeds the current gate on mount; the subscription is
-    // auto-disposed with this State, so it survives navigation but not logout.
+    // Subscribe for subsequent gate changes. These notifications fire outside
+    // the build phase, so applying them immediately is safe. The subscription
+    // is auto-disposed with this State, so it survives navigation but not logout.
     ref.listenManual<_DeliveryGate>(
       _deliveryGateProvider,
       (_, g) => _apply(g),
-      fireImmediately: true,
     );
+    // Seed the current gate after the first frame. We can't apply during
+    // initState (or any lifecycle): apply() synchronously mutates
+    // deliveryOrdersProvider via clear()/loadForBranch(), which Riverpod
+    // forbids inside a widget life-cycle.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _apply(ref.read(_deliveryGateProvider));
+    });
   }
 
   void _apply(_DeliveryGate g) =>

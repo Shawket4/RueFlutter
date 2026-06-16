@@ -10,6 +10,7 @@ import '../models/order.dart';
 import '../models/pending_action.dart';
 import '../models/shift.dart';
 import '../providers/auth_notifier.dart';
+import '../utils/time_utils.dart';
 import 'connectivity_service.dart';
 
 // ── Constants ───────────────────────────────────────────────────────────────
@@ -150,9 +151,15 @@ class OfflineQueueNotifier extends Notifier<OfflineQueueState> {
 
   String? get _currentUserId => ref.read(authProvider).user?.id;
 
+  /// Stamp the clock offset that was applied to this action's timestamps when it
+  /// was created, so the outbox can re-base them to a FRESH server offset at sync
+  /// time (correct-at-sync). Cash movements are online-only and never use this.
+  Map<String, dynamic> _payloadWithOffset(PendingAction action) =>
+      action.toJson()..['clock_offset_ms'] = TimeUtils.offsetMs;
+
   Future<void> enqueueShiftOpen(PendingShiftOpen action) async {
     final entry = OutboxEntry.fromActionJson(
-      action.toJson(),
+      _payloadWithOffset(action),
       userId: _currentUserId,
     );
     await ref.read(outboxDaoProvider).insert(entry);
@@ -164,7 +171,7 @@ class OfflineQueueNotifier extends Notifier<OfflineQueueState> {
     // Attach dependency on any live PendingShiftOpen for the same shift.
     final dependsOn = _findLiveShiftOpen(action.shiftId);
     final entry = OutboxEntry.fromActionJson(
-      action.toJson(),
+      _payloadWithOffset(action),
       dependsOn: dependsOn,
       userId: _currentUserId,
     );
@@ -176,7 +183,7 @@ class OfflineQueueNotifier extends Notifier<OfflineQueueState> {
   Future<void> enqueueShiftClose(PendingShiftClose action) async {
     final dependsOn = _findLiveShiftOpen(action.shiftId);
     final entry = OutboxEntry.fromActionJson(
-      action.toJson(),
+      _payloadWithOffset(action),
       dependsOn: dependsOn,
       userId: _currentUserId,
     );
@@ -199,7 +206,7 @@ class OfflineQueueNotifier extends Notifier<OfflineQueueState> {
       break;
     }
     final entry = OutboxEntry.fromActionJson(
-      action.toJson(),
+      _payloadWithOffset(action),
       dependsOn: dependsOn,
       userId: _currentUserId,
     );
@@ -453,13 +460,21 @@ class OfflineQueueNotifier extends Notifier<OfflineQueueState> {
     final payload = entry.payloadMap;
     final action = PendingAction.fromJson(payload);
 
+    // Correct-at-sync: re-base each timestamp from the (possibly stale) offset it
+    // was stamped with to the fresh server offset we hold now (we're online to
+    // sync). A device clock that was wrong by a constant amount is fully fixed;
+    // only a clock CHANGED mid-offline is left for the skew warning to catch.
+    final offsetThenMs = (payload['clock_offset_ms'] as int?) ?? TimeUtils.offsetMs;
+    DateTime rebase(DateTime stamped) =>
+        stamped.add(Duration(milliseconds: TimeUtils.offsetMs - offsetThenMs));
+
     switch (action) {
       case PendingShiftOpen():
         final result = await ref.read(shiftApiProvider).openWithId(
               branchId: action.branchId,
               shiftId: action.shiftId,
               openingCash: action.openingCash,
-              openedAt: action.openedAt,
+              openedAt: rebase(action.openedAt),
               editReason: action.editReason,
             );
         onShiftOpenSynced?.call(result);
@@ -485,7 +500,7 @@ class OfflineQueueNotifier extends Notifier<OfflineQueueState> {
               totalAmount: action.totalAmount,
               changeGiven: action.changeGiven,
               idempotencyKey: action.localId,
-              createdAt: action.orderedAt,
+              createdAt: rebase(action.orderedAt),
         );
 
         // Task 1.6: Fix backend syncing bugs where create order endpoint might return 'mixed'
@@ -504,6 +519,7 @@ class OfflineQueueNotifier extends Notifier<OfflineQueueState> {
               reason: action.reason,
               note: action.note,
               restoreInventory: action.restoreInventory,
+              voidedAt: rebase(action.voidedAt),
             );
         onVoidSynced?.call(result);
 
@@ -513,7 +529,7 @@ class OfflineQueueNotifier extends Notifier<OfflineQueueState> {
               closingCash: action.closingCash,
               note: action.cashNote,
               inventoryCounts: action.inventoryCounts,
-              closedAt: action.closedAt,
+              closedAt: rebase(action.closedAt),
             );
         onShiftCloseSynced?.call(result);
 

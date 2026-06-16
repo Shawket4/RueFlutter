@@ -1357,6 +1357,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'Offline — everything keeps working and syncs when you reconnect.';
 
   @override
+  String clockSkewWarning(int minutes) {
+    return 'This device\'s clock is off by about $minutes min — fix the date & time so sales record on the right day.';
+  }
+
+  @override
   String syncSessionExpiredBanner(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

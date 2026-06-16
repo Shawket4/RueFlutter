@@ -133,9 +133,15 @@ class ShiftApi {
     return ShiftReport.fromJson(res.data as Map<String, dynamic>);
   }
 
-  Future<void> addCashMovement(String shiftId, int amount, String note) async {
-    await _c.dio.post('/shifts/$shiftId/cash-movements',
-        data: {'amount': amount, 'note': note});
+  Future<void> addCashMovement(String shiftId, int amount, String note,
+      {DateTime? createdAt}) async {
+    await _c.dio.post('/shifts/$shiftId/cash-movements', data: {
+      'amount': amount,
+      'note': note,
+      // Sent for movements made OFFLINE so they keep their real time after sync;
+      // omitted for live movements (the server stamps now()).
+      if (createdAt != null) 'created_at': createdAt.toUtc().toIso8601String(),
+    });
   }
 }
 

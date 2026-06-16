@@ -1046,105 +1046,238 @@ class _Actions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = context.tokens;
+    final isReceived = order.status == DeliveryStatus.received;
 
-    final List<Widget> actions = switch (order.status) {
-      DeliveryStatus.received => [
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      _DeliveryStepper(
+        order: order,
+        busy: busy,
+        onConfirm: onConfirm,
+        onAdvance: onAdvance,
+        onFinalize: onFinalize,
+      ),
+      Padding(
+        padding: const EdgeInsetsDirectional.fromSTEB(
+            AppSpace.lg, 0, AppSpace.lg, AppSpace.md),
+        child: Row(children: [
+          if (busy) ...[
+            const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2)),
+            const SizedBox(width: AppSpace.md),
+          ],
+          const Spacer(),
+          // The only off-line action: reject (before acceptance) / cancel
+          // (after). Forward/back movement lives on the step line above.
           _Btn(
-              label: 'Reject',
-              icon: Icons.block_rounded,
-              bg: t.dangerBg,
-              fg: t.danger,
-              onTap: busy ? null : onReject),
-          _Btn(
-              label: 'Confirm',
-              icon: Icons.check_rounded,
-              bg: t.navy,
-              fg: Colors.white,
-              primary: true,
-              onTap: busy ? null : onConfirm),
-        ],
-      DeliveryStatus.confirmed => [
-          _Btn(
-              label: 'Cancel',
-              icon: Icons.cancel_outlined,
-              bg: t.dangerBg,
-              fg: t.danger,
-              onTap: busy ? null : onCancel),
-          _Btn(
-              label: 'Start preparing',
-              icon: Icons.soup_kitchen_rounded,
-              bg: t.navy,
-              fg: Colors.white,
-              primary: true,
-              onTap: busy ? null : () => onAdvance(DeliveryStatus.preparing)),
-        ],
-      DeliveryStatus.preparing => [
-          _Btn(
-              label: 'Cancel',
-              icon: Icons.cancel_outlined,
-              bg: t.dangerBg,
-              fg: t.danger,
-              onTap: busy ? null : onCancel),
-          _Btn(
-              label: 'Mark ready',
-              icon: Icons.shopping_bag_rounded,
-              bg: t.navy,
-              fg: Colors.white,
-              primary: true,
-              onTap: busy ? null : () => onAdvance(DeliveryStatus.ready)),
-        ],
-      DeliveryStatus.ready => [
-          _Btn(
-              label: 'Cancel',
-              icon: Icons.cancel_outlined,
-              bg: t.dangerBg,
-              fg: t.danger,
-              onTap: busy ? null : onCancel),
-          _Btn(
-              label: 'Out for delivery',
-              icon: Icons.delivery_dining_rounded,
-              bg: t.navy,
-              fg: Colors.white,
-              primary: true,
-              onTap:
-                  busy ? null : () => onAdvance(DeliveryStatus.outForDelivery)),
-        ],
-      DeliveryStatus.outForDelivery => [
-          _Btn(
-              label: 'Cancel',
-              icon: Icons.cancel_outlined,
-              bg: t.dangerBg,
-              fg: t.danger,
-              onTap: busy ? null : onCancel),
-          _Btn(
-              label: 'Finalize',
-              icon: Icons.point_of_sale_rounded,
-              bg: t.success,
-              fg: Colors.white,
-              primary: true,
-              onTap: busy ? null : onFinalize),
-        ],
-      _ => const [],
-    };
+            label: isReceived ? 'Reject' : 'Cancel',
+            icon: isReceived ? Icons.block_rounded : Icons.cancel_outlined,
+            bg: t.dangerBg,
+            fg: t.danger,
+            onTap: busy ? null : (isReceived ? onReject : onCancel),
+          ),
+        ]),
+      ),
+    ]);
+  }
+}
 
+// ── Step line (tappable, jumpable) ────────────────────────────────────────────
+
+/// The delivery line, in order. `received` is the entry node; `delivered` is the
+/// finalize node. `cancelled`/`rejected` are off-line (shown as a status chip in
+/// the header, reached via the Cancel/Reject button — never the line).
+const List<DeliveryStatus> _lineSteps = [
+  DeliveryStatus.received,
+  DeliveryStatus.confirmed,
+  DeliveryStatus.preparing,
+  DeliveryStatus.ready,
+  DeliveryStatus.outForDelivery,
+  DeliveryStatus.delivered,
+];
+
+/// A horizontal progress line the teller can tap to JUMP to any step. The line
+/// always renders filled up to the current status (a normal-looking progress
+/// bar), but the backend treats the tapped step as the order's sole position —
+/// clearing the skipped step stamps and sending at most one WhatsApp update.
+class _DeliveryStepper extends StatelessWidget {
+  final DeliveryOrder order;
+  final bool busy;
+  final VoidCallback onConfirm;
+  final void Function(DeliveryStatus to) onAdvance;
+  final VoidCallback onFinalize;
+
+  const _DeliveryStepper({
+    required this.order,
+    required this.busy,
+    required this.onConfirm,
+    required this.onAdvance,
+    required this.onFinalize,
+  });
+
+  Future<void> _onTap(BuildContext context, int index) async {
+    if (busy) return;
+    final current = _lineSteps.indexOf(order.status);
+    final target = _lineSteps[index];
+    if (index == current || target == DeliveryStatus.received) return;
+
+    // The delivered node opens the finalize flow (its sheet confirms payment).
+    if (target == DeliveryStatus.delivered) {
+      onFinalize();
+      return;
+    }
+
+    // The plain next-forward step is the common path — go straight through.
+    // Any skip or backward move clears in-between progress, so confirm first.
+    if (index != current + 1) {
+      final ok = await _confirmJump(context, target);
+      if (!ok) return;
+    }
+
+    // Confirm routes through the accept path (prints the receipt once); the
+    // rest are plain status jumps.
+    if (target == DeliveryStatus.confirmed) {
+      onConfirm();
+    } else {
+      onAdvance(target);
+    }
+  }
+
+  Future<bool> _confirmJump(BuildContext context, DeliveryStatus target) async {
+    final t = context.tokens;
+    final label = _statusChip(target).label;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: t.surface,
+        title: Text('Jump to $label?',
+            style:
+                ui(size: 16, weight: FontWeight.w800, color: t.textPrimary)),
+        content: Text(
+          'Steps in between are cleared, and the customer is notified only for '
+          'the latest jumped step that has a WhatsApp update.',
+          style: ui(size: 13, color: t.textSecondary),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text('Cancel',
+                  style: ui(weight: FontWeight.w700, color: t.textSecondary))),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text('Jump to $label',
+                  style: ui(weight: FontWeight.w800, color: t.navy))),
+        ],
+      ),
+    );
+    return ok ?? false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final current = _lineSteps.indexOf(order.status);
     return Padding(
       padding: const EdgeInsetsDirectional.symmetric(
-          horizontal: AppSpace.lg, vertical: AppSpace.md),
-      child: Row(children: [
-        if (busy) ...[
-          const SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2)),
-          const SizedBox(width: AppSpace.md),
+          horizontal: AppSpace.md, vertical: AppSpace.md),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (var i = 0; i < _lineSteps.length; i++)
+            Expanded(
+              child: _StepNode(
+                step: _lineSteps[i],
+                index: i,
+                current: current,
+                busy: busy,
+                onTap: () => _onTap(context, i),
+              ),
+            ),
         ],
-        const Spacer(),
-        for (var i = 0; i < actions.length; i++) ...[
-          if (i > 0) const SizedBox(width: AppSpace.sm),
-          actions[i],
-        ],
-      ]),
+      ),
     );
+  }
+}
+
+class _StepNode extends StatelessWidget {
+  final DeliveryStatus step;
+  final int index;
+  final int current;
+  final bool busy;
+  final VoidCallback onTap;
+
+  const _StepNode({
+    required this.step,
+    required this.index,
+    required this.current,
+    required this.busy,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.tokens;
+    final chip = _statusChip(step);
+    final isFirst = index == 0;
+    final isLast = index == _lineSteps.length - 1;
+    final done = index < current;
+    final active = index == current;
+    final reached = index <= current;
+
+    // received (entry) and the current node aren't jump targets.
+    final tappable = !busy && index != current && step != DeliveryStatus.received;
+
+    final Color circleBg = reached ? t.navy : t.surface;
+    final Color circleBorder = reached ? t.navy : t.border;
+    final Color iconColor = reached ? Colors.white : t.textMuted;
+
+    Color seg(bool on) => on ? t.navy : t.border;
+
+    final node = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(children: [
+          // left half-connector (reached once we're at/after this node)
+          Expanded(
+              child: isFirst
+                  ? const SizedBox()
+                  : Container(height: 2, color: seg(index <= current))),
+          Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              color: circleBg,
+              shape: BoxShape.circle,
+              border: Border.all(color: circleBorder, width: 2),
+            ),
+            child: Icon(done ? Icons.check_rounded : chip.icon,
+                size: 16, color: iconColor),
+          ),
+          // right half-connector (reached once we're past this node)
+          Expanded(
+              child: isLast
+                  ? const SizedBox()
+                  : Container(height: 2, color: seg(index < current))),
+        ]),
+        const SizedBox(height: 6),
+        Text(
+          chip.label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+          style: ui(
+            size: 10,
+            weight: active ? FontWeight.w800 : FontWeight.w600,
+            color: active
+                ? t.navy
+                : (reached ? t.textPrimary : t.textMuted),
+          ),
+        ),
+      ],
+    );
+
+    if (!tappable) return Opacity(opacity: busy ? 0.6 : 1, child: node);
+    return AnimatedPressScale(onTap: onTap, child: node);
   }
 }
 
@@ -1153,7 +1286,6 @@ class _Btn extends StatelessWidget {
   final IconData icon;
   final Color bg;
   final Color fg;
-  final bool primary;
   final VoidCallback? onTap;
 
   const _Btn({
@@ -1161,7 +1293,6 @@ class _Btn extends StatelessWidget {
     required this.icon,
     required this.bg,
     required this.fg,
-    this.primary = false,
     required this.onTap,
   });
 

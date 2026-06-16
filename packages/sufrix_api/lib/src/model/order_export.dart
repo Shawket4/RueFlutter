@@ -32,6 +32,8 @@ class OrderExport {
 
      this.customerName,
 
+     this.deliveryChannel,
+
     required  this.deliveryFee,
 
      this.deliveryOrderId,
@@ -144,6 +146,19 @@ class OrderExport {
 
 
   final String? customerName;
+
+
+
+      /// Delivery channel (\"in_mall\" | \"outside\") of the linked delivery order, surfaced on the list so clients can flag + segment delivery orders without a per-order detail fetch. `null` for dine-in orders.
+  @JsonKey(
+    
+    name: r'delivery_channel',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final String? deliveryChannel;
 
 
 
@@ -484,6 +499,7 @@ class OrderExport {
       other.changeGiven == changeGiven &&
       other.createdAt == createdAt &&
       other.customerName == customerName &&
+      other.deliveryChannel == deliveryChannel &&
       other.deliveryFee == deliveryFee &&
       other.deliveryOrderId == deliveryOrderId &&
       other.discountAmount == discountAmount &&
@@ -519,6 +535,7 @@ class OrderExport {
         changeGiven.hashCode +
         createdAt.hashCode +
         customerName.hashCode +
+        deliveryChannel.hashCode +
         deliveryFee.hashCode +
         deliveryOrderId.hashCode +
         discountAmount.hashCode +

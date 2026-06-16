@@ -18,7 +18,7 @@ Name | Type | Description | Notes
 **printerBrand** | [**PrinterBrand**](PrinterBrand.md) |  | [optional] 
 **printerIp** | **String** |  | [optional] 
 **printerPort** | **int** | TCP port for the receipt printer. Defaults to `9100` if absent. | [optional] 
-**timezone** | **String** | IANA timezone name. Defaults to `Africa/Cairo` if absent. | [optional] 
+**timezone** | **String** | IANA timezone name. If absent, the branch inherits the org's timezone. | [optional] 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

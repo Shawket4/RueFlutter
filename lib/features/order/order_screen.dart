@@ -23,6 +23,7 @@ import '../../core/utils/responsive.dart';
 import '../../shared/widgets/animated_icons.dart';
 import '../../shared/widgets/new_order_banner.dart';
 import '../../shared/widgets/offline_banner.dart';
+import '../../shared/widgets/clock_skew_banner.dart';
 import '../../shared/widgets/sync_status_chip.dart';
 import '../delivery/widgets/delivery_realtime_host.dart';
 import 'checkout/checkout_sheet.dart';
@@ -206,6 +207,8 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
                   const DeliveryRealtimeHost(),
                   TopBar(ctrl: _searchCtrl, query: query, searchFocus: _searchFocus),
                   const OfflineBanner(
+                      margin: EdgeInsetsDirectional.fromSTEB(10, 6, 10, 0)),
+                  const ClockSkewBanner(
                       margin: EdgeInsetsDirectional.fromSTEB(10, 6, 10, 0)),
                   const NewOrderBanner(
                       margin: EdgeInsetsDirectional.fromSTEB(10, 6, 10, 0)),

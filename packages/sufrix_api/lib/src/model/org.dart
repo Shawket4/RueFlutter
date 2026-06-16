@@ -35,6 +35,8 @@ class Org {
     required  this.slug,
 
     required  this.taxRate,
+
+    required  this.timezone,
   });
 
   @JsonKey(
@@ -134,6 +136,19 @@ class Org {
 
 
 
+      /// IANA timezone name. The org-level default that branches inherit when their own timezone is unset. Defaults to `Africa/Cairo`.
+  @JsonKey(
+    
+    name: r'timezone',
+    required: true,
+    includeIfNull: false,
+  )
+
+
+  final String timezone;
+
+
+
 
 
     @override
@@ -145,7 +160,8 @@ class Org {
       other.name == name &&
       other.receiptFooter == receiptFooter &&
       other.slug == slug &&
-      other.taxRate == taxRate;
+      other.taxRate == taxRate &&
+      other.timezone == timezone;
 
     @override
     int get hashCode =>
@@ -156,7 +172,8 @@ class Org {
         name.hashCode +
         (receiptFooter == null ? 0 : receiptFooter.hashCode) +
         slug.hashCode +
-        taxRate.hashCode;
+        taxRate.hashCode +
+        timezone.hashCode;
 
   factory Org.fromJson(Map<String, dynamic> json) => _$OrgFromJson(json);
 

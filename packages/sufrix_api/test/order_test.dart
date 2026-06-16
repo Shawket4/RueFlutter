@@ -32,6 +32,12 @@ void main() {
       // TODO
     });
 
+    // Delivery channel (\"in_mall\" | \"outside\") of the linked delivery order, surfaced on the list so clients can flag + segment delivery orders without a per-order detail fetch. `null` for dine-in orders.
+    // String deliveryChannel
+    test('to test the property `deliveryChannel`', () async {
+      // TODO
+    });
+
     // Delivery charge in piastres, shown separately from the item subtotal. Always 0 for dine-in orders; for delivery orders `total_amount == subtotal + tax_amount + delivery_fee` (minus discount).
     // int deliveryFee
     test('to test the property `deliveryFee`', () async {

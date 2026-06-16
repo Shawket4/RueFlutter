@@ -30,6 +30,8 @@ class Order {
 
      this.customerName,
 
+     this.deliveryChannel,
+
     required  this.deliveryFee,
 
      this.deliveryOrderId,
@@ -138,6 +140,19 @@ class Order {
 
 
   final String? customerName;
+
+
+
+      /// Delivery channel (\"in_mall\" | \"outside\") of the linked delivery order, surfaced on the list so clients can flag + segment delivery orders without a per-order detail fetch. `null` for dine-in orders.
+  @JsonKey(
+    
+    name: r'delivery_channel',
+    required: false,
+    includeIfNull: false,
+  )
+
+
+  final String? deliveryChannel;
 
 
 
@@ -454,6 +469,7 @@ class Order {
       other.changeGiven == changeGiven &&
       other.createdAt == createdAt &&
       other.customerName == customerName &&
+      other.deliveryChannel == deliveryChannel &&
       other.deliveryFee == deliveryFee &&
       other.deliveryOrderId == deliveryOrderId &&
       other.discountAmount == discountAmount &&
@@ -487,6 +503,7 @@ class Order {
         (changeGiven == null ? 0 : changeGiven.hashCode) +
         createdAt.hashCode +
         (customerName == null ? 0 : customerName.hashCode) +
+        (deliveryChannel == null ? 0 : deliveryChannel.hashCode) +
         deliveryFee.hashCode +
         (deliveryOrderId == null ? 0 : deliveryOrderId.hashCode) +
         discountAmount.hashCode +

@@ -7,7 +7,10 @@ import '../../core/models/shift_report.dart';
 import '../../core/providers/auth_notifier.dart';
 import '../../core/providers/payment_method_notifier.dart';
 import '../../core/services/printer_service.dart';
+import 'package:intl/intl.dart';
+
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/app_tz.dart';
 import '../../core/utils/formatting.dart';
 import '../../shared/widgets/app_button.dart';
 import '../../shared/widgets/responsive_sheet.dart';
@@ -101,14 +104,8 @@ class ShiftReportPreviewSheet extends ConsumerWidget {
   }
 
   // ── Helpers ──────────────────────────────────────────────────────────────
-  String _fmtDt(DateTime dt) {
-    final l = dt.toLocal();
-    final d = l.day.toString().padLeft(2, '0');
-    final mo = l.month.toString().padLeft(2, '0');
-    final h = l.hour.toString().padLeft(2, '0');
-    final mi = l.minute.toString().padLeft(2, '0');
-    return '$d/$mo/${l.year}  $h:$mi';
-  }
+  String _fmtDt(DateTime dt) =>
+      DateFormat('dd/MM/yyyy  hh:mm a').format(AppTz.local(dt));
 
   // ── Build ─────────────────────────────────────────────────────────────────
   @override

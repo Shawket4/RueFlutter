@@ -23,6 +23,8 @@ abstract class _$OrgCWProxy {
 
   Org taxRate(double taxRate);
 
+  Org timezone(String timezone);
+
   /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `Org(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
   ///
   /// Usage
@@ -38,6 +40,7 @@ abstract class _$OrgCWProxy {
     String? receiptFooter,
     String slug,
     double taxRate,
+    String timezone,
   });
 }
 
@@ -73,6 +76,9 @@ class _$OrgCWProxyImpl implements _$OrgCWProxy {
   Org taxRate(double taxRate) => this(taxRate: taxRate);
 
   @override
+  Org timezone(String timezone) => this(timezone: timezone);
+
+  @override
   /// This function **does support** nullification of nullable fields. All `null` values passed to `non-nullable` fields will be ignored. You can also use `Org(...).copyWith.fieldName(...)` to override fields one at a time with nullification support.
   ///
   /// Usage
@@ -88,6 +94,7 @@ class _$OrgCWProxyImpl implements _$OrgCWProxy {
     Object? receiptFooter = const $CopyWithPlaceholder(),
     Object? slug = const $CopyWithPlaceholder(),
     Object? taxRate = const $CopyWithPlaceholder(),
+    Object? timezone = const $CopyWithPlaceholder(),
   }) {
     return Org(
       currencyCode: currencyCode == const $CopyWithPlaceholder()
@@ -122,6 +129,10 @@ class _$OrgCWProxyImpl implements _$OrgCWProxy {
           ? _value.taxRate
           // ignore: cast_nullable_to_non_nullable
           : taxRate as double,
+      timezone: timezone == const $CopyWithPlaceholder()
+          ? _value.timezone
+          // ignore: cast_nullable_to_non_nullable
+          : timezone as String,
     );
   }
 }
@@ -149,6 +160,7 @@ Org _$OrgFromJson(Map<String, dynamic> json) => $checkedCreate(
         'name',
         'slug',
         'tax_rate',
+        'timezone',
       ],
     );
     final val = Org(
@@ -160,6 +172,7 @@ Org _$OrgFromJson(Map<String, dynamic> json) => $checkedCreate(
       receiptFooter: $checkedConvert('receipt_footer', (v) => v as String?),
       slug: $checkedConvert('slug', (v) => v as String),
       taxRate: $checkedConvert('tax_rate', (v) => (v is String ? double.parse(v) : (v as num).toDouble())),
+      timezone: $checkedConvert('timezone', (v) => v as String),
     );
     return val;
   },
@@ -181,4 +194,5 @@ Map<String, dynamic> _$OrgToJson(Org instance) => <String, dynamic>{
   'receipt_footer': ?instance.receiptFooter,
   'slug': instance.slug,
   'tax_rate': instance.taxRate,
+  'timezone': instance.timezone,
 };

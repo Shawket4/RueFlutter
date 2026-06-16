@@ -59,7 +59,7 @@ void main() {
       // TODO
     });
 
-    // IANA timezone name. Defaults to `Africa/Cairo` if absent.
+    // IANA timezone name. If absent, the branch inherits the org's timezone.
     // String timezone
     test('to test the property `timezone`', () async {
       // TODO

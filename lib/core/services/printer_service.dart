@@ -6,11 +6,13 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:starxpand_sdk_wrapper/starxpand_sdk_wrapper.dart';
+import 'package:intl/intl.dart';
 import '../models/branch.dart';
 import '../models/delivery_order.dart';
 import '../models/order.dart';
 import '../models/shift_report.dart';
 import '../models/payment_method.dart';
+import '../utils/app_tz.dart';
 import '../utils/formatting.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 
@@ -258,12 +260,9 @@ class PrinterService {
       pw.Divider(thickness: 0.2, color: PdfColors.grey400, height: 4);
 
   static String _fmtDt(DateTime dt) {
-    final l = dt.toLocal();
-    final d = l.day.toString().padLeft(2, '0');
-    final m = l.month.toString().padLeft(2, '0');
-    final hh = l.hour.toString().padLeft(2, '0');
-    final mm = l.minute.toString().padLeft(2, '0');
-    return '$d/$m/${l.year}  $hh:$mm';
+    // Branch timezone, not the device's — receipts must print the branch's
+    // local time even when the till's OS clock/zone is wrong. 12-hour (AM/PM).
+    return DateFormat('dd/MM/yyyy  hh:mm a').format(AppTz.local(dt));
   }
 
   /// Formats a payment method string for the order receipt footer.
@@ -276,6 +275,13 @@ class PrinterService {
     }
     return raw[0].toUpperCase() + raw.substring(1).replaceAll('_', ' ');
   }
+
+  /// Human label for a delivery channel ("in_mall" → "In-Mall").
+  static String _channelLabel(String? ch) => switch (ch) {
+        'in_mall' => 'In-Mall',
+        'outside' => 'Outside',
+        _ => (ch == null || ch.isEmpty) ? '' : ch,
+      };
 
   // ── Order receipt PDF ──────────────────────────────────────────────────────
 
@@ -313,6 +319,19 @@ class PrinterService {
 
     final dts = _fmtDt(order.createdAt);
 
+    // Delivery context (finalized delivery orders). `delivery` (phone/address) is
+    // only present on the detail fetch; top-level fields are always available.
+    final isDelivery = order.orderType == 'delivery';
+    final dInfo = order.delivery;
+    final addrParts = <String>[];
+    if (dInfo != null) {
+      if ((dInfo.placeName ?? '').isNotEmpty) addrParts.add(dInfo.placeName!);
+      if ((dInfo.addressLine ?? '').isNotEmpty) addrParts.add(dInfo.addressLine!);
+      if ((dInfo.unitNumber ?? '').isNotEmpty) addrParts.add('Unit ${dInfo.unitNumber}');
+      if ((dInfo.floor ?? '').isNotEmpty) addrParts.add('Floor ${dInfo.floor}');
+      if ((dInfo.landmark ?? '').isNotEmpty) addrParts.add(dInfo.landmark!);
+    }
+
     pdf.addPage(pw.Page(
       pageFormat: const PdfPageFormat(72 * PdfPageFormat.mm, double.infinity,
           marginTop: 2 * PdfPageFormat.mm,
@@ -325,6 +344,16 @@ class PrinterService {
         pw.Center(child: pw.Image(logo!, width: 56)),
         pw.SizedBox(height: 2),
         pw.Center(child: pw.Text(branchName, style: ts(font, sz: 7.5))),
+        if (isDelivery) ...[
+          pw.SizedBox(height: 1),
+          pw.Center(
+            child: pw.Text(
+              order.deliveryChannel != null
+                  ? '*** DELIVERY — ${_channelLabel(order.deliveryChannel)} ***'
+                  : '*** DELIVERY ***',
+              style: ts(fontB, sz: 9)),
+          ),
+        ],
         pw.SizedBox(height: 2),
         _divider(),
 
@@ -341,6 +370,36 @@ class PrinterService {
         if (order.orderRef != null)
           _row('Ref: ${order.orderRef}', dts, font: font, fontB: fontB, sz: 8),
         _divider(),
+
+        // Delivery customer + destination (delivery orders only). Phone/address
+        // come from the detail fetch; the flag/channel/customer always render.
+        if (isDelivery) ...[
+          if (order.customerName != null && order.customerName!.isNotEmpty)
+            _row('Customer', order.customerName!, font: font, fontB: fontB, sz: 7.5),
+          if (dInfo != null && dInfo.customerPhone.isNotEmpty)
+            _row('Phone', dInfo.customerPhone, font: font, fontB: fontB, sz: 7.5),
+          if (addrParts.isNotEmpty)
+            pw.Padding(
+              padding: const pw.EdgeInsets.only(bottom: 1.5),
+              child: pw.Text('Address: ${addrParts.join(', ')}',
+                  style: ts(font, sz: 7.5)),
+            ),
+          if (dInfo != null && (dInfo.zoneName ?? '').isNotEmpty)
+            _row('Zone', dInfo.zoneName!, font: font, fontB: fontB, sz: 7.5),
+          if (dInfo != null && (dInfo.deliveryRef ?? '').isNotEmpty)
+            _row('Delivery Ref', dInfo.deliveryRef!,
+                font: font, fontB: fontB, sz: 7.5),
+          if (dInfo != null && (dInfo.paymentMethodHint ?? '').isNotEmpty)
+            _row('Payment (hint)', dInfo.paymentMethodHint!,
+                font: font, fontB: fontB, sz: 7.5),
+          if (dInfo != null && (dInfo.deliveryNotes ?? '').isNotEmpty)
+            pw.Padding(
+              padding: const pw.EdgeInsets.only(bottom: 1.5),
+              child: pw.Text('Notes: ${dInfo.deliveryNotes}',
+                  style: ts(font, sz: 7.5)),
+            ),
+          _divider(),
+        ],
 
         // Items
         ...order.items.expand((item) {
@@ -436,7 +495,8 @@ class PrinterService {
         // Footer metadata
         _row('Payment', _fmtPayment(order.paymentMethod, paymentMethods),
             font: font, fontB: fontB, sz: 7.5),
-        if (order.customerName != null && order.customerName!.isNotEmpty)
+        // Delivery orders already show the customer in the delivery block above.
+        if (!isDelivery && order.customerName != null && order.customerName!.isNotEmpty)
           _row('Customer', order.customerName!,
               font: font, fontB: fontB, sz: 7.5),
         if (order.tellerName.isNotEmpty)
@@ -515,8 +575,8 @@ class PrinterService {
         pw.SizedBox(height: 1),
         pw.Center(
             child: pw.Text(
-                order.isInMall ? 'IN-MALL DELIVERY' : 'DELIVERY',
-                style: ts(fontB, sz: 8))),
+                order.isInMall ? '*** DELIVERY — In-Mall ***' : '*** DELIVERY — Outside ***',
+                style: ts(fontB, sz: 9))),
         pw.SizedBox(height: 2),
         _divider(),
 
@@ -654,7 +714,7 @@ class PrinterService {
     pw.Widget thinDiv() => _thinDivider();
 
     // Formatted timestamps
-    final openDt = report.openedAt.toLocal();
+    final openDt = AppTz.local(report.openedAt);
     final bizDate = '${openDt.day.toString().padLeft(2, '0')}/'
         '${openDt.month.toString().padLeft(2, '0')}/${openDt.year}';
     final openTs = _fmtDt(report.openedAt);
@@ -766,10 +826,7 @@ class PrinterService {
           ...report.cashMovements.map((m) {
             final sign = m.isIn ? '+' : '−';
             final amount = '$sign ${egp(m.amount.abs())}';
-            final time = () {
-              final l = m.createdAt.toLocal();
-              return '${l.hour.toString().padLeft(2, '0')}:${l.minute.toString().padLeft(2, '0')}';
-            }();
+            final time = DateFormat('hh:mm a').format(AppTz.local(m.createdAt));
             // Two-line: note on top, time + amount on the row
             return pw.Padding(
               padding: const pw.EdgeInsets.only(bottom: 4),

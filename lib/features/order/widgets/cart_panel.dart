@@ -7,6 +7,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/entrance_focus.dart';
 import '../../../core/utils/formatting.dart';
 import '../../../core/utils/haptics.dart';
+import '../../../core/utils/time_utils.dart';
 import '../../../shared/widgets/animated_icons.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/confirm_sheet.dart';
@@ -308,7 +309,7 @@ class DraftTabsBar extends ConsumerWidget {
       (
         id: activeId,
         name: active.name ?? l10n(context).shellDefaultOrderName,
-        createdAt: active.createdAt ?? DateTime.now(),
+        createdAt: active.createdAt ?? TimeUtils.now(),
         draft: null,
       ),
       for (final d in drafts)

@@ -7,6 +7,8 @@ import 'auth_notifier.dart';
 import '../services/connectivity_service.dart';
 import '../services/menu_image_cache.dart';
 import '../storage/storage_service.dart';
+import '../utils/app_tz.dart';
+import '../utils/time_utils.dart';
 
 /// Sentinel category ID for the synthetic "Combos" rail entry.
 const String kComboCategoryId = '__combos__';
@@ -67,7 +69,7 @@ class MenuState {
     required String branchId,
     DateTime? now,
   }) {
-    final n     = now ?? DateTime.now();
+    final n     = now ?? AppTz.local(TimeUtils.now());
     final catId = selectedCategoryId;
     final entries = <MenuGridEntry>[];
 
@@ -94,7 +96,7 @@ class MenuState {
     DateTime? now,
   }) {
     final q = query.toLowerCase();
-    final n = now ?? DateTime.now();
+    final n = now ?? AppTz.local(TimeUtils.now());
     return bundles.where((b) {
       if (!isBundleAvailableNow(b, branchId, n)) return false;
       return b.name.toLowerCase().contains(q) ||

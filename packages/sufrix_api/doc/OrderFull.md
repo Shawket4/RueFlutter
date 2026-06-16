@@ -13,6 +13,7 @@ Name | Type | Description | Notes
 **changeGiven** | **int** |  | [optional] 
 **createdAt** | [**DateTime**](DateTime.md) |  | 
 **customerName** | **String** |  | [optional] 
+**deliveryChannel** | **String** | Delivery channel (\"in_mall\" | \"outside\") of the linked delivery order, surfaced on the list so clients can flag + segment delivery orders without a per-order detail fetch. `null` for dine-in orders. | [optional] 
 **deliveryFee** | **int** | Delivery charge in piastres, shown separately from the item subtotal. Always 0 for dine-in orders; for delivery orders `total_amount == subtotal + tax_amount + delivery_fee` (minus discount). | 
 **deliveryOrderId** | **String** | Links a finalized delivery order back to its `delivery_orders` row (customer, address, channel, zone). `null` for dine-in orders. | [optional] 
 **discountAmount** | **int** |  | 

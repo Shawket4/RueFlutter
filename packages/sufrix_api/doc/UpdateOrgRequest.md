@@ -15,6 +15,7 @@ Name | Type | Description | Notes
 **receiptFooter** | **String** |  | [optional] 
 **slug** | **String** |  | [optional] 
 **taxRate** | **double** |  | [optional] 
+**timezone** | **String** | IANA timezone name (e.g. `Africa/Cairo`). Validated against the PostgreSQL timezone database. Branches inherit this when their own timezone is unset. | [optional] 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

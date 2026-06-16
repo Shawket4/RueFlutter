@@ -19,10 +19,17 @@ import 'core/providers/theme_mode_notifier.dart';
 import 'core/storage/secure_token_store.dart';
 import 'core/storage/storage_service.dart';
 import 'core/theme/app_theme.dart';
+import 'core/utils/app_tz.dart';
+import 'core/utils/time_utils.dart';
 import 'core/widgets/sufrix_logo.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Load the IANA timezone DB so all display/business-day logic can render in
+  // the branch's configured zone (set from authProvider.branch.timezone below),
+  // never the device's local zone.
+  AppTz.init();
 
   FlutterError.onError = (details) {
     FlutterError.presentError(details);
@@ -39,6 +46,7 @@ void main() async {
   await AppDatabase.instance.init();
   final kv = KvStore(AppDatabase.instance);
   await kv.init(); // hydrate in-memory cache from kv table
+  TimeUtils.init(kv); // restore the persisted server-clock offset
   final outboxDao = OutboxDao(AppDatabase.instance);
 
   // JWT lives in the platform keychain; migrate any legacy plaintext token.
@@ -136,6 +144,9 @@ class _AppState extends ConsumerState<_App> with WidgetsBindingObserver {
     final router    = ref.watch(routerProvider);
     final locale    = ref.watch(localeProvider);
     final themeMode = ref.watch(themeModeProvider);
+
+    // Keep the display/business-day clock pointed at the active branch's zone.
+    AppTz.setBranchTimezone(auth.branch?.timezone);
 
     if (auth.isLoading) return const _SplashScreen();
 

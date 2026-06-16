@@ -1387,6 +1387,11 @@ class AppLocalizationsAr extends AppLocalizations {
       'غير متصل — كل شيء يعمل كالمعتاد ويُزامن عند عودة الاتصال.';
 
   @override
+  String clockSkewWarning(int minutes) {
+    return 'ساعة هذا الجهاز غير مضبوطة بفارق $minutes دقيقة تقريبًا — صحّح التاريخ والوقت حتى تُسجَّل المبيعات في اليوم الصحيح.';
+  }
+
+  @override
   String syncSessionExpiredBanner(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

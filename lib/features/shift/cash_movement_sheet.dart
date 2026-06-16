@@ -354,9 +354,8 @@ class _Segment extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = context.tokens;
-    return GestureDetector(
+    return AnimatedPressScale(
       onTap: onTap,
-      behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(vertical: 12),

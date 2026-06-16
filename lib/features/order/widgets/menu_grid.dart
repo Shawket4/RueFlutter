@@ -17,10 +17,10 @@ Widget _buildGrid(int count, Widget Function(BuildContext, int) builder) =>
     GridView.builder(
       padding: const EdgeInsets.all(AppSpace.md),
       gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: 200,
+        maxCrossAxisExtent: 260,
         mainAxisSpacing: AppSpace.sm + 2,
         crossAxisSpacing: AppSpace.sm + 2,
-        childAspectRatio: 1 / 1.22,
+        childAspectRatio: 1 / 1.15,
       ),
       itemCount: count,
       // GridView already wraps each child in a RepaintBoundary.

@@ -156,34 +156,42 @@ class CategoryStrip extends ConsumerWidget {
           final selected = e.id == selectedId;
           // Underline-indicator tab (dashboard style): the selected tab carries
           // a 2px accent underline; no pill fill, no border.
+          // IntrinsicWidth bounds the tab to its content so the underline's
+          // `width: double.infinity` resolves to the tab width. Without it the
+          // horizontal ListView hands the item an unbounded width constraint
+          // and the infinite-width underline blows up the layout (red screen in
+          // debug, an invisible/blank strip in release) — i.e. categories
+          // vanish on phones, the only form factor that uses this strip.
           return AnimatedPressScale(
             onTap: () => ref.read(menuProvider.notifier).selectCategory(e.id),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Expanded(
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    Icon(e.icon,
-                        size: 15, color: selected ? t.accent : t.textMuted),
-                    const SizedBox(width: 6),
-                    Text(e.label,
-                        style: ui(
-                            size: 13,
-                            weight:
-                                selected ? FontWeight.w700 : FontWeight.w500,
-                            color: selected ? t.accent : t.textSecondary)),
-                  ]),
-                ),
-                Container(
-                  height: 2,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: selected ? t.accent : Colors.transparent,
-                    borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(2)),
+            child: IntrinsicWidth(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      Icon(e.icon,
+                          size: 15, color: selected ? t.accent : t.textMuted),
+                      const SizedBox(width: 6),
+                      Text(e.label,
+                          style: ui(
+                              size: 13,
+                              weight:
+                                  selected ? FontWeight.w700 : FontWeight.w500,
+                              color: selected ? t.accent : t.textSecondary)),
+                    ]),
                   ),
-                ),
-              ],
+                  Container(
+                    height: 2,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: selected ? t.accent : Colors.transparent,
+                      borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(2)),
+                    ),
+                  ),
+                ],
+              ),
             ),
           );
         },

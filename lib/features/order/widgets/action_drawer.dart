@@ -83,21 +83,21 @@ class ActionDrawer extends ConsumerWidget {
                       badge:
                           ref.watch(deliveryOrdersProvider.select((d) => d.activeCount)),
                       onTap: () =>
-                          _popThen(() => parentContext.push('/delivery-orders')),
+                          _popThen(() => parentContext.pushNamed('delivery-orders')),
                     ),
                     Divider(height: 1, color: t.borderLight),
                     _ActionTile(
                       icon: Icons.schedule_rounded,
                       label: s.shellPastShifts,
                       onTap: () =>
-                          _popThen(() => parentContext.push('/shift-history')),
+                          _popThen(() => parentContext.pushNamed('shift-history')),
                     ),
                     Divider(height: 1, color: t.borderLight),
                     _ActionTile(
                       icon: Icons.settings_rounded,
                       label: s.settings,
                       onTap: () =>
-                          _popThen(() => parentContext.push('/settings')),
+                          _popThen(() => parentContext.pushNamed('settings')),
                     ),
                   ]),
                 ),
@@ -113,7 +113,7 @@ class ActionDrawer extends ConsumerWidget {
                       disabled: !isOnline || shift == null,
                       subtitle: !isOnline ? s.commonCashOfflineHint : null,
                       onTap: () =>
-                          _popThen(() => parentContext.push('/cash-movements')),
+                          _popThen(() => parentContext.pushNamed('cash-movements')),
                     ),
                     Divider(height: 1, color: t.borderLight),
                     _ActionTile(
@@ -215,7 +215,7 @@ class ActionDrawer extends ConsumerWidget {
       destructive: true,
       icon: Icons.lock_outline_rounded,
     );
-    if (ok && ctx.mounted) ctx.go('/close-shift');
+    if (ok && ctx.mounted) ctx.goNamed('close-shift');
   }
 
   Future<void> _signOut(BuildContext ctx, WidgetRef ref) async {
@@ -234,7 +234,7 @@ class ActionDrawer extends ConsumerWidget {
       destructive: true,
       icon: Icons.lock_outline_rounded,
     );
-    if (goClose && ctx.mounted) ctx.go('/close-shift');
+    if (goClose && ctx.mounted) ctx.goNamed('close-shift');
   }
 }
 

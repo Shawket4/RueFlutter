@@ -56,7 +56,7 @@ class SettingsScreen extends ConsumerWidget {
         confirmLabel: s.settingsGoCloseShift,
         icon: Icons.schedule_rounded,
       );
-      if (goClose && context.mounted) context.go('/close-shift');
+      if (goClose && context.mounted) context.goNamed('close-shift');
       return;
     }
 

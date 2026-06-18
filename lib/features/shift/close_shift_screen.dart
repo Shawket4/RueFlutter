@@ -151,7 +151,7 @@ class _CloseShiftScreenState extends ConsumerState<CloseShiftScreen> {
     // Stay on the order screen if the shift is still open; only go to
     // open-shift when the shift has already been cleared (shouldn't normally
     // happen via the back button, but handle it gracefully).
-    context.go(ref.read(shiftProvider).hasOpenShift ? '/order' : '/open-shift');
+    context.goNamed(ref.read(shiftProvider).hasOpenShift ? 'order' : 'open-shift');
   }
 
   void _onCashChanged() {
@@ -307,9 +307,9 @@ class _CloseShiftScreenState extends ConsumerState<CloseShiftScreen> {
       if (!mounted || _navigatedAway) return;
       if (canNowLogout) {
         await ref.read(authProvider.notifier).logout();
-        if (mounted && !_navigatedAway) context.go('/login');
+        if (mounted && !_navigatedAway) context.goNamed('login');
       } else {
-        context.go('/open-shift');
+        if (mounted && !_navigatedAway) context.goNamed('open-shift');
       }
     } else {
       _ctl.failSubmit(

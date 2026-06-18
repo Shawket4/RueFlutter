@@ -990,7 +990,7 @@ class _TableRow extends StatelessWidget {
                       label: l10n(context).commonPendingSync,
                       tone: ChipTone.warning,
                       icon: Icons.sync_rounded,
-                      onTap: () => context.push('/pending-orders'),
+                      onTap: () => context.pushNamed('pending-orders'),
                     ),
                   ],
                   if (o.customerName != null) ...[
@@ -1198,7 +1198,7 @@ class _OrderCard extends StatelessWidget {
                           label: l10n(context).commonPendingSync,
                           tone: ChipTone.warning,
                           icon: Icons.sync_rounded,
-                          onTap: () => context.push('/pending-orders'),
+                          onTap: () => context.pushNamed('pending-orders'),
                         ),
                     ]),
                   ],

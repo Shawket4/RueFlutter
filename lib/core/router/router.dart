@@ -59,7 +59,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           ? local.hasOpenShift
           : ref.read(shiftProvider).hasOpenShift;
 
-      if (loc == '/login' || loc == '/home') {
+      if (loc == '/login') {
         return hasShift ? '/order' : '/open-shift';
       }
       if (loc == '/device-setup') return configured ? (hasShift ? '/order' : '/open-shift') : null;
@@ -69,17 +69,17 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       // Classic flat stack — the order screen's bottom action bar is the
       // navigation hub; everything else is pushed on top of it.
-      GoRoute(path: '/device-setup',   builder: (_, __) => const DeviceSetupScreen()),
-      GoRoute(path: '/login',          builder: (_, __) => const LoginScreen()),
-      GoRoute(path: '/open-shift',     builder: (_, __) => const OpenShiftScreen()),
-      GoRoute(path: '/close-shift',    builder: (_, __) => const CloseShiftScreen()),
-      GoRoute(path: '/order',          builder: (_, __) => const OrderScreen()),
-      GoRoute(path: '/order-history',  builder: (_, __) => const OrderHistoryScreen()),
-      GoRoute(path: '/delivery-orders', builder: (_, __) => const DeliveryOrdersScreen()),
-      GoRoute(path: '/pending-orders', builder: (_, __) => const PendingOrdersScreen()),
-      GoRoute(path: '/shift-history',  builder: (_, __) => const ShiftHistoryScreen()),
-      GoRoute(path: '/cash-movements', builder: (_, __) => const CashMovementsScreen()),
-      GoRoute(path: '/settings',       builder: (_, __) => const SettingsScreen()),
+      GoRoute(name: 'device-setup',    path: '/device-setup',    builder: (_, __) => const DeviceSetupScreen()),
+      GoRoute(name: 'login',           path: '/login',           builder: (_, __) => const LoginScreen()),
+      GoRoute(name: 'open-shift',      path: '/open-shift',      builder: (_, __) => const OpenShiftScreen()),
+      GoRoute(name: 'close-shift',     path: '/close-shift',     builder: (_, __) => const CloseShiftScreen()),
+      GoRoute(name: 'order',           path: '/order',           builder: (_, __) => const OrderScreen()),
+      GoRoute(name: 'order-history',   path: '/order-history',   builder: (_, __) => const OrderHistoryScreen()),
+      GoRoute(name: 'delivery-orders', path: '/delivery-orders', builder: (_, __) => const DeliveryOrdersScreen()),
+      GoRoute(name: 'pending-orders',  path: '/pending-orders',  builder: (_, __) => const PendingOrdersScreen()),
+      GoRoute(name: 'shift-history',   path: '/shift-history',   builder: (_, __) => const ShiftHistoryScreen()),
+      GoRoute(name: 'cash-movements',  path: '/cash-movements',  builder: (_, __) => const CashMovementsScreen()),
+      GoRoute(name: 'settings',        path: '/settings',        builder: (_, __) => const SettingsScreen()),
     ],
   );
 });

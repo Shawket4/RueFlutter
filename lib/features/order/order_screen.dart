@@ -156,6 +156,17 @@ class _OrderScreenState extends ConsumerState<OrderScreen> {
     // Phase 1: shift notifier serves local cache instantly.
     await ref.read(shiftProvider.notifier).load(branchId);
 
+    // The router redirect reads local cache and may have sent us here while the
+    // shift was already closed externally (e.g. from the dashboard on an expired
+    // session). Now that we have live server data, re-validate: if the server
+    // confirms no open shift exists, the correct screen is /open-shift.
+    if (!mounted) return;
+    final shiftState = ref.read(shiftProvider);
+    if (shiftState.freshness == DataFreshness.live && !shiftState.hasOpenShift) {
+      context.goNamed('open-shift');
+      return;
+    }
+
     final shift = ref.read(shiftProvider).shift;
     if (orgId != null) {
       unawaited(Future.wait([
@@ -336,13 +347,13 @@ class _BottomActionBar extends ConsumerWidget {
                       badgeDanger: true,
                       pulse: deliveryNew > 0,
                       accent: deliveryNew > 0,
-                      onTap: () => context.push('/delivery-orders'),
+                      onTap: () => context.pushNamed('delivery-orders'),
                     ),
                     _BarAction(
                       icon: Icons.receipt_long_rounded,
                       label: s.shellPastOrders,
                       compact: compact,
-                      onTap: () => context.push('/order-history'),
+                      onTap: () => context.pushNamed('order-history'),
                     ),
                     _BarAction(
                       icon: Icons.sync_rounded,
@@ -350,7 +361,7 @@ class _BottomActionBar extends ConsumerWidget {
                       compact: compact,
                       badgeCount: badgeCount,
                       badgeDanger: badgeDanger,
-                      onTap: () => context.push('/pending-orders'),
+                      onTap: () => context.pushNamed('pending-orders'),
                     ),
                     if (!compact) ...[
                       _BarAction(
@@ -359,19 +370,19 @@ class _BottomActionBar extends ConsumerWidget {
                         compact: compact,
                         disabled: !isOnline || shift == null,
                         tooltip: !isOnline ? s.commonCashOfflineHint : null,
-                        onTap: () => context.push('/cash-movements'),
+                        onTap: () => context.pushNamed('cash-movements'),
                       ),
                       _BarAction(
                         icon: Icons.schedule_rounded,
                         label: s.shellPastShifts,
                         compact: compact,
-                        onTap: () => context.push('/shift-history'),
+                        onTap: () => context.pushNamed('shift-history'),
                       ),
                       _BarAction(
                         icon: Icons.settings_rounded,
                         label: s.settings,
                         compact: compact,
-                        onTap: () => context.push('/settings'),
+                        onTap: () => context.pushNamed('settings'),
                       ),
                     ],
                     _BarAction(

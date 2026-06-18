@@ -18,7 +18,7 @@ class SyncStatusChip extends ConsumerWidget {
     final s = l10n(context);
     final sync = ref.watch(offlineQueueProvider);
     final isOnline = ref.watch(isOnlineProvider);
-    void open() => context.push('/pending-orders');
+    void open() => context.pushNamed('pending-orders');
 
     if (sync.authPaused && !sync.isEmpty) {
       return StatusChip(

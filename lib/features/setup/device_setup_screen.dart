@@ -147,7 +147,7 @@ class _DeviceSetupScreenState extends ConsumerState<DeviceSetupScreen> {
     await ref.read(authProvider.notifier).confirmBranch(branch);
     if (!mounted) return;
     // The redirect only re-evaluates on navigation/auth events — go explicitly.
-    context.go('/login');
+    context.goNamed('login');
   }
 
   @override
@@ -186,7 +186,7 @@ class _DeviceSetupScreenState extends ConsumerState<DeviceSetupScreen> {
         if (alreadyConfigured)
           Row(children: [
             IconButton(
-              onPressed: setup.loading ? null : () => context.go('/login'),
+              onPressed: setup.loading ? null : () => context.goNamed('login'),
               icon: Icon(Icons.arrow_back_rounded,
                   color: t.textPrimary, size: 22),
             ),

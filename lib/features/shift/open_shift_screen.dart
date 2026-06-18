@@ -108,7 +108,7 @@ class _OpenShiftScreenState extends ConsumerState<OpenShiftScreen> {
       if (branchId == null) return;
       ref.read(shiftProvider.notifier).load(branchId).then((_) {
         if (mounted && ref.read(shiftProvider).hasOpenShift) {
-          context.go('/order');
+          context.goNamed('order');
         }
       });
     });
@@ -169,7 +169,7 @@ class _OpenShiftScreenState extends ConsumerState<OpenShiftScreen> {
 
     if (!mounted) return;
     if (ok) {
-      context.go('/order');
+      context.goNamed('order');
     } else {
       ctl.fail(ref.read(shiftProvider).error ?? l10n(context).shiftOpenFailed);
     }
@@ -193,7 +193,7 @@ class _OpenShiftScreenState extends ConsumerState<OpenShiftScreen> {
     );
     if (!confirmed || !mounted) return;
     await ref.read(authProvider.notifier).logout();
-    if (mounted) context.go('/login');
+    if (mounted) context.goNamed('login');
   }
 
   @override

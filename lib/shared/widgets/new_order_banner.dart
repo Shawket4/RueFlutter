@@ -61,7 +61,7 @@ class NewOrderBanner extends ConsumerWidget {
     return Padding(
       padding: margin,
       child: AnimatedPressScale(
-        onTap: () => context.push('/delivery-orders'),
+        onTap: () => context.pushNamed('delivery-orders'),
         child: Container(
           width: double.infinity,
           padding: const EdgeInsetsDirectional.fromSTEB(12, 10, 8, 10),

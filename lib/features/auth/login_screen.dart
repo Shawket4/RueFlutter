@@ -299,7 +299,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                     icon: Icons.storefront_rounded,
                   ),
                   TextButton(
-                    onPressed: () => context.go('/device-setup'),
+                    onPressed: () => context.goNamed('device-setup'),
                     child: Text(
                       s.settingsReconfigureDevice,
                       style: ui(size: 12, color: t.textMuted),

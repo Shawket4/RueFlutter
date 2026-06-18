@@ -125,6 +125,6 @@ class NotificationService {
   void _onTap(NotificationResponse response) {
     final context = rootNavigatorKey.currentContext;
     if (context == null) return;
-    GoRouter.of(context).push('/delivery-orders');
+    GoRouter.of(context).goNamed('delivery-orders');
   }
 }

@@ -1,7 +1,9 @@
 name: sufrix_pos
 description: Sufrix POS — Teller App (v2 Riverpod)
 publish_to: none
-version: 2.0.1+2
+# Rescue build: versionCode must be >= the installed 2 or the in-place update
+# is rejected as a downgrade. 2 → 3.
+version: 2.0.2+3
 
 environment:
   sdk: ">=3.2.0 <4.0.0"

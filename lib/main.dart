@@ -1,199 +1,249 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// RESCUE BUILD — offline DB extraction only. NOT a working POS.
+//
+// Built from tag v3.5.1.2 (the build deployed to the field) so it installs in
+// place over com.sufrixpos.sufrix_pos with the data partition untouched.
+//
+// The point of this entrypoint is what it does NOT do:
+//   • never imports/opens AppDatabase  → openDatabase() is never called, so
+//     _onUpgrade can't ALTER the outbox or rewrite in_flight → pending
+//   • never starts OfflineQueue        → no replay, no retry_count churn, no
+//     rows flipped to dead, no synced_at stamped, nothing sent to the API
+//   • never starts ConnectivityService / NotificationService / the router
+//
+// It copies raw bytes of a file SQLite has not opened in this process, hashes
+// both sides, and stops. A byte copy of an unopened file cannot corrupt it.
+//
+// Destination is the app's external files dir
+// (/sdcard/Android/data/com.sufrixpos.sufrix_pos/files/), which `adb pull`
+// reaches on a stock, non-rooted, non-debuggable device.
+// ─────────────────────────────────────────────────────────────────────────────
+
+import 'dart:io';
+
+import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'core/db/app_database.dart';
-import 'core/db/kv_store.dart';
-import 'core/l10n/app_localizations.dart';
-import 'core/db/outbox_dao.dart';
-import 'core/providers/auth_notifier.dart';
-import 'core/providers/order_history_notifier.dart';
-import 'core/providers/shift_notifier.dart';
-import 'core/router/router.dart';
-import 'core/services/connectivity_service.dart';
-import 'core/services/delivery_realtime_service.dart';
-import 'core/services/notification_service.dart';
-import 'core/services/offline_queue.dart';
-import 'core/providers/locale_notifier.dart';
-import 'core/providers/theme_mode_notifier.dart';
-import 'core/storage/secure_token_store.dart';
-import 'core/storage/storage_service.dart';
-import 'core/theme/app_theme.dart';
-import 'core/utils/app_tz.dart';
-import 'core/utils/time_utils.dart';
-import 'core/widgets/sufrix_logo.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+
+/// The sqflite DB sits next to getApplicationSupportDirectory() — NOT in the
+/// conventional databases/ dir. Mirrors AppDatabase._dbPath().
+const _dbName = 'sufrix_pos.db';
+
+/// WAL sidecars. The -wal file can hold the most recent orders; copying the
+/// .db alone would silently hand back a stale snapshot.
+const _dbFiles = [_dbName, '$_dbName-wal', '$_dbName-shm'];
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Load the IANA timezone DB so all display/business-day logic can render in
-  // the branch's configured zone (set from authProvider.branch.timezone below),
-  // never the device's local zone.
-  AppTz.init();
-
-  FlutterError.onError = (details) {
-    FlutterError.presentError(details);
-    debugPrint('Flutter error: ${details.exceptionAsString()}');
-  };
-
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.landscapeLeft,
-    DeviceOrientation.landscapeRight,
-    DeviceOrientation.portraitUp,
-  ]);
-
-  // ── Database bootstrap (replaces SharedPreferences) ──────────────────────
-  await AppDatabase.instance.init();
-  final kv = KvStore(AppDatabase.instance);
-  await kv.init(); // hydrate in-memory cache from kv table
-  TimeUtils.init(kv); // restore the persisted server-clock offset
-  final outboxDao = OutboxDao(AppDatabase.instance);
-
-  // JWT lives in the platform keychain; migrate any legacy plaintext token.
-  final tokenStore = SecureTokenStore();
-  await tokenStore.init(migrateFrom: kv);
-
-  await ConnectivityService.instance.init();
-  await NotificationService.instance.init();
-
-  runApp(ProviderScope(
-    overrides: [
-      storageServiceProvider.overrideWithValue(StorageService(kv, tokenStore)),
-      outboxDaoProvider.overrideWithValue(outboxDao),
-    ],
-    child: const _App(),
-  ));
+  DumpReport report;
+  try {
+    report = await _dump();
+  } catch (e, st) {
+    report = DumpReport.failure('$e\n$st');
+  }
+  runApp(RescueApp(report));
 }
 
-class _App extends ConsumerStatefulWidget {
-  const _App();
-  @override
-  ConsumerState<_App> createState() => _AppState();
+class CopiedFile {
+  final String name;
+  final int bytes;
+  final String sourceSha256;
+  final String destSha256;
+  const CopiedFile(this.name, this.bytes, this.sourceSha256, this.destSha256);
+
+  bool get verified => sourceSha256 == destSha256;
 }
 
-class _AppState extends ConsumerState<_App> with WidgetsBindingObserver {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final queue      = ref.read(offlineQueueProvider.notifier);
-      final history    = ref.read(orderHistoryProvider.notifier);
-      final shiftNotif = ref.read(shiftProvider.notifier);
+class DumpReport {
+  final bool ok;
+  final String? error;
+  final String? destDir;
+  final List<CopiedFile> files;
+  final List<String> missing;
 
-      // Wire up optimistic replacement callbacks.
-      queue.onOrderSynced = (order, localId) {
-        history.replaceOrder(localId, order);
-        // The synced order is leaving the outbox and now counts toward the
-        // server's expected-cash figure — refresh so systemCash doesn't keep
-        // a stale queued-cash adjustment (loadSystemCash re-adds whatever is
-        // still queued via _queuedCashForShift).
-        final current = ref.read(shiftProvider).shift;
-        if (current != null && current.id == order.shiftId) {
-          shiftNotif.loadSystemCash();
-        }
-      };
-      queue.onVoidSynced      = history.updateOrder;
-      queue.onShiftOpenSynced = (shift) {
-        final current = ref.read(shiftProvider).shift;
-        if (current != null && current.id == shift.id) {
-          shiftNotif.updateShiftSynced(shift);
-        }
-      };
-      queue.onShiftCloseSynced = (_) {};
-      // A queued offline shift-open was permanently rejected (another shift
-      // already holds this branch/teller open) — clear the phantom local shift
-      // so the teller stops selling against a shift the server will never accept.
-      queue.onShiftOpenRejected = (shiftId, branchId) {
-        final current = ref.read(shiftProvider).shift;
-        if (current != null && current.id == shiftId) {
-          shiftNotif.handleOpenRejected(branchId);
-        }
-      };
+  const DumpReport({
+    required this.ok,
+    this.error,
+    this.destDir,
+    this.files = const [],
+    this.missing = const [],
+  });
 
-      queue.init();
-    });
+  factory DumpReport.failure(String e) => DumpReport(ok: false, error: e);
+
+  bool get allVerified => files.isNotEmpty && files.every((f) => f.verified);
+}
+
+Future<DumpReport> _dump() async {
+  final srcDir = await getApplicationSupportDirectory();
+
+  // External files dir is adb-pullable without root. Null on iOS and on the
+  // odd Android device with no external volume — fall back to the documents
+  // dir, whose path the UI prints either way.
+  Directory? extDir;
+  if (Platform.isAndroid) {
+    extDir = await getExternalStorageDirectory();
   }
+  final destRoot = extDir ?? await getApplicationDocumentsDirectory();
 
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
+  final stamp =
+      DateTime.now().toIso8601String().replaceAll(':', '-').replaceAll('.', '-');
+  final destDir = Directory(p.join(destRoot.path, 'rescue-dump-$stamp'));
+  await destDir.create(recursive: true);
 
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Coming back to the foreground is when a long-backgrounded JWT is most
-    // likely to have expired. Re-validate the session proactively so an expired
-    // token routes to /login instead of stranding the teller mid-app.
-    if (state == AppLifecycleState.resumed) {
-      ref.read(authProvider.notifier).revalidateSession();
-      // Re-open the delivery stream (it was dropped on pause) + re-GET to catch
-      // anything that arrived while backgrounded.
-      ref.read(deliveryRealtimeProvider).reevaluate();
-    } else if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.detached) {
-      // Don't hold a dead socket while backgrounded.
-      ref.read(deliveryRealtimeProvider).pause();
+  final copied = <CopiedFile>[];
+  final missing = <String>[];
+
+  for (final name in _dbFiles) {
+    final src = File(p.join(srcDir.path, name));
+    if (!await src.exists()) {
+      missing.add(name);
+      continue;
     }
+    final dest = File(p.join(destDir.path, name));
+
+    // Plain byte copy. No sqflite, no openDatabase, no migration.
+    await src.copy(dest.path);
+
+    // Hash both sides so a truncated copy (full disk) is caught here, not
+    // after the tablet has gone back to the branch.
+    final srcHash = await _sha256(src);
+    final destHash = await _sha256(dest);
+    copied.add(CopiedFile(name, await dest.length(), srcHash, destHash));
   }
+
+  // Drop a manifest in the dump so the pulled folder is self-describing.
+  final manifest = StringBuffer()
+    ..writeln('sufrix_pos rescue dump')
+    ..writeln('taken_at: ${DateTime.now().toIso8601String()}')
+    ..writeln('source_dir: ${srcDir.path}')
+    ..writeln('os: ${Platform.operatingSystemVersion}')
+    ..writeln('');
+  for (final f in copied) {
+    manifest.writeln('${f.name}  ${f.bytes} bytes  sha256=${f.sourceSha256}  '
+        'verified=${f.verified}');
+  }
+  for (final m in missing) {
+    manifest.writeln('$m  ABSENT');
+  }
+  await File(p.join(destDir.path, 'manifest.txt')).writeAsString('$manifest');
+
+  return DumpReport(
+    ok: copied.isNotEmpty,
+    destDir: destDir.path,
+    files: copied,
+    missing: missing,
+  );
+}
+
+Future<String> _sha256(File f) async {
+  // Streamed so a large DB doesn't spike memory on a low-RAM tablet.
+  final digest = await sha256.bind(f.openRead()).first;
+  return digest.toString();
+}
+
+class RescueApp extends StatelessWidget {
+  final DumpReport report;
+  const RescueApp(this.report, {super.key});
 
   @override
   Widget build(BuildContext context) {
-    final auth      = ref.watch(authProvider);
-    final router    = ref.watch(routerProvider);
-    final locale    = ref.watch(localeProvider);
-    final themeMode = ref.watch(themeModeProvider);
-
-    // Keep the display/business-day clock pointed at the active branch's zone.
-    AppTz.setBranchTimezone(auth.branch?.timezone);
-
-    if (auth.isLoading) return const _SplashScreen();
-
-    return MaterialApp.router(
+    return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Sufrix POS',
-      theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
-      themeMode: themeMode,
-      locale: locale,
-      routerConfig: router,
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: const [
-        Locale('en'),
-        Locale('ar'),
-      ],
-      builder: (context, child) {
-        return GestureDetector(
-          onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
-          behavior: HitTestBehavior.translucent,
-          child: child,
-        );
-      },
+      theme: ThemeData(colorSchemeSeed: Colors.deepOrange, useMaterial3: true),
+      home: RescueScreen(report),
     );
   }
 }
 
-class _SplashScreen extends StatelessWidget {
-  const _SplashScreen();
+class RescueScreen extends StatelessWidget {
+  final DumpReport report;
+  const RescueScreen(this.report, {super.key});
+
   @override
-  Widget build(BuildContext context) => MaterialApp(
-    debugShowCheckedModeBanner: false,
-    theme: AppTheme.light,
-    home: Scaffold(
-      backgroundColor: AppTokens.light.bg,
-      body: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const SufrixLongLogo(height: 56),
-        const SizedBox(height: 32),
-        SizedBox(width: 24, height: 24,
-            child: CircularProgressIndicator(
-                strokeWidth: 2.5, color: AppTokens.light.accent)),
-      ])),
-    ),
-  );
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final good = report.ok && report.allVerified;
+
+    return Scaffold(
+      backgroundColor: good ? const Color(0xFF0E2A14) : const Color(0xFF2A0E0E),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(good ? Icons.check_circle : Icons.error,
+                        color: good ? Colors.greenAccent : Colors.redAccent,
+                        size: 40),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        good ? 'DUMP READY' : 'DUMP FAILED',
+                        style: t.headlineMedium?.copyWith(
+                            color: Colors.white, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Maintenance build — this is not the POS.\n'
+                  'DO NOT UNINSTALL THIS APP. Hand the tablet to the admin.',
+                  style: t.titleMedium?.copyWith(color: Colors.amberAccent),
+                ),
+                const Divider(height: 32, color: Colors.white24),
+                if (report.error != null)
+                  SelectableText(report.error!,
+                      style: t.bodySmall?.copyWith(color: Colors.redAccent)),
+                if (report.destDir != null) ...[
+                  Text('Dump folder',
+                      style: t.labelLarge?.copyWith(color: Colors.white70)),
+                  SelectableText(report.destDir!,
+                      style: t.bodyMedium?.copyWith(
+                          color: Colors.white, fontFamily: 'monospace')),
+                  const SizedBox(height: 16),
+                ],
+                for (final f in report.files)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${f.verified ? "✓" : "✗"}  ${f.name}  —  '
+                          '${_human(f.bytes)}',
+                          style: t.bodyLarge?.copyWith(
+                              color: f.verified
+                                  ? Colors.greenAccent
+                                  : Colors.redAccent),
+                        ),
+                        SelectableText(
+                          'sha256 ${f.sourceSha256}',
+                          style: t.bodySmall?.copyWith(
+                              color: Colors.white54, fontFamily: 'monospace'),
+                        ),
+                      ],
+                    ),
+                  ),
+                for (final m in report.missing)
+                  Text('–  $m  (not present)',
+                      style: t.bodyMedium?.copyWith(color: Colors.white38)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _human(int b) => b < 1024
+      ? '$b B'
+      : b < 1024 * 1024
+          ? '${(b / 1024).toStringAsFixed(1)} KB'
+          : '${(b / 1024 / 1024).toStringAsFixed(2)} MB';
 }

@@ -1,0 +1,78 @@
+# Rescue build — signed with the SAME keystore secret as deploy.yml, so the
+# resulting APK updates com.sufrixpos.sufrix_pos in place without touching
+# /data/data. Deliberately does NOT reuse deploy.yml:
+#
+#   • triggers on `rescue-*` tags, which do NOT match deploy.yml's `v*.*.*`,
+#     so tagging a rescue never fires the release pipeline
+#   • no diawi upload, no GitHub release, and above all no mirror to the
+#     PUBLIC Shawket4/SufrixPOS-Releases repo — a gutted maintenance build
+#     must not land on the page branches install from
+#   • Android only; the Windows/macOS jobs are irrelevant here
+#
+# The APK comes back as a private workflow artifact.
+
+name: Rescue Build (DB dump)
+
+on:
+  push:
+    tags:
+      - "rescue-*"
+  workflow_dispatch:
+
+jobs:
+  build-rescue-apk:
+    name: Build signed rescue APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.41.4"
+          channel: stable
+          cache: true
+
+      # Identical to deploy.yml — same secret, same alias, same output path.
+      # This is what guarantees the signature matches the field build.
+      - name: Decode keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/release.keystore
+
+      - name: Create key.properties
+        run: |
+          cat > android/key.properties <<EOF
+          storePassword=${{ secrets.KEYSTORE_PASSWORD }}
+          keyPassword=${{ secrets.KEY_PASSWORD }}
+          keyAlias=${{ secrets.KEY_ALIAS }}
+          storeFile=release.keystore
+          EOF
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Build APK
+        run: flutter build apk --release
+
+      # Print the signing cert in the log so the fingerprint can be compared
+      # against the deployed APK before anyone touches a tablet.
+      - name: Print signing certificate
+        run: |
+          APKSIGNER=$(ls -d "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          echo "using: $APKSIGNER"
+          "$APKSIGNER" verify --print-certs -v \
+            build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Upload rescue APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: rescue-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
+          retention-days: 30

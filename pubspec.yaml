@@ -1,7 +1,11 @@
 name: sufrix_pos
 description: Sufrix POS — Teller App (v2 Riverpod)
 publish_to: none
-version: 2.0.1+2
+# Unchanged v3.5.1.2 app code. ONLY the versionCode moves: the rescue builds
+# took the device to 4, and Android refuses a downgrade back to 2 even with
+# `adb install -d` for a non-debuggable release app. 5 restores the original
+# POS in place over the rescue build without touching /data/user/0.
+version: 2.0.4+5
 
 environment:
   sdk: ">=3.2.0 <4.0.0"

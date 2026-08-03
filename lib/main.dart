@@ -104,7 +104,24 @@ Future<DumpReport> _dump() async {
     final dest = File(p.join(destDir.path, name));
 
     // Plain byte copy. No sqflite, no openDatabase, no migration.
-    await src.copy(dest.path);
+    //
+    // Deliberately NOT File.copy(): that preserves the source mode, and the
+    // internal DB is 0600, which leaves the dump unreadable by the `shell`
+    // user — adb pull dies with "remote open failed: Permission denied".
+    // Streaming into a fresh sink creates the file under the app's umask
+    // (0660, group ext_data_rw), and adb's shell is a member of that group.
+    // Streamed rather than readAsBytes so a large DB doesn't spike memory.
+    final sink = dest.openWrite();
+    await sink.addStream(src.openRead());
+    await sink.flush();
+    await sink.close();
+
+    // Belt and braces on OEM builds with a stricter umask. chmod is toybox on
+    // Android; if it's missing or refuses, the sink mode above already covers
+    // the normal case, so never let this fail the dump.
+    try {
+      await Process.run('chmod', ['0644', dest.path]);
+    } catch (_) {}
 
     // Hash both sides so a truncated copy (full disk) is caught here, not
     // after the tablet has gone back to the branch.
